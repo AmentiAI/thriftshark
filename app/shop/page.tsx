@@ -53,21 +53,21 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
   return (
     <div className="wrap py-12">
-      <header className="border-b border-line pb-8">
-        <p className="eyebrow text-reef-dark">
+      <header className="pb-8">
+        <p className="eyebrow-pill">
           {query.includeSold ? "Shop + sold archive" : "In stock now"}
         </p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em] sm:text-6xl">
           {activeCategory?.name ?? (query.q ? `“${query.q}”` : "Everything we have")}
         </h1>
-        <p className="mt-3 max-w-2xl text-ink-soft">
+        <p className="mt-4 max-w-2xl text-lg text-ink-soft">
           {activeCategory?.blurb ??
             "Single-piece inventory, measured by hand. Filter it down, then move fast — there is only ever one of each."}
         </p>
       </header>
 
-      <div className="grid gap-10 pt-8 lg:grid-cols-[17rem_1fr]">
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+      <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
+        <aside className="lg:sticky lg:top-44 lg:self-start">
           <ShopFilters
             categories={categories}
             counts={counts}
@@ -87,17 +87,17 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           </div>
 
           {result.items.length === 0 ? (
-            <div className="border border-line bg-paper-dim/60 px-6 py-20 text-center">
-              <h2 className="font-display text-2xl font-bold">Nothing matches that</h2>
+            <div className="panel px-6 py-20 text-center">
+              <h2 className="font-display text-3xl font-extrabold tracking-tight">Nothing matches that</h2>
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
                 Our stock turns over weekly, so try a looser filter — or tell us
                 what you are hunting for and we will watch for it.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link href="/shop" className="bg-ink px-5 py-3 text-sm font-semibold text-paper uppercase">
+                <Link href="/shop" className="btn btn-ink">
                   Clear filters
                 </Link>
-                <Link href="/contact" className="border border-ink px-5 py-3 text-sm font-semibold uppercase">
+                <Link href="/contact" className="btn btn-ghost">
                   Send a wishlist
                 </Link>
               </div>
@@ -111,24 +111,24 @@ export default async function ShopPage(props: PageProps<"/shop">) {
           )}
 
           {result.pages > 1 && (
-            <nav className="mt-14 flex items-center justify-between border-t border-line pt-6" aria-label="Pagination">
+            <nav className="mt-14 flex items-center justify-between" aria-label="Pagination">
               {result.page > 1 ? (
-                <Link href={pageHref(result.page - 1)} className="text-sm font-semibold underline hover:text-reef-dark">
+                <Link href={pageHref(result.page - 1)} className="text-sm font-semibold underline">
                   ← Previous
                 </Link>
               ) : (
                 <span className="text-sm text-ink-faint">← Previous</span>
               )}
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 {Array.from({ length: result.pages }, (_, i) => i + 1).map((n) => (
                   <Link
                     key={n}
                     href={pageHref(n)}
-                    aria-current={n === result.page}
-                    className={`flex h-9 w-9 items-center justify-center text-sm ${
+                    aria-current={n === result.page ? "page" : undefined}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm ${
                       n === result.page
                         ? "bg-ink font-semibold text-paper"
-                        : "border border-line hover:border-ink"
+                        : "bg-white ring-1 ring-black/10 hover:bg-reef hover:text-white"
                     }`}
                   >
                     {n}
@@ -136,7 +136,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
                 ))}
               </div>
               {result.page < result.pages ? (
-                <Link href={pageHref(result.page + 1)} className="text-sm font-semibold underline hover:text-reef-dark">
+                <Link href={pageHref(result.page + 1)} className="text-sm font-semibold underline">
                   Next →
                 </Link>
               ) : (

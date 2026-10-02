@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { setItemStatus } from "@/lib/actions";
 import { money, shortDate } from "@/lib/format";
 import { adminListItems } from "@/lib/queries";
-import { conditionLabel, STATUSES } from "@/lib/types";
+import { conditionLabel, imageSrc, STATUSES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,8 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
             {status ? ` with status “${status}”` : " across every status"}
           </p>
         </div>
-        <Link href="/admin/items/new" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
-          Add item
+        <Link href="/admin/sellers" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
+          Manage shops
         </Link>
       </header>
 
@@ -53,20 +53,17 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
 
       {items.length === 0 ? (
         <p className="border border-line bg-paper-dim/40 px-5 py-16 text-center text-sm text-ink-soft">
-          Nothing here yet.{" "}
-          <Link href="/admin/items/new" className="underline">
-            Add the first item
-          </Link>
-          .
+          Nothing listed yet — listings are created by sellers in their own
+          dashboards.
         </p>
       ) : (
         <ul className="divide-y divide-line border-y border-line">
           {items.map((item) => (
             <li key={item.id} className="flex flex-wrap items-center gap-4 py-3.5">
               <div className="relative h-20 w-15 shrink-0 bg-paper-dim">
-                {item.images[0] && (
+                {imageSrc(item.images[0]) && (
                   <Image
-                    src={item.images[0].url}
+                    src={imageSrc(item.images[0])!}
                     alt=""
                     fill
                     sizes="60px"
@@ -76,12 +73,17 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
               </div>
 
               <div className="min-w-50 flex-1">
-                <Link
-                  href={`/admin/items/${item.id}`}
-                  className="font-medium hover:text-reef-dark"
-                >
+                <Link href={`/item/${item.slug}`} className="font-medium hover:text-reef-dark">
                   {item.title}
                 </Link>
+                {item.seller_handle && (
+                  <Link
+                    href={`/shop/${item.seller_handle}`}
+                    className="ml-2 text-xs font-semibold text-reef-dark hover:underline"
+                  >
+                    {item.seller_shop_name}
+                  </Link>
+                )}
                 <p className="mt-0.5 text-xs text-ink-faint">
                   {[
                     item.category_name,

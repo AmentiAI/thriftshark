@@ -39,9 +39,9 @@ export default async function ContactPage(props: PageProps<"/contact">) {
 
   return (
     <div className="wrap py-12">
-      <header className="border-b border-line pb-8">
-        <p className="eyebrow text-reef-dark">Contact</p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight sm:text-5xl">
+      <header className="pb-8">
+        <p className="eyebrow-pill">Contact</p>
+        <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em] sm:text-6xl">
           Ask us anything
         </h1>
         <p className="mt-3 max-w-xl text-ink-soft">
@@ -71,9 +71,9 @@ export default async function ContactPage(props: PageProps<"/contact">) {
 
           <div>
             <h2 className="eyebrow text-ink-soft">Common questions</h2>
-            <dl className="mt-4 divide-y divide-line border-y border-line">
+            <dl className="mt-4 space-y-3">
               {FAQ.map((entry) => (
-                <div key={entry.q} className="py-4">
+                <div key={entry.q} className="rounded-2xl bg-white p-4 ring-1 ring-black/5">
                   <dt className="font-semibold">{entry.q}</dt>
                   <dd className="mt-1.5 text-sm leading-relaxed text-ink-soft">{entry.a}</dd>
                 </div>

@@ -11,7 +11,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase"
+          className="mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase"
         >
           Password
         </label>
@@ -22,17 +22,17 @@ export function LoginForm() {
           required
           autoFocus
           autoComplete="current-password"
-          className="w-full border border-line bg-paper px-3.5 py-3 text-sm focus:border-ink focus:outline-none"
+          className="field"
         />
       </div>
 
       {state?.error && (
-        <p className="border-l-4 border-coral bg-coral/10 px-4 py-3 text-sm">{state.error}</p>
+        <p className="rounded-2xl bg-coral/10 px-4 py-3 text-sm">{state.error}</p>
       )}
 
       <button
         disabled={pending}
-        className="w-full bg-ink px-6 py-3.5 text-sm font-semibold tracking-wide text-paper uppercase disabled:opacity-60"
+        className="btn btn-ink w-full disabled:opacity-60"
       >
         {pending ? "Checking…" : "Log in"}
       </button>

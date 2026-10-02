@@ -29,9 +29,6 @@ const SORTS = [
   ["title", "A–Z"],
 ];
 
-const field =
-  "w-full border border-line bg-paper px-3 py-2.5 text-sm focus:border-ink focus:outline-none";
-
 export function ShopFilters({ categories, counts, sizes, brands, active, total }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const submit = () => formRef.current?.requestSubmit();
@@ -40,29 +37,27 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
   );
 
   return (
-    <Form ref={formRef} action="/shop" className="space-y-7">
+    <Form ref={formRef} action="/shop" className="panel space-y-7 p-5 sm:p-6">
       <div>
-        <label htmlFor="q" className="eyebrow mb-2 block text-ink-soft">
+        <label htmlFor="q" className="eyebrow mb-2 block text-ink-faint">
           Search
         </label>
-        <div className="flex">
+        <div className="flex gap-2">
           <input
             id="q"
             name="q"
             defaultValue={active.q ?? ""}
             placeholder="Levi's, flannel, size 9…"
-            className={field}
+            className="field"
           />
-          <button className="shrink-0 bg-ink px-4 text-sm font-semibold text-paper">
-            Go
-          </button>
+          <button className="btn btn-ink shrink-0 !px-4 !py-2">Go</button>
         </div>
       </div>
 
       <fieldset>
-        <legend className="eyebrow mb-2 text-ink-soft">Category</legend>
-        <div className="space-y-1.5">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <legend className="eyebrow mb-3 text-ink-faint">Category</legend>
+        <div className="space-y-1">
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm hover:bg-paper-dim">
             <input
               type="radio"
               name="category"
@@ -75,7 +70,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
             <span className="ml-auto text-xs text-ink-faint">{total}</span>
           </label>
           {categories.map((c) => (
-            <label key={c.slug} className="flex cursor-pointer items-center gap-2 text-sm">
+            <label key={c.slug} className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-1.5 text-sm hover:bg-paper-dim">
               <input
                 type="radio"
                 name="category"
@@ -93,7 +88,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="size" className="eyebrow mb-2 block text-ink-soft">
+          <label htmlFor="size" className="eyebrow mb-2 block text-ink-faint">
             Size
           </label>
           <select
@@ -101,7 +96,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
             name="size"
             defaultValue={active.size ?? ""}
             onChange={submit}
-            className={field}
+            className="field"
           >
             <option value="">Any size</option>
             {sizes.map((s) => (
@@ -112,7 +107,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
           </select>
         </div>
         <div>
-          <label htmlFor="condition" className="eyebrow mb-2 block text-ink-soft">
+          <label htmlFor="condition" className="eyebrow mb-2 block text-ink-faint">
             Condition
           </label>
           <select
@@ -120,7 +115,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
             name="condition"
             defaultValue={active.condition ?? ""}
             onChange={submit}
-            className={field}
+            className="field"
           >
             <option value="">Any condition</option>
             {CONDITIONS.map((c) => (
@@ -133,7 +128,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
       </div>
 
       <div>
-        <label htmlFor="brand" className="eyebrow mb-2 block text-ink-soft">
+        <label htmlFor="brand" className="eyebrow mb-2 block text-ink-faint">
           Brand
         </label>
         <select
@@ -141,7 +136,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
           name="brand"
           defaultValue={active.brand ?? ""}
           onChange={submit}
-          className={field}
+          className="field"
         >
           <option value="">Any brand</option>
           {brands.map((b) => (
@@ -153,7 +148,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
       </div>
 
       <div>
-        <label htmlFor="sort" className="eyebrow mb-2 block text-ink-soft">
+        <label htmlFor="sort" className="eyebrow mb-2 block text-ink-faint">
           Sort
         </label>
         <select
@@ -161,7 +156,7 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
           name="sort"
           defaultValue={active.sort ?? "newest"}
           onChange={submit}
-          className={field}
+          className="field"
         >
           {SORTS.map(([value, label]) => (
             <option key={value} value={value}>
@@ -184,19 +179,13 @@ export function ShopFilters({ categories, counts, sizes, brands, active, total }
       </label>
 
       {hasFilters && (
-        <Link
-          href="/shop"
-          className="inline-block text-sm text-ink-soft underline hover:text-reef-dark"
-        >
+        <Link href="/shop" className="inline-block text-sm font-semibold underline">
           Clear all filters
         </Link>
       )}
 
-      {/* Submit target for browsers without JS. */}
       <noscript>
-        <button className="w-full bg-ink px-4 py-3 text-sm font-semibold text-paper uppercase">
-          Apply filters
-        </button>
+        <button className="btn btn-ink w-full">Apply filters</button>
       </noscript>
     </Form>
   );

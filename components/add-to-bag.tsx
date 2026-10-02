@@ -9,15 +9,12 @@ export function AddToBag({ id, soldOut }: { id: number; soldOut: boolean }) {
   if (soldOut) {
     return (
       <div className="space-y-3">
-        <button
-          disabled
-          className="w-full cursor-not-allowed border border-line bg-paper-dim px-6 py-4 text-sm font-semibold tracking-wide text-ink-faint uppercase"
-        >
+        <button disabled className="btn w-full cursor-not-allowed bg-paper-dim text-ink-faint">
           Sold — gone for good
         </button>
         <p className="text-sm text-ink-soft">
           Every piece here is one of one.{" "}
-          <Link href="/shop" className="underline hover:text-reef-dark">
+          <Link href="/shop" className="font-semibold underline">
             See what is still swimming
           </Link>
           .
@@ -31,17 +28,11 @@ export function AddToBag({ id, soldOut }: { id: number; soldOut: boolean }) {
   return (
     <div className="space-y-3">
       {inBag ? (
-        <Link
-          href="/cart"
-          className="block w-full border border-ink bg-paper px-6 py-4 text-center text-sm font-semibold tracking-wide text-ink uppercase transition hover:bg-ink hover:text-paper"
-        >
+        <Link href="/cart" className="btn btn-ghost w-full">
           In your bag — review it
         </Link>
       ) : (
-        <button
-          onClick={() => add(id)}
-          className="w-full bg-ink px-6 py-4 text-sm font-semibold tracking-wide text-paper uppercase transition hover:bg-reef-dark"
-        >
+        <button onClick={() => add(id)} className="btn btn-ink w-full">
           Add to bag
         </button>
       )}

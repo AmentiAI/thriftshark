@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { sql } from "@/lib/db";
 
+// Rendered per request: a build should never fail because the database is
+// briefly unreachable.
+export const dynamic = "force-dynamic";
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -29,5 +33,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 }
-
-export const revalidate = 3600;

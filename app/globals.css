@@ -1,22 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  /* Thrift Shark: deep water navy, warm paper, a cold cyan edge. */
-  --color-ink: #0c1b2a;
-  --color-ink-soft: #3b5168;
-  --color-ink-faint: #7b8da1;
-  --color-paper: #f8f5ef;
-  --color-paper-dim: #efeae1;
-  --color-line: #ded6c9;
-  --color-reef: #17a2b8;
-  --color-reef-dark: #0e7d8f;
-  --color-coral: #e4573d;
-  --color-kelp: #2f6b4f;
+  /* Thrift Sharks logo: ocean navy, electric blue, water cyan, chain gold. */
+  --color-ink: #07182c;
+  --color-ink-soft: #3a4e68;
+  --color-ink-faint: #6a7e96;
+  --color-paper: #f4f8fc;
+  --color-paper-dim: #e5eef8;
+  --color-line: #d3e1f0;
+  --color-reef: #0084ff;
+  --color-reef-dark: #0057b8;
+  --color-foam: #3ec6ff;
+  --color-gold: #e8b423;
+  --color-coral: #e31c3d;
+  --color-blood: #7a0c1e;
+  --color-kelp: #128a4a;
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), Georgia, serif;
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 2px;
+  --radius-card: 1.5rem;
 }
 
 @layer base {
@@ -26,41 +29,380 @@
 
   body {
     background-color: var(--color-paper);
+    background-image:
+      radial-gradient(900px 420px at 100% -10%, rgb(0 132 255 / 0.18), transparent 60%),
+      radial-gradient(700px 380px at -10% 20%, rgb(62 198 255 / 0.16), transparent 55%);
+    background-attachment: fixed;
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
+    background-color: var(--color-reef);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    border-radius: 1rem;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    padding: 0.95rem 1.45rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn:disabled {
+    transform: none;
+    opacity: 0.55;
+  }
+
+  .btn-ink {
     background-color: var(--color-ink);
     color: var(--color-paper);
   }
 
-  :focus-visible {
-    outline: 2px solid var(--color-reef-dark);
-    outline-offset: 2px;
+  .btn-ink:hover {
+    background-color: var(--color-reef);
+    color: #fff;
+  }
+
+  .btn-lime {
+    background-color: var(--color-reef);
+    color: #fff;
+  }
+
+  .btn-lime:hover {
+    background-color: var(--color-gold);
+    color: var(--color-ink);
+  }
+
+  .btn-ghost {
+    border: 1px solid color-mix(in srgb, var(--color-ink) 16%, transparent);
+    background-color: #fff;
+    color: var(--color-ink);
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--color-ink);
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .btn-ghost-light {
+    border: 1px solid rgb(255 255 255 / 0.28);
+    color: var(--color-paper);
+  }
+
+  .btn-ghost-light:hover {
+    border-color: var(--color-reef);
+    background-color: var(--color-reef);
+    color: #fff;
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 1rem;
+    border: 1px solid var(--color-line);
+    background-color: #fff;
+    padding: 0.8rem 1rem;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .field:focus {
+    border-color: var(--color-ink);
+    box-shadow: 0 0 0 4px rgb(0 132 255 / 0.28);
+  }
+
+  .panel {
+    border-radius: 1.75rem;
+    border: 1px solid var(--color-line);
+    background-color: #fff;
+    box-shadow: 0 24px 60px -36px rgb(0 0 0 / 0.45);
+  }
+
+  .eyebrow-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    background-color: var(--color-reef);
+    padding: 0.35rem 0.7rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fff;
   }
 }
 
 @utility wrap {
   margin-inline: auto;
   width: 100%;
-  max-width: 76rem;
-  padding-inline: 1rem;
+  max-width: 80rem;
+  padding-inline: 1.25rem;
 }
 
 @utility eyebrow {
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
-/* Diagonal hatch used behind the hero and footer. */
-@utility hatch {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgb(255 255 255 / 0.05) 0 1px,
-    transparent 1px 7px
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 32s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion layer. Everything here animates transform/opacity only, and every
+   animation is switched off under prefers-reduced-motion at the bottom.
+   --------------------------------------------------------------------------- */
+
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(0, -18px, 0) rotate(-1.5deg); }
+}
+
+@keyframes drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(6%, -8%, 0) scale(1.12); }
+  66%  { transform: translate3d(-5%, 6%, 0) scale(0.95); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.85); opacity: 0.8; }
+  70%  { transform: scale(1.6);  opacity: 0; }
+  100% { transform: scale(1.6);  opacity: 0; }
+}
+
+@keyframes swim {
+  0%   { transform: translateX(-12%) rotate(-3deg); }
+  50%  { transform: translateX(12%) rotate(3deg); }
+  100% { transform: translateX(-12%) rotate(-3deg); }
+}
+
+/* Scroll reveal: hidden until <Reveal> adds .is-in. */
+@utility reveal {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+@utility reveal-left {
+  opacity: 0;
+  transform: translate3d(-32px, 0, 0);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+@utility reveal-scale {
+  opacity: 0;
+  transform: scale(0.94);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.is-in {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Infinite marquee. The track holds two copies of its children. */
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-left var(--marquee-duration, 42s) linear infinite;
+}
+
+.marquee-track-reverse {
+  animation-name: marquee-right;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Ambient background blobs behind dark sections. */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  animation: drift var(--blob-duration, 26s) ease-in-out infinite;
+  will-change: transform;
+}
+
+.float-slow {
+  animation: float-slow 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+.swim {
+  animation: swim 9s ease-in-out infinite;
+}
+
+/* Light sweep across a button or card. */
+.sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.sheen:hover::after {
+  animation: shimmer 900ms ease-out;
+}
+
+/* Live dot for the "just listed" feed. */
+.live-dot {
+  position: relative;
+}
+
+.live-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-color: currentColor;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* Pointer-tracked spotlight, fed by --x/--y from <Spotlight>. */
+.spotlight {
+  background-image: radial-gradient(
+    420px circle at var(--x, 50%) var(--y, 0%),
+    rgb(0 132 255 / 0.28),
+    transparent 65%
   );
+  transition: opacity 300ms ease;
+}
+
+/* Tilt card, fed by --rx/--ry from <TiltCard>. */
+.tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform-style: preserve-3d;
+}
+
+.underline-grow {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 2px;
+  transition: background-size 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .underline-grow,
+.underline-grow:hover {
+  background-size: 100% 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .blob,
+  .float-slow,
+  .swim,
+  .live-dot::before,
+  .sheen:hover::after {
+    animation: none !important;
+  }
+
+  .reveal,
+  .reveal-left,
+  .reveal-scale {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .tilt {
+    transform: none;
+  }
 }

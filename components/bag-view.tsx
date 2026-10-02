@@ -8,6 +8,7 @@ import { money } from "@/lib/format";
 import {
   conditionLabel,
   FREE_SHIPPING_THRESHOLD_CENTS,
+  imageSrc,
   shippingFor,
   type Item,
 } from "@/lib/types";
@@ -65,15 +66,15 @@ export function BagView() {
 
   if (!items || items.length === 0) {
     return (
-      <div className="border border-line bg-paper-dim/60 px-6 py-20 text-center">
-        <h2 className="font-display text-2xl font-bold">Your bag is empty</h2>
+      <div className="panel px-6 py-20 text-center">
+        <h2 className="font-display text-3xl font-extrabold tracking-tight">Your bag is empty</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
           Nothing in here yet. The rack restocks every Thursday and the good
           pieces rarely last the weekend.
         </p>
         <Link
           href="/shop"
-          className="mt-6 inline-block bg-ink px-6 py-3.5 text-sm font-semibold tracking-wide text-paper uppercase"
+          className="btn btn-ink mt-6"
         >
           Start digging
         </Link>
@@ -83,26 +84,26 @@ export function BagView() {
 
   return (
     <div className="grid gap-12 lg:grid-cols-[1fr_22rem]">
-      <ul className="divide-y divide-line border-y border-line">
+      <ul className="panel divide-y divide-line px-5">
         {items.map((item) => {
           const sold = item.status !== "available";
           return (
             <li key={item.id} className="flex gap-4 py-5">
-              <Link href={`/item/${item.slug}`} className="relative h-28 w-21 shrink-0 bg-paper-dim">
-                {item.images[0] && (
+              <Link href={`/item/${item.slug}`} className="relative h-28 w-21 shrink-0 overflow-hidden rounded-2xl bg-paper-dim">
+                {imageSrc(item.images[0]) && (
                   <Image
-                    src={item.images[0].url}
+                    src={imageSrc(item.images[0])!}
                     alt={item.images[0].alt ?? item.title}
                     fill
                     sizes="96px"
-                    className={`object-cover ${sold ? "opacity-50 grayscale" : ""}`}
+                    className={`object-contain bg-white p-1 ${sold ? "opacity-50 grayscale" : ""}`}
                   />
                 )}
               </Link>
 
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex justify-between gap-4">
-                  <Link href={`/item/${item.slug}`} className="font-display font-semibold hover:text-reef-dark">
+                  <Link href={`/item/${item.slug}`} className="font-display font-bold tracking-tight hover:underline">
                     {item.title}
                   </Link>
                   <p className="shrink-0 font-semibold">{money(item.price_cents)}</p>
@@ -129,8 +130,8 @@ export function BagView() {
         })}
       </ul>
 
-      <aside className="lg:sticky lg:top-28 lg:self-start">
-        <div className="border border-line bg-paper-dim/50 p-6">
+      <aside className="lg:sticky lg:top-44 lg:self-start">
+        <div className="panel p-6">
           <h2 className="font-display text-lg font-bold">Summary</h2>
 
           <dl className="mt-5 space-y-2.5 text-sm">
@@ -151,13 +152,13 @@ export function BagView() {
           </dl>
 
           {toFreeShipping > 0 && available.length > 0 && (
-            <p className="mt-4 bg-reef/15 px-3 py-2.5 text-xs text-ink-soft">
+            <p className="mt-4 rounded-2xl bg-reef px-3 py-2.5 text-xs font-medium text-white">
               {money(toFreeShipping)} more and shipping is on us.
             </p>
           )}
 
           {unavailable.length > 0 && (
-            <p className="mt-4 bg-coral/10 px-3 py-2.5 text-xs text-ink-soft">
+            <p className="mt-4 rounded-2xl bg-coral/10 px-3 py-2.5 text-xs text-ink-soft">
               Remove the sold {unavailable.length === 1 ? "piece" : "pieces"} above
               to check out.
             </p>
@@ -166,9 +167,9 @@ export function BagView() {
           <Link
             href={available.length > 0 && unavailable.length === 0 ? "/checkout" : "/cart"}
             aria-disabled={available.length === 0 || unavailable.length > 0}
-            className={`mt-6 block px-6 py-4 text-center text-sm font-semibold tracking-wide uppercase transition ${
+            className={`btn mt-6 w-full ${
               available.length > 0 && unavailable.length === 0
-                ? "bg-ink text-paper hover:bg-reef-dark"
+                ? "btn-ink"
                 : "pointer-events-none bg-paper-dim text-ink-faint"
             }`}
           >
@@ -177,7 +178,7 @@ export function BagView() {
 
           <Link
             href="/shop"
-            className="mt-3 block text-center text-sm text-ink-soft underline hover:text-reef-dark"
+            className="mt-3 block text-center text-sm font-semibold underline"
           >
             Keep looking
           </Link>

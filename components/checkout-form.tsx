@@ -6,11 +6,9 @@ import { useActionState, useState } from "react";
 import { useBagItems } from "@/components/bag-view";
 import { money } from "@/lib/format";
 import { placeOrder, type FormState } from "@/lib/actions";
-import { FREE_SHIPPING_THRESHOLD_CENTS, shippingFor } from "@/lib/types";
+import { FREE_SHIPPING_THRESHOLD_CENTS, imageSrc, shippingFor } from "@/lib/types";
 
-const field =
-  "w-full border border-line bg-paper px-3.5 py-3 text-sm focus:border-ink focus:outline-none";
-const label = "mb-1.5 block text-xs font-semibold tracking-wide text-ink-soft uppercase";
+const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase";
 
 export function CheckoutForm() {
   const { items, available, unavailable, subtotal, loading } = useBagItems();
@@ -26,12 +24,12 @@ export function CheckoutForm() {
 
   if (!items || available.length === 0) {
     return (
-      <div className="border border-line bg-paper-dim/60 px-6 py-20 text-center">
-        <h2 className="font-display text-2xl font-bold">Nothing to check out</h2>
+      <div className="panel px-6 py-20 text-center">
+        <h2 className="font-display text-3xl font-extrabold">Nothing to check out</h2>
         <p className="mt-2 text-sm text-ink-soft">Your bag is empty.</p>
         <Link
           href="/shop"
-          className="mt-6 inline-block bg-ink px-6 py-3.5 text-sm font-semibold tracking-wide text-paper uppercase"
+          className="btn btn-ink mt-6"
         >
           Back to the shop
         </Link>
@@ -45,7 +43,7 @@ export function CheckoutForm() {
 
       <div className="space-y-10">
         {unavailable.length > 0 && (
-          <p className="border-l-4 border-coral bg-coral/10 px-4 py-3 text-sm">
+          <p className="rounded-2xl bg-coral/10 px-4 py-3 text-sm">
             {unavailable.length} piece{unavailable.length === 1 ? "" : "s"} sold while
             you were deciding and {unavailable.length === 1 ? "has" : "have"} been left
             out of this order.{" "}
@@ -61,15 +59,15 @@ export function CheckoutForm() {
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div>
               <label className={label} htmlFor="customer_name">Full name</label>
-              <input id="customer_name" name="customer_name" required autoComplete="name" className={field} />
+              <input id="customer_name" name="customer_name" required autoComplete="name" className="field" />
             </div>
             <div>
               <label className={label} htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" required autoComplete="email" className={field} />
+              <input id="email" name="email" type="email" required autoComplete="email" className="field" />
             </div>
             <div className="sm:col-span-2">
               <label className={label} htmlFor="phone">Phone (optional)</label>
-              <input id="phone" name="phone" autoComplete="tel" className={field} />
+              <input id="phone" name="phone" autoComplete="tel" className="field" />
             </div>
           </div>
         </fieldset>
@@ -83,8 +81,8 @@ export function CheckoutForm() {
             ].map(([value, title, note]) => (
               <label
                 key={value}
-                className={`cursor-pointer border p-4 transition ${
-                  fulfilment === value ? "border-ink bg-paper-dim/60" : "border-line hover:border-ink-faint"
+                className={`cursor-pointer rounded-2xl border p-4 transition ${
+                  fulfilment === value ? "border-ink bg-reef/40" : "border-line bg-white hover:border-ink"
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -110,27 +108,27 @@ export function CheckoutForm() {
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={label} htmlFor="address_line1">Street address</label>
-                <input id="address_line1" name="address_line1" autoComplete="address-line1" className={field} />
+                <input id="address_line1" name="address_line1" autoComplete="address-line1" className="field" />
               </div>
               <div className="sm:col-span-2">
                 <label className={label} htmlFor="address_line2">Apartment, unit (optional)</label>
-                <input id="address_line2" name="address_line2" autoComplete="address-line2" className={field} />
+                <input id="address_line2" name="address_line2" autoComplete="address-line2" className="field" />
               </div>
               <div>
                 <label className={label} htmlFor="city">City</label>
-                <input id="city" name="city" autoComplete="address-level2" className={field} />
+                <input id="city" name="city" autoComplete="address-level2" className="field" />
               </div>
               <div>
                 <label className={label} htmlFor="region">State / region</label>
-                <input id="region" name="region" autoComplete="address-level1" className={field} />
+                <input id="region" name="region" autoComplete="address-level1" className="field" />
               </div>
               <div>
                 <label className={label} htmlFor="postal_code">Postcode</label>
-                <input id="postal_code" name="postal_code" autoComplete="postal-code" className={field} />
+                <input id="postal_code" name="postal_code" autoComplete="postal-code" className="field" />
               </div>
               <div>
                 <label className={label} htmlFor="country">Country</label>
-                <input id="country" name="country" defaultValue="US" autoComplete="country-name" className={field} />
+                <input id="country" name="country" defaultValue="US" autoComplete="country-name" className="field" />
               </div>
             </div>
           </fieldset>
@@ -144,13 +142,13 @@ export function CheckoutForm() {
             name="notes"
             rows={3}
             placeholder="Gift wrap, delivery instructions, a question about fit…"
-            className={`${field} mt-5`}
+            className="field mt-5"
           />
         </fieldset>
       </div>
 
-      <aside className="lg:sticky lg:top-28 lg:self-start">
-        <div className="border border-line bg-paper-dim/50 p-6">
+      <aside className="lg:sticky lg:top-44 lg:self-start">
+        <div className="panel p-6">
           <h2 className="font-display text-lg font-bold">
             {available.length} {available.length === 1 ? "piece" : "pieces"}
           </h2>
@@ -158,14 +156,14 @@ export function CheckoutForm() {
           <ul className="mt-5 space-y-4">
             {available.map((item) => (
               <li key={item.id} className="flex gap-3">
-                <div className="relative h-16 w-12 shrink-0 bg-paper-dim">
-                  {item.images[0] && (
+                <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-xl bg-paper-dim">
+                  {imageSrc(item.images[0]) && (
                     <Image
-                      src={item.images[0].url}
+                      src={imageSrc(item.images[0])!}
                       alt=""
                       fill
                       sizes="48px"
-                      className="object-cover"
+                      className="object-contain bg-white p-0.5"
                     />
                   )}
                 </div>
@@ -196,14 +194,14 @@ export function CheckoutForm() {
           </dl>
 
           {state?.error && (
-            <p className="mt-5 border-l-4 border-coral bg-coral/10 px-3 py-2.5 text-sm">
+            <p className="mt-5 rounded-2xl bg-coral/10 px-3 py-2.5 text-sm">
               {state.error}
             </p>
           )}
 
           <button
             disabled={pending}
-            className="mt-6 w-full bg-ink px-6 py-4 text-sm font-semibold tracking-wide text-paper uppercase transition hover:bg-reef-dark disabled:opacity-60"
+            className="btn btn-ink mt-6 w-full disabled:opacity-60"
           >
             {pending ? "Reserving…" : "Place order"}
           </button>

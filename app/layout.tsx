@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { Outfit, Syne } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-const body = DM_Sans({
+const body = Outfit({
   variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
 });
 
-const display = Fraunces({
+const display = Syne({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
@@ -21,15 +21,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Thrift Shark — hand-picked secondhand clothing",
+    default: "Thrift Shark — open a shop, sell your merch",
     template: "%s · Thrift Shark",
   },
   description:
-    "A small secondhand shop with a big appetite. One-of-one vintage clothing, measured by hand, photographed honestly, shipped in two days.",
+    "A marketplace for one-of-one secondhand. Open your own shop in minutes, list your merch, and get paid straight to Cash App.",
   openGraph: {
-    title: "Thrift Shark — hand-picked secondhand clothing",
+    title: "Thrift Shark — open a shop, sell your merch",
     description:
-      "One-of-one vintage clothing, measured by hand and photographed honestly.",
+      "A marketplace for one-of-one secondhand. Your shop, your logo, paid to Cash App.",
     type: "website",
     url: siteUrl,
   },

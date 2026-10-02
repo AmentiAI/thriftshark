@@ -16,8 +16,10 @@ export default async function LoginPage() {
 
   return (
     <div className="wrap max-w-sm py-24">
-      <SharkMark className="h-10 w-10 text-reef-dark" />
-      <h1 className="mt-5 font-display text-3xl font-bold tracking-tight">Staff login</h1>
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ink text-reef">
+        <SharkMark className="h-7 w-7" />
+      </span>
+      <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight">Staff login</h1>
       <p className="mt-2 text-sm text-ink-soft">
         Shop staff only. Everything behind here edits the live storefront.
       </p>

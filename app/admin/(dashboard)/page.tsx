@@ -12,6 +12,7 @@ export default async function AdminDashboard() {
   ]);
 
   const tiles = [
+    ["Shops", String(stats.shops), "/admin/sellers"],
     ["In stock", String(stats.available), "/admin/items"],
     ["Sold", String(stats.sold), "/admin/items?status=sold"],
     ["Drafts", String(stats.drafts), "/admin/items?status=draft"],
@@ -124,8 +125,8 @@ export default async function AdminDashboard() {
       <section className="border border-line bg-paper-dim/40 p-6">
         <h2 className="font-display text-lg font-bold">Quick actions</h2>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/admin/items/new" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
-            Add an item
+          <Link href="/admin/sellers" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
+            Manage shops
           </Link>
           <Link href="/admin/items?status=draft" className="border border-ink px-5 py-3 text-sm font-semibold tracking-wide uppercase">
             Finish drafts

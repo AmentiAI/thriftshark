@@ -19,12 +19,9 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="you@email.com"
-          className="min-w-0 flex-1 border border-paper/30 bg-transparent px-4 py-3 text-sm text-paper placeholder:text-paper/50 focus:border-reef focus:outline-none"
+          className="min-w-0 flex-1 rounded-full border border-paper/20 bg-white/5 px-5 py-3.5 text-sm text-paper placeholder:text-paper/45 focus:border-reef focus:outline-none"
         />
-        <button
-          disabled={pending}
-          className="bg-reef px-5 py-3 text-sm font-semibold tracking-wide text-ink uppercase transition hover:bg-paper disabled:opacity-60"
-        >
+        <button disabled={pending} className="btn btn-lime disabled:opacity-60">
           {pending ? "Adding…" : "Notify me"}
         </button>
       </div>

@@ -30,23 +30,22 @@ const STEPS = [
 export default function AboutPage() {
   return (
     <>
-      <section className="bg-ink text-paper">
-        <div className="hatch">
-          <div className="wrap max-w-3xl py-20">
-            <p className="eyebrow flex items-center gap-2 text-reef">
-              <SharkMark className="h-4 w-4" />
-              About Thrift Shark
-            </p>
-            <h1 className="mt-5 font-display text-5xl leading-[1.02] font-bold tracking-tight">
-              Someone has to go through all of it.
-            </h1>
-            <p className="mt-6 text-lg leading-relaxed text-paper/75">
-              Thrift Shark started in 2019 as two people, a van and a storage
-              unit full of other people&apos;s decisions. The idea has not changed:
-              do the digging so that everything on the rack is already worth your
-              time.
-            </p>
-          </div>
+      <section className="relative overflow-hidden bg-ink text-paper">
+        <div className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-reef/25 blur-3xl" />
+        <div className="wrap relative max-w-3xl py-20">
+          <p className="eyebrow-pill">
+            <SharkMark className="h-3.5 w-3.5" />
+            About Thrift Shark
+          </p>
+          <h1 className="mt-6 font-display text-5xl leading-[0.92] font-extrabold tracking-[-0.05em] sm:text-7xl">
+            Someone has to go through all of it.
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-paper/70">
+            Thrift Shark started in 2019 as two people, a van and a storage
+            unit full of other people&apos;s decisions. The idea has not changed:
+            do the digging so that everything on the rack is already worth your
+            time.
+          </p>
         </div>
       </section>
 
@@ -74,28 +73,28 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-paper-dim py-16">
+      <section className="bg-ink py-16 text-paper">
         <div className="wrap">
-          <h2 className="font-display text-3xl font-bold tracking-tight">
+          <h2 className="font-display text-4xl font-extrabold tracking-[-0.04em]">
             Four steps, every single piece
           </h2>
-          <div className="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
-              <div key={step.title} className="border-t-2 border-ink pt-5">
-                <p className="font-display text-sm font-bold text-reef-dark">
-                  Step {i + 1}
+              <div key={step.title} className="rounded-[1.6rem] bg-white/6 p-6 ring-1 ring-white/10">
+                <p className="font-display text-4xl font-extrabold text-reef">
+                  0{i + 1}
                 </p>
-                <h3 className="mt-2 font-display text-xl font-bold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{step.body}</p>
+                <h3 className="mt-4 font-display text-xl font-bold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-paper/65">{step.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="wrap grid gap-10 py-16 sm:grid-cols-2">
-        <div>
-          <h2 className="font-display text-2xl font-bold">Come in person</h2>
+      <section className="wrap grid gap-4 py-16 sm:grid-cols-2">
+        <div className="panel p-8">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight">Come in person</h2>
           <p className="mt-3 leading-relaxed text-ink-soft">
             218 Harbour Road. Open Wednesday to Sunday, 11am to 7pm. Roughly a
             third of our stock never makes it online, so the rail by the window
@@ -106,17 +105,17 @@ export default function AboutPage() {
             &ldquo;collect in store&rdquo; at checkout.
           </p>
         </div>
-        <div>
-          <h2 className="font-display text-2xl font-bold">Work with us</h2>
-          <p className="mt-3 leading-relaxed text-ink-soft">
+        <div className="panel bg-ink p-8 text-paper">
+          <h2 className="font-display text-3xl font-extrabold tracking-tight">Work with us</h2>
+          <p className="mt-3 leading-relaxed text-paper/70">
             We buy and trade in good secondhand clothing every week, and we take
             on the occasional whole-wardrobe clear-out.
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href="/sell" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/sell" className="btn btn-lime">
               Sell to us
             </Link>
-            <Link href="/contact" className="border border-ink px-5 py-3 text-sm font-semibold tracking-wide uppercase">
+            <Link href="/contact" className="btn btn-ghost-light">
               Get in touch
             </Link>
           </div>

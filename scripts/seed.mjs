@@ -97,13 +97,8 @@ for (const [cat, title, price, compare, brand, size, condition, color, featured,
             now() - (${n} * interval '7 hours'))
     returning id`;
 
-  // Placeholder photography keyed to the slug so each item keeps a stable image.
-  for (let p = 0; p < 3; p++) {
-    await sql`insert into item_images (item_id, url, alt, position)
-              values (${item.id},
-                      ${`https://picsum.photos/seed/${slug}-${p}/900/1200`},
-                      ${`${title} — view ${p + 1}`}, ${p})`;
-  }
+  await sql`insert into item_images (item_id, url, alt, position)
+            values (${item.id}, '/logo.jpg', ${title}, 0)`;
   n++;
 }
 

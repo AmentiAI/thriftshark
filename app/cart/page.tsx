@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 export default function CartPage() {
   return (
     <div className="wrap py-12">
-      <header className="border-b border-line pb-8">
-        <p className="eyebrow text-reef-dark">Step 1 of 2</p>
-        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight">Your bag</h1>
+      <header className="pb-2">
+        <p className="eyebrow-pill">Step 1 of 2</p>
+        <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em]">Your bag</h1>
         <p className="mt-3 max-w-xl text-ink-soft">
           Nothing is reserved until you check out — single-piece inventory means
           first paid, first served.

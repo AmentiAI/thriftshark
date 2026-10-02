@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 const TABS = [
   ["/admin", "Dashboard"],
+  ["/admin/sellers", "Shops"],
   ["/admin/items", "Inventory"],
-  ["/admin/items/new", "Add item"],
   ["/admin/orders", "Orders"],
   ["/admin/messages", "Messages"],
 ];
@@ -23,15 +23,17 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     <div className="wrap py-10">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
         <div className="flex items-center gap-2.5">
-          <SharkMark className="h-6 w-6 text-reef-dark" />
-          <h1 className="font-display text-xl font-bold">Shop admin</h1>
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-reef">
+            <SharkMark className="h-5 w-5" />
+          </span>
+          <h1 className="font-display text-xl font-extrabold tracking-tight">Shop admin</h1>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-sm text-ink-soft underline hover:text-reef-dark">
+          <Link href="/" className="text-sm font-semibold underline">
             View storefront
           </Link>
           <form action={logout}>
-            <button className="border border-line px-3 py-1.5 text-xs font-semibold tracking-wide uppercase hover:border-ink">
+            <button className="btn btn-ghost !px-4 !py-2 text-xs">
               Log out
             </button>
           </form>

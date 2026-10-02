@@ -1,4 +1,6 @@
-/** Shark fin cutting a waterline — doubles as the favicon mark. */
+import Image from "next/image";
+
+/** Shark fin cutting a waterline — used where the full crest would be too small. */
 export function SharkMark({ className = "h-7 w-7" }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" aria-hidden className={className}>
@@ -18,13 +20,15 @@ export function SharkMark({ className = "h-7 w-7" }: { className?: string }) {
   );
 }
 
-export function Wordmark() {
+export function Wordmark({ className = "h-12 w-auto sm:h-14" }: { className?: string }) {
   return (
-    <span className="flex items-center gap-2">
-      <SharkMark className="h-7 w-7 text-reef" />
-      <span className="font-display text-xl leading-none font-bold tracking-tight">
-        Thrift<span className="text-reef">Shark</span>
-      </span>
-    </span>
+    <Image
+      src="/nav-logo.jpg"
+      alt="Thrift Sharks"
+      width={1024}
+      height={341}
+      priority
+      className={className}
+    />
   );
 }
