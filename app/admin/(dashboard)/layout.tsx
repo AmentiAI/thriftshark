@@ -40,12 +40,12 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
         </div>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto border-b border-line" aria-label="Admin sections">
+      <nav className="scroll-x flex gap-1 border-b border-line" aria-label="Admin sections">
         {TABS.map(([href, label]) => (
           <Link
             key={href}
             href={href}
-            className="-mb-px border-b-2 border-transparent px-4 py-3 text-sm font-medium whitespace-nowrap text-ink-soft hover:border-ink hover:text-ink"
+            className="tap -mb-px flex items-center border-b-2 border-transparent px-4 py-3 text-sm font-medium whitespace-nowrap text-ink-soft hover:border-ink hover:text-ink"
           >
             {label}
           </Link>

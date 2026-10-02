@@ -70,18 +70,19 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
           )}
         </div>
 
-        <div className="relative px-6 pb-7 sm:px-10">
+        <div className="relative px-5 pb-7 sm:px-10">
           <div className="-mt-12 flex flex-wrap items-end justify-between gap-5">
-            <div className="flex items-end gap-4">
+            <div className="flex min-w-0 items-end gap-3 sm:gap-4">
               <div className="rounded-full bg-white p-1.5 ring-1 ring-black/5">
                 <ShopAvatar
                   shopName={seller.shop_name}
                   logoImageId={seller.logo_image_id}
-                  size={88}
+                  size={64}
+                  className="sm:!h-22 sm:!w-22"
                 />
               </div>
-              <div className="pb-1">
-                <h1 className="font-display text-4xl leading-none font-extrabold tracking-[-0.04em] sm:text-5xl">
+              <div className="min-w-0 pb-1">
+                <h1 className="font-display text-3xl leading-none font-extrabold tracking-[-0.04em] break-anywhere sm:text-4xl lg:text-5xl">
                   {seller.shop_name}
                 </h1>
                 <p className="mt-2 text-sm font-semibold text-ink-faint">
@@ -173,7 +174,7 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
             </Link>
           </div>
         ) : (
-          <div className="mt-8 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
             {items.map((item, i) => (
               <ItemCard key={item.id} item={item} priority={i < 4} />
             ))}

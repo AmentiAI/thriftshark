@@ -30,7 +30,7 @@ export default async function AdminOrdersPage() {
       ) : (
         <ul className="space-y-4">
           {orders.map((order) => (
-            <li key={order.id} className="border border-line p-5">
+            <li key={order.id} className="break-anywhere border border-line p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="font-mono text-sm font-semibold">{order.order_number}</p>
@@ -97,7 +97,7 @@ export default async function AdminOrdersPage() {
                     id={`status-${order.id}`}
                     name="status"
                     defaultValue={order.status}
-                    className="border border-line bg-paper px-3 py-2 text-sm capitalize"
+                    className="tap rounded-xl border border-line bg-paper px-3 py-2 capitalize sm:text-sm"
                   >
                     {ORDER_STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -117,7 +117,7 @@ export default async function AdminOrdersPage() {
                     id={`payment-${order.id}`}
                     name="payment_status"
                     defaultValue={order.payment_status}
-                    className="border border-line bg-paper px-3 py-2 text-sm capitalize"
+                    className="tap rounded-xl border border-line bg-paper px-3 py-2 capitalize sm:text-sm"
                   >
                     {PAYMENT_STATUSES.map((s) => (
                       <option key={s} value={s}>

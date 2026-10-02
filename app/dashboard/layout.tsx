@@ -48,14 +48,14 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
       </div>
 
       <nav
-        className="mt-7 flex gap-1.5 overflow-x-auto rounded-full bg-white/80 p-1.5 ring-1 ring-black/5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="scroll-x mt-7 flex gap-1.5 rounded-full bg-white/80 p-1.5 ring-1 ring-black/5"
         aria-label="Dashboard sections"
       >
         {TABS.map(([href, label]) => (
           <Link
             key={href}
             href={href}
-            className="shrink-0 rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap text-ink-soft transition hover:bg-reef/10 hover:text-reef-dark"
+            className="tap flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap text-ink-soft transition hover:bg-reef/10 hover:text-reef-dark"
           >
             {label}
           </Link>

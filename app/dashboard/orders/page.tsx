@@ -43,7 +43,7 @@ export default async function DashboardOrdersPage() {
       ) : (
         <ul className="space-y-4">
           {orders.map((order) => (
-            <li key={order.id} className="panel p-6">
+            <li key={order.id} className="panel break-anywhere p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="font-mono text-sm font-bold">{order.order_number}</p>

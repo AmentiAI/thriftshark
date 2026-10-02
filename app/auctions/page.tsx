@@ -21,7 +21,7 @@ export default async function AuctionsPage(props: PageProps<"/auctions">) {
 
   return (
     <div className="wrap py-12">
-      <header className="relative isolate overflow-hidden rounded-[2rem] bg-ink p-8 text-paper sm:p-12">
+      <header className="relative isolate overflow-hidden rounded-[2rem] bg-ink p-6 text-paper sm:p-12">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <span className="blob -top-24 -right-16 h-96 w-96 bg-coral/30" />
           <span
@@ -35,11 +35,11 @@ export default async function AuctionsPage(props: PageProps<"/auctions">) {
             <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-white" />
             {stats.live} lots live
           </p>
-          <h1 className="mt-5 font-display text-5xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-6xl">
+          <h1 className="mt-5 font-display text-4xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-5xl lg:text-6xl">
             The auction
             <span className="block text-reef">house.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-paper/70">
+          <p className="mt-5 max-w-xl leading-relaxed text-paper/70 sm:text-lg">
             One of one, one chance. Sellers put their best pieces on the clock —
             highest bid when it runs out takes it, and pays the shop straight
             over Cash App.
@@ -99,7 +99,7 @@ export default async function AuctionsPage(props: PageProps<"/auctions">) {
           </div>
         </div>
       ) : (
-        <div className="mt-10 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
           {auctions.map((auction, i) => (
             <Reveal key={auction.id} variant="scale" delay={i * 70}>
               <AuctionCard auction={auction} priority={i < 4} />

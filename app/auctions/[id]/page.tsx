@@ -275,7 +275,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
           <h2 className="font-display text-3xl font-extrabold tracking-tight">
             Also on the block
           </h2>
-          <div className="mt-8 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
             {others.map((other, i) => (
               <Reveal key={other.id} variant="scale" delay={i * 70}>
                 <AuctionCard auction={other} />

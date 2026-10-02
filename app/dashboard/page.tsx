@@ -60,7 +60,7 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
         </section>
       )}
 
-      <section className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {tiles.map(([label, value, href]) => (
           <Link
             key={label}

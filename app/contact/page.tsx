@@ -41,7 +41,7 @@ export default async function ContactPage(props: PageProps<"/contact">) {
     <div className="wrap py-12">
       <header className="pb-8">
         <p className="eyebrow-pill">Contact</p>
-        <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em] sm:text-6xl">
+        <h1 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] sm:mt-5 sm:text-5xl lg:text-6xl">
           Ask us anything
         </h1>
         <p className="mt-3 max-w-xl text-ink-soft">

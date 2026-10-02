@@ -23,9 +23,9 @@ export default async function SignupPage() {
 
   return (
     <div className="wrap grid gap-12 py-12 lg:grid-cols-[1fr_1.1fr] lg:py-16">
-      <div className="rounded-[2rem] bg-ink p-8 text-paper sm:p-10">
+      <div className="order-2 rounded-[2rem] bg-ink p-6 text-paper sm:p-10 lg:order-1">
         <p className="eyebrow-pill">Start selling</p>
-        <h1 className="mt-5 font-display text-5xl leading-[0.9] font-extrabold tracking-[-0.05em]">
+        <h1 className="mt-5 font-display text-4xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-5xl">
           Your shop,
           <span className="block text-reef">your money.</span>
         </h1>
@@ -49,7 +49,7 @@ export default async function SignupPage() {
         </dl>
       </div>
 
-      <div className="panel p-7 sm:p-9">
+      <div className="order-1 panel p-5 sm:p-9 lg:order-2">
         <h2 className="font-display text-2xl font-extrabold tracking-tight">
           Open your shop
         </h2>

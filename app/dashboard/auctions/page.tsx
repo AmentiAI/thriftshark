@@ -48,7 +48,7 @@ export default async function DashboardAuctionsPage() {
                     {src && <Image src={src} alt="" fill sizes="64px" className="object-cover" />}
                   </div>
 
-                  <div className="min-w-48 flex-1">
+                  <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                     <Link
                       href={`/auctions/${auction.id}`}
                       className="font-display font-bold hover:text-reef-dark"
@@ -107,7 +107,7 @@ export default async function DashboardAuctionsPage() {
           <ul className="mt-4 divide-y divide-line border-y border-line">
             {past.map((auction) => (
               <li key={auction.id} className="flex flex-wrap items-center gap-4 py-3.5">
-                <div className="min-w-48 flex-1">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <Link
                     href={`/auctions/${auction.id}`}
                     className="font-semibold hover:text-reef-dark"

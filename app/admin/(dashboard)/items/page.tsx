@@ -72,7 +72,7 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
                 )}
               </div>
 
-              <div className="min-w-50 flex-1">
+              <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                 <Link href={`/item/${item.slug}`} className="font-medium hover:text-reef-dark">
                   {item.title}
                 </Link>
@@ -108,7 +108,7 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
                   id={`status-${item.id}`}
                   name="status"
                   defaultValue={item.status}
-                  className="border border-line bg-paper px-2 py-1.5 text-xs capitalize"
+                  className="tap rounded-xl border border-line bg-paper px-2 py-2 capitalize sm:py-1.5 sm:text-xs"
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>

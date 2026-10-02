@@ -50,7 +50,7 @@ export default async function SellPage() {
             Keep every
             <span className="block text-reef">dollar.</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-paper/70">
+          <p className="mt-6 max-w-xl leading-relaxed text-paper/70 sm:text-lg">
             Open your own storefront, put your logo on it, and list whatever you
             have. Buyers scan your Cash App code and pay you — not us. There is
             no fee and no waiting to be approved.

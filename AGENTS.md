@@ -40,6 +40,24 @@ Postgres. See README.md for the layout and docs/payments.md for the money.
   concurrency-sensitive: see `lib/orders.ts` and `lib/auctions.ts`.
 - Auctions have no scheduler. `settleDueAuctions()` runs from the read path.
 
+## Mobile
+
+Phones are the default case, not an afterthought. When adding UI:
+
+- Form controls must be 16px on phones or iOS zooms the page on focus. Use
+  `.field` (already handles it) and prefix any smaller type with `sm:`.
+- Interactive elements clear 44px on touch — `.btn` does this automatically via
+  `@media (hover: none)`; for anything else add the `tap` class.
+- Fixed tracks in `grid-cols-[...]` are breakpoint-prefixed so they stack.
+- Never put a fixed `min-w-*` on a flex child in a list row; use
+  `min-w-0 basis-full sm:basis-auto`.
+- Anything genuinely wide (a table, a card rail) goes in a `scroll-x` box so it
+  scrolls itself instead of widening the page. `html`/`body` are
+  `overflow-x: clip`.
+- Long strings — emails, handles, shop names — need `break-anywhere`.
+- Product grids are two-up on phones (`grid-cols-2`); text-heavy cards stay
+  one-up.
+
 ## Checks
 
 `npm run lint && npm run typecheck && npm run build` before calling work done.

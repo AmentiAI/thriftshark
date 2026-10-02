@@ -32,10 +32,24 @@
     background-image:
       radial-gradient(900px 420px at 100% -10%, rgb(0 132 255 / 0.18), transparent 60%),
       radial-gradient(700px 380px at -10% 20%, rgb(62 198 255 / 0.16), transparent 55%);
-    background-attachment: fixed;
+    background-attachment: scroll;
+    background-repeat: no-repeat;
     color: var(--color-ink);
     font-family: var(--font-sans);
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Only pin the gradient where it is cheap; iOS repaints fixed layers badly. */
+  @media (width >= 64rem) {
+    body {
+      background-attachment: fixed;
+    }
+  }
+
+  html {
+    overflow-x: clip;
   }
 
   ::selection {
@@ -80,6 +94,13 @@
   .btn:disabled {
     transform: none;
     opacity: 0.55;
+  }
+
+  @media (hover: none) {
+    .btn,
+    .tap {
+      min-height: 2.75rem;
+    }
   }
 
   .btn-ink {
@@ -130,10 +151,18 @@
     border-radius: 1rem;
     border: 1px solid var(--color-line);
     background-color: #fff;
-    padding: 0.8rem 1rem;
-    font-size: 0.875rem;
+    /* 16px on phones: anything smaller makes iOS Safari zoom on focus. */
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
     outline: none;
     transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  @media (width >= 40rem) {
+    .field {
+      padding: 0.8rem 1rem;
+      font-size: 0.875rem;
+    }
   }
 
   .field:focus {
@@ -405,4 +434,23 @@
   .tilt {
     transform: none;
   }
+}
+
+/* A box that scrolls sideways on small screens, so wide tables and rails never
+   widen the page itself. Edges are faded to hint there is more. */
+@utility scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* Keeps a long word or URL from pushing a card wider than the screen. */
+@utility break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }

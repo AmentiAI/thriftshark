@@ -38,7 +38,7 @@ export default async function DashboardMessagesPage() {
           {messages.map((m) => (
             <li
               key={m.id}
-              className={`panel p-6 ${m.handled ? "opacity-70" : "ring-2 ring-reef/30"}`}
+              className={`panel break-anywhere p-5 sm:p-6 ${m.handled ? "opacity-70" : "ring-2 ring-reef/30"}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

@@ -79,7 +79,7 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
                   )}
                 </div>
 
-                <div className="min-w-50 flex-1">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <Link
                     href={`/dashboard/items/${item.id}`}
                     className="font-display font-bold hover:text-reef-dark"
@@ -120,7 +120,7 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
                       id={`status-${item.id}`}
                       name="status"
                       defaultValue={item.status}
-                      className="field !w-auto !py-2 text-xs capitalize"
+                      className="field !w-auto !py-2 capitalize sm:text-xs"
                     >
                       {SELLER_SETTABLE_STATUSES.map((s) => (
                         <option key={s} value={s}>

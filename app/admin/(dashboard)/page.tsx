@@ -27,7 +27,7 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-12">
       <section>
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {tiles.map(([label, value, href]) => (
             <Link
               key={label}
@@ -54,7 +54,8 @@ export default async function AdminDashboard() {
             No orders yet. They will show up here the moment one lands.
           </p>
         ) : (
-          <table className="mt-4 w-full border-collapse text-sm">
+          <div className="scroll-x mt-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[34rem] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line text-left">
                 {["Order", "Customer", "Pieces", "Total", "Status", "Placed"].map((h) => (
@@ -83,6 +84,7 @@ export default async function AdminDashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

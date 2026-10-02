@@ -19,13 +19,13 @@ export default async function SellersPage() {
 
   return (
     <div className="wrap py-12">
-      <header className="rounded-[2rem] bg-ink p-8 text-paper sm:p-12">
+      <header className="rounded-[2rem] bg-ink p-6 text-paper sm:p-12">
         <p className="eyebrow-pill">The shops</p>
-        <h1 className="mt-5 font-display text-5xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-6xl">
+        <h1 className="mt-5 font-display text-4xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-5xl lg:text-6xl">
           {stats.shops} independent
           <span className="block text-reef">sellers.</span>
         </h1>
-        <p className="mt-5 max-w-xl text-lg leading-relaxed text-paper/70">
+        <p className="mt-5 max-w-xl leading-relaxed text-paper/70 sm:text-lg">
           Every shop here is someone&apos;s own. They set their prices, shoot
           their own photos and get paid straight to their Cash App — Thrift
           Shark just brings the buyers.

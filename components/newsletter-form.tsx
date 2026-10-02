@@ -19,7 +19,7 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="you@email.com"
-          className="min-w-0 flex-1 rounded-full border border-paper/20 bg-white/5 px-5 py-3.5 text-sm text-paper placeholder:text-paper/45 focus:border-reef focus:outline-none"
+          className="min-w-0 flex-1 rounded-full border border-paper/20 bg-white/5 px-5 py-3.5 text-base text-paper sm:text-sm placeholder:text-paper/45 focus:border-reef focus:outline-none"
         />
         <button disabled={pending} className="btn btn-lime disabled:opacity-60">
           {pending ? "Adding…" : "Notify me"}

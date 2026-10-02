@@ -184,7 +184,7 @@ export default async function HomePage() {
           </Reveal>
         </div>
 
-        <div className="mt-10 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
           {latest.map((item, i) => (
             <Reveal key={item.id} variant="scale" delay={i * 70}>
               <TiltCard max={5}>
@@ -228,7 +228,7 @@ export default async function HomePage() {
               </Reveal>
             </div>
 
-            <div className="mt-10 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
               {auctions.map((auction, i) => (
                 <Reveal key={auction.id} variant="scale" delay={i * 80}>
                   <AuctionCard auction={auction} />
@@ -331,7 +331,7 @@ export default async function HomePage() {
               Picked out this week
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-x-5 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
             {featured.map((item, i) => (
               <Reveal key={item.id} variant="scale" delay={i * 70}>
                 <TiltCard max={5}>

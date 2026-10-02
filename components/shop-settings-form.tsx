@@ -38,7 +38,7 @@ export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
               logoImageId={seller.logo_image_id}
               size={88}
             />
-            <div className="min-w-56 flex-1">
+            <div className="min-w-0 flex-1 basis-full sm:basis-56">
               <label className={label} htmlFor="logo">
                 {seller.logo_image_id ? "Replace logo" : "Upload logo"}
               </label>

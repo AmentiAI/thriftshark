@@ -32,7 +32,7 @@ export default async function AdminSellersPage() {
           {sellers.map((seller) => (
             <li
               key={seller.id}
-              className={`flex flex-wrap items-center gap-4 rounded-2xl bg-white p-4 ring-1 ${
+              className={`flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 sm:gap-4 sm:p-4 ring-1 ${
                 seller.status === "suspended" ? "ring-coral/40" : "ring-black/5"
               }`}
             >
@@ -42,7 +42,7 @@ export default async function AdminSellersPage() {
                 size={48}
               />
 
-              <div className="min-w-56 flex-1">
+              <div className="min-w-0 flex-1 basis-full break-anywhere sm:basis-auto">
                 <Link
                   href={`/shop/${seller.handle}`}
                   className="font-display font-bold hover:text-reef-dark"

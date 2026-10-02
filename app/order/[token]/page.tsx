@@ -43,14 +43,14 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
   ].filter(Boolean);
 
   return (
-    <div className="wrap max-w-4xl py-14">
+    <div className="wrap max-w-4xl py-10 sm:py-14">
       <ClearBag itemIds={allItemIds} />
 
-      <header className="rounded-[2rem] bg-ink p-8 text-paper sm:p-12">
+      <header className="rounded-[2rem] bg-ink p-6 text-paper sm:p-12">
         <p className="eyebrow-pill">
           {multi ? `${orders.length} shops · ${orders.length} orders` : `Order ${first.order_number}`}
         </p>
-        <h1 className="mt-5 font-display text-5xl leading-[0.9] font-extrabold tracking-[-0.05em]">
+        <h1 className="mt-5 font-display text-4xl leading-[0.9] font-extrabold tracking-[-0.05em] break-anywhere sm:text-5xl">
           Caught it, {first.customer_name.split(" ")[0]}.
         </h1>
         <p className="mt-5 max-w-xl leading-relaxed text-paper/70">
@@ -94,7 +94,7 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
               )}
             </div>
 
-            <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.3fr_auto]">
+            <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.3fr_auto]">
               <div>
                 <ul className="divide-y divide-line border-y border-line">
                   {order.lines.map((line) => (

@@ -29,7 +29,7 @@ export default async function AdminMessagesPage() {
           {messages.map((m) => (
             <li
               key={m.id}
-              className={`border p-5 ${m.handled ? "border-line bg-paper-dim/30" : "border-ink"}`}
+              className={`break-anywhere border p-4 sm:p-5 ${m.handled ? "border-line bg-paper-dim/30" : "border-ink"}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

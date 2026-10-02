@@ -98,7 +98,7 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
               name="image_urls"
               rows={3}
               placeholder={"https://…/front.jpg\nhttps://…/back.jpg"}
-              className="field mt-3 font-mono text-xs"
+              className="field mt-3 font-mono sm:text-xs"
             />
           </details>
         </div>

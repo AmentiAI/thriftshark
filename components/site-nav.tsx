@@ -36,12 +36,12 @@ function CategoryLinks({
 }) {
   return (
     <nav aria-label="Categories" className="border-t border-white/10 bg-blood">
-      <div className="wrap flex gap-1.5 overflow-x-auto py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="wrap scroll-x flex gap-1.5 py-2">
         <Link
           href="/shop"
           onClick={onNavigate}
           aria-current={activeCategory === "" ? "page" : undefined}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition ${
+          className={`tap flex shrink-0 items-center rounded-full px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition ${
             activeCategory === ""
               ? "bg-white text-blood"
               : "text-white hover:bg-white/15"
@@ -57,7 +57,7 @@ function CategoryLinks({
               href={`/shop?category=${category.slug}`}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition ${
+              className={`tap flex shrink-0 items-center rounded-full px-3.5 py-2 text-sm font-semibold whitespace-nowrap transition ${
                 active ? "bg-white text-blood" : "text-white hover:bg-white/15"
               }`}
             >
@@ -103,9 +103,9 @@ export function SiteNav({
   return (
     <header className="sticky top-0 z-50">
       <div className="overflow-hidden bg-ink text-foam">
-        <div className="ticker-track gap-8 py-2 text-[11px] font-bold tracking-[0.22em] uppercase">
+        <div className="ticker-track gap-6 py-1.5 text-[10px] font-bold tracking-[0.18em] uppercase sm:gap-8 sm:py-2 sm:text-[11px]">
           {loop.map((line, i) => (
-            <span key={`${line}-${i}`} className="flex items-center gap-8 whitespace-nowrap">
+            <span key={`${line}-${i}`} className="flex items-center gap-6 whitespace-nowrap sm:gap-8">
               {line}
               <span aria-hidden className="text-gold">
                 ✦
@@ -160,7 +160,7 @@ export function SiteNav({
                 Sign in
               </Link>
             )}
-            <Link href="/cart" className="btn btn-lime !px-5 !py-2.5">
+            <Link href="/cart" className="btn btn-lime !px-4 !py-2.5 sm:!px-5">
               Bag
               <BagCount />
             </Link>
@@ -189,7 +189,10 @@ export function SiteNav({
       </div>
 
       {open && (
-        <nav className="absolute inset-x-0 top-full border-b border-line bg-paper px-6 py-4 shadow-2xl lg:hidden" aria-label="Mobile">
+        <nav
+          className="absolute inset-x-0 top-full max-h-[70dvh] overflow-y-auto border-b border-line bg-paper px-5 py-4 shadow-2xl lg:hidden"
+          aria-label="Mobile"
+        >
           <div className="flex flex-col gap-1">
             {NAV.map((link) => (
               <Link

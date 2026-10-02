@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ItemCard } from "@/components/item-card";
 import { ShopFilters } from "@/components/shop-filters";
+import { FilterDrawer } from "@/components/filter-drawer";
 import { getCategories, getCategoryCounts, getFilterFacets, searchItems } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -57,10 +58,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
         <p className="eyebrow-pill">
           {query.includeSold ? "Shop + sold archive" : "In stock now"}
         </p>
-        <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em] sm:text-6xl">
+        <h1 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] break-anywhere sm:mt-5 sm:text-5xl lg:text-6xl">
           {activeCategory?.name ?? (query.q ? `“${query.q}”` : "Everything we have")}
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-ink-soft">
+        <p className="mt-3 max-w-2xl text-ink-soft sm:mt-4 sm:text-lg">
           {activeCategory?.blurb ??
             "Single-piece inventory, measured by hand. Filter it down, then move fast — there is only ever one of each."}
         </p>
@@ -68,23 +69,36 @@ export default async function ShopPage(props: PageProps<"/shop">) {
 
       <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
         <aside className="lg:sticky lg:top-44 lg:self-start">
-          <ShopFilters
-            categories={categories}
-            counts={counts}
-            sizes={facets.sizes}
-            brands={facets.brands}
-            active={query}
-            total={totalInStock}
-          />
+          <FilterDrawer
+            activeCount={
+              [query.category, query.q, query.condition, query.size, query.brand].filter(Boolean)
+                .length + (query.includeSold ? 1 : 0)
+            }
+            resultCount={result.total}
+          >
+            <ShopFilters
+              categories={categories}
+              counts={counts}
+              sizes={facets.sizes}
+              brands={facets.brands}
+              active={query}
+              total={totalInStock}
+            />
+          </FilterDrawer>
         </aside>
 
         <section>
-          <div className="flex items-baseline justify-between gap-4 pb-6">
+          <div className="hidden items-baseline justify-between gap-4 pb-6 lg:flex">
             <p className="text-sm text-ink-soft">
               {result.total} {result.total === 1 ? "piece" : "pieces"}
               {result.pages > 1 && ` · page ${result.page} of ${result.pages}`}
             </p>
           </div>
+          {result.pages > 1 && (
+            <p className="pb-5 text-xs text-ink-faint lg:hidden">
+              Page {result.page} of {result.pages}
+            </p>
+          )}
 
           {result.items.length === 0 ? (
             <div className="panel px-6 py-20 text-center">
@@ -103,7 +117,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
               </div>
             </div>
           ) : (
-            <div className="grid gap-x-5 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-10 xl:grid-cols-3">
               {result.items.map((item, i) => (
                 <ItemCard key={item.id} item={item} priority={i < 3} />
               ))}

@@ -181,7 +181,7 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           <h2 className="font-display text-3xl font-extrabold tracking-tight">
             Others you might circle
           </h2>
-          <div className="mt-8 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-4">
             {related.map((r) => (
               <ItemCard key={r.id} item={r} />
             ))}
