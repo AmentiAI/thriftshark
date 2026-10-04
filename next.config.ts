@@ -3,9 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      // Listing forms carry up to six photos; each file is capped at 3MB in
-      // lib/images.ts, and multipart overhead needs a little headroom.
-      bodySizeLimit: "20mb",
+      // Listing forms carry up to six photos. The browser shrinks them before
+      // upload (components/image-field.tsx), so a real submission is a couple
+      // of MB; this ceiling is headroom for a browser that could not.
+      bodySizeLimit: "40mb",
     },
   },
   images: {

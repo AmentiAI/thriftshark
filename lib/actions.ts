@@ -461,6 +461,14 @@ async function readPhotos(formData: FormData, sellerId: number) {
     .filter((f): f is File => f instanceof File && f.size > 0)
     .slice(0, 6);
 
+  const total = files.reduce((sum, f) => sum + f.size, 0);
+  if (total > 30 * 1024 * 1024) {
+    return {
+      ok: false as const,
+      error: `Those photos add up to ${(total / 1024 / 1024).toFixed(0)}MB. Add them in two goes, or let the page shrink them first.`,
+    };
+  }
+
   const ids: number[] = [];
   for (const file of files) {
     const stored = await storeUpload(file, sellerId, "item");

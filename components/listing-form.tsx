@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import {
   createListing,
   updateListing,
   deleteListing,
   type FormState,
 } from "@/lib/actions";
+import { ImageField } from "@/components/image-field";
 import { CONDITIONS, imageSrc, type Category, type Item } from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
@@ -31,7 +32,6 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
     editing ? updateListing : createListing,
     null,
   );
-  const [photoCount, setPhotoCount] = useState(0);
 
   const dollars = (cents: number | null | undefined) =>
     cents === null || cents === undefined ? "" : (cents / 100).toFixed(2);
@@ -70,24 +70,14 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
           )}
 
           <div className="mt-5">
-            <label className={label} htmlFor="photos">
-              {existing.length > 0 ? "Replace photos" : "Upload photos"}
-            </label>
-            <input
-              id="photos"
+            <ImageField
               name="photos"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
+              label={existing.length > 0 ? "Replace photos" : "Upload photos"}
+              hint="Up to 6. Straight from your camera roll is fine — we shrink and convert them here."
               multiple
-              onChange={(e) => setPhotoCount(e.target.files?.length ?? 0)}
-              className="w-full rounded-2xl border border-line border-dashed bg-white px-4 py-6 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-xs file:font-bold file:tracking-wide file:text-paper file:uppercase"
+              max={6}
+              maxEdge={1800}
             />
-            {photoCount > 0 && (
-              <p className="mt-2 text-xs font-semibold text-kelp">
-                {photoCount} photo{photoCount === 1 ? "" : "s"} ready to upload
-                {photoCount > 6 && " — only the first 6 are kept"}
-              </p>
-            )}
           </div>
 
           <details className="mt-4">

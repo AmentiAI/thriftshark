@@ -26,7 +26,7 @@ export function ShopAvatar({
         alt={`${shopName} logo`}
         width={size}
         height={size}
-        className={`shrink-0 rounded-full border border-line bg-paper object-cover ${className}`}
+        className={`aspect-square shrink-0 rounded-full border border-line bg-paper object-cover ${className}`}
         style={{ width: size, height: size }}
       />
     );
@@ -35,10 +35,12 @@ export function ShopAvatar({
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-full bg-ink font-display font-bold text-paper ${className}`}
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
+      // 38cqw keeps the initials proportional even when a responsive class
+      // overrides the box, which inline font-size could not do.
+      className={`flex shrink-0 items-center justify-center rounded-full bg-ink font-display font-bold text-paper [container-type:size] ${className}`}
+      style={{ width: size, height: size }}
     >
-      {initials || "?"}
+      <span className="text-[38cqw] leading-none">{initials || "?"}</span>
     </span>
   );
 }

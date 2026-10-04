@@ -55,6 +55,9 @@ Phones are the default case, not an afterthought. When adding UI:
   scrolls itself instead of widening the page. `html`/`body` are
   `overflow-x: clip`.
 - Long strings — emails, handles, shop names — need `break-anywhere`.
+- Every image upload goes through `ImageField`, never a bare `<input
+  type="file">`: it shrinks and converts on the device, and gives a full-width
+  tap target instead of the browser's default control.
 - Product grids are two-up on phones (`grid-cols-2`); text-heavy cards stay
   one-up.
 

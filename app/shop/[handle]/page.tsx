@@ -54,8 +54,9 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
   return (
     <div className="wrap py-10">
       {/* Banner + identity */}
-      <header className="overflow-hidden rounded-[2rem] bg-white ring-1 ring-black/5">
-        <div className="relative h-40 bg-ink sm:h-56">
+      <header className="overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-black/5 sm:rounded-[2rem]">
+        {/* A proper banner: tall enough to be a banner on a phone, too. */}
+        <div className="relative h-44 sm:h-64 lg:h-80">
           {seller.banner_image_id ? (
             <Image
               src={`/api/images/${seller.banner_image_id}`}
@@ -66,45 +67,58 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
               className="object-cover"
             />
           ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(600px_300px_at_80%_-20%,rgb(0_132_255/0.6),transparent_60%),radial-gradient(400px_240px_at_10%_120%,rgb(62_198_255/0.45),transparent_60%)]" />
+            <div className="absolute inset-0 bg-ink">
+              <div className="absolute inset-0 bg-[radial-gradient(600px_300px_at_80%_-20%,rgb(0_132_255/0.65),transparent_60%),radial-gradient(420px_260px_at_10%_120%,rgb(62_198_255/0.5),transparent_60%)]" />
+              <div className="hatch absolute inset-0" />
+            </div>
           )}
+          {/* Keeps the avatar and name legible over a busy photo. */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
         </div>
 
-        <div className="relative px-5 pb-7 sm:px-10">
-          <div className="-mt-12 flex flex-wrap items-end justify-between gap-5">
-            <div className="flex min-w-0 items-end gap-3 sm:gap-4">
-              <div className="rounded-full bg-white p-1.5 ring-1 ring-black/5">
-                <ShopAvatar
-                  shopName={seller.shop_name}
-                  logoImageId={seller.logo_image_id}
-                  size={64}
-                  className="sm:!h-22 sm:!w-22"
-                />
-              </div>
-              <div className="min-w-0 pb-1">
-                <h1 className="font-display text-3xl leading-none font-extrabold tracking-[-0.04em] break-anywhere sm:text-4xl lg:text-5xl">
-                  {seller.shop_name}
-                </h1>
-                <p className="mt-2 text-sm font-semibold text-ink-faint">
-                  @{seller.handle}
-                  {seller.location && ` · ${seller.location}`}
-                  {` · joined ${shortDate(seller.created_at)}`}
-                </p>
-              </div>
+        <div className="relative px-5 pb-7 sm:px-8 lg:px-10">
+          {/* Centred stack on a phone, row from sm up. */}
+          <div className="-mt-14 flex flex-col items-center text-center sm:-mt-16 sm:flex-row sm:items-end sm:gap-5 sm:text-left">
+            <div className="rounded-full bg-white p-1.5 shadow-xl ring-1 ring-black/5">
+              <ShopAvatar
+                shopName={seller.shop_name}
+                logoImageId={seller.logo_image_id}
+                size={112}
+                className="sm:!h-32 sm:!w-32"
+              />
             </div>
 
-            <div className="flex flex-wrap gap-2 pb-1">
+            <div className="mt-3 min-w-0 flex-1 sm:mt-0 sm:pb-2">
+              <h1 className="font-display text-3xl leading-[1.02] font-extrabold tracking-[-0.04em] break-anywhere sm:text-4xl lg:text-5xl">
+                {seller.shop_name}
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-ink-faint">
+                @{seller.handle}
+                {seller.location && ` · ${seller.location}`}
+              </p>
+              <p className="text-xs text-ink-faint">
+                Joined {shortDate(seller.created_at)}
+              </p>
+            </div>
+
+            {/* Full-width buttons on a phone, inline from sm up. */}
+            <div className="mt-5 grid w-full grid-cols-2 gap-2 sm:mt-0 sm:flex sm:w-auto sm:pb-2">
               {seller.cashapp_tag && (
                 <a
                   href={cashappUrl(seller.cashapp_tag)}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="btn btn-ghost !px-4 !py-2.5 text-xs"
+                  className="btn btn-ghost !px-4 !py-3 text-xs sm:!py-2.5"
                 >
                   ${seller.cashapp_tag}
                 </a>
               )}
-              <Link href="/contact" className="btn btn-ink !px-4 !py-2.5 text-xs">
+              <Link
+                href="/contact"
+                className={`btn btn-ink !px-4 !py-3 text-xs sm:!py-2.5 ${
+                  seller.cashapp_tag ? "" : "col-span-2"
+                }`}
+              >
                 Message shop
               </Link>
             </div>
@@ -113,7 +127,9 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
           {(seller.tagline || seller.bio) && (
             <div className="mt-6 max-w-2xl">
               {seller.tagline && (
-                <p className="font-display text-xl font-bold tracking-tight">{seller.tagline}</p>
+                <p className="font-display text-lg font-bold tracking-tight sm:text-xl">
+                  {seller.tagline}
+                </p>
               )}
               {seller.bio && (
                 <p className="mt-2 leading-relaxed whitespace-pre-line text-ink-soft">
@@ -123,15 +139,19 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
             </div>
           )}
 
-          <dl className="mt-7 flex flex-wrap gap-3">
+          <dl className="mt-7 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3">
             {[
               [String(seller.item_count), "for sale"],
               [String(seller.sold_count), "sold"],
               [money(stockValue), "on the rack"],
             ].map(([value, label]) => (
-              <div key={label} className="rounded-2xl bg-paper-dim px-4 py-3">
-                <dt className="font-display text-xl font-extrabold tracking-tight">{value}</dt>
-                <dd className="text-xs font-semibold text-ink-faint">{label}</dd>
+              <div key={label} className="rounded-2xl bg-paper-dim px-3 py-3 sm:px-4">
+                <dt className="font-display text-lg font-extrabold tracking-tight sm:text-xl">
+                  {value}
+                </dt>
+                <dd className="text-[11px] font-semibold text-ink-faint sm:text-xs">
+                  {label}
+                </dd>
               </div>
             ))}
           </dl>

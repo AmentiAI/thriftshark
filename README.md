@@ -88,6 +88,15 @@ reserve puts the piece back on the rack at its fixed price. Bids are guarded the
 same way — the insert only lands if it still clears the high bid plus the
 increment.
 
+**Uploads are shrunk on the device.** `components/image-field.tsx` decodes a
+picked photo into a canvas, downscales it and re-encodes it as JPEG before the
+form is submitted. That is what makes phone uploads work: a camera photo is
+several megabytes and an iPhone shoots HEIC, and this turns both into something
+small that every browser and the server agree on. If a browser cannot decode
+the file, the original is sent and the server validates it — HEIC/HEIF, AVIF,
+JPEG, PNG, WebP and GIF are accepted, by MIME type or by extension when the
+picker reports `application/octet-stream`.
+
 **Images live in Postgres.** Logos, banners, listing photos and uploaded Cash
 App codes are stored as rows and served by `/api/images/[id]` with immutable
 cache headers. One dependency, no bucket to configure; swap `lib/images.ts` for

@@ -54,8 +54,8 @@ export default async function SellersPage() {
         </div>
       ) : (
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sellers.map((seller) => (
-            <SellerCard key={seller.id} seller={seller} />
+          {sellers.map((seller, i) => (
+            <SellerCard key={seller.id} seller={seller} priority={i < 3} />
           ))}
         </div>
       )}

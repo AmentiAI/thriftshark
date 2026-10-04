@@ -1,14 +1,44 @@
 import QRCode from "qrcode";
 import { sql } from "@/lib/db";
 
-export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+/**
+ * Straight off a phone, a single photo is routinely 3-6MB and an iPhone shoots
+ * HEIC, so the old 3MB JPEG-only rule rejected most real uploads. The browser
+ * downscales and re-encodes before sending (see components/image-field.tsx);
+ * this ceiling is the fallback for anything that arrives un-processed.
+ */
+export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 const ALLOWED = new Map([
   ["image/jpeg", "jpg"],
+  ["image/jpg", "jpg"],
   ["image/png", "png"],
   ["image/webp", "webp"],
   ["image/gif", "gif"],
+  ["image/avif", "avif"],
+  // What iPhones and some Android cameras hand over.
+  ["image/heic", "heic"],
+  ["image/heif", "heif"],
 ]);
+
+/** What a file picker should offer, on a laptop or a phone. */
+export const UPLOAD_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif,.heic,.heif";
+
+function guessTypeFromName(name: string) {
+  const ext = name.toLowerCase().split(".").pop() ?? "";
+  const byExt: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    avif: "image/avif",
+    heic: "image/heic",
+    heif: "image/heif",
+  };
+  return byExt[ext] ?? "";
+}
 
 export type ImagePurpose = "item" | "logo" | "banner" | "cashapp-qr";
 
@@ -26,8 +56,15 @@ export async function storeUpload(
   sellerId: number,
   purpose: ImagePurpose,
 ): Promise<UploadResult> {
-  if (!ALLOWED.has(file.type)) {
-    return { ok: false, error: "Photos must be JPEG, PNG, WebP or GIF." };
+  // Phone pickers variously send no type at all or application/octet-stream,
+  // so whenever the reported type is not one we know, trust the extension.
+  const reported = file.type.toLowerCase();
+  const type = ALLOWED.has(reported) ? reported : guessTypeFromName(file.name);
+  if (!ALLOWED.has(type)) {
+    return {
+      ok: false,
+      error: "That file is not an image we can read. JPEG, PNG, WebP, HEIC or GIF.",
+    };
   }
   if (file.size === 0) {
     return { ok: false, error: "That file was empty." };
@@ -35,7 +72,9 @@ export async function storeUpload(
   if (file.size > MAX_UPLOAD_BYTES) {
     return {
       ok: false,
-      error: `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)}MB. Keep photos under 3MB.`,
+      error: `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)}MB, over the ${
+        MAX_UPLOAD_BYTES / 1024 / 1024
+      }MB limit. Try it again on a connection that lets the browser shrink it first.`,
     };
   }
 
@@ -43,7 +82,7 @@ export async function storeUpload(
   const rows = (await sql.query(
     `insert into images (seller_id, mime, bytes, byte_size, purpose)
      values ($1, $2, $3, $4, $5) returning id`,
-    [sellerId, file.type, bytes, bytes.byteLength, purpose],
+    [sellerId, type, bytes, bytes.byteLength, purpose],
   )) as { id: number }[];
 
   return { ok: true, id: rows[0].id };

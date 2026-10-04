@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useActionState, useState } from "react";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { ImageField } from "@/components/image-field";
 import { updateShop, type FormState } from "@/lib/actions";
 import type { ShopSettings } from "@/lib/types";
 
@@ -12,9 +13,6 @@ export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateShop, null);
   const [handle, setHandle] = useState(seller.handle);
   const [cashtag, setCashtag] = useState(seller.cashapp_tag ?? "");
-  const [logoName, setLogoName] = useState<string | null>(null);
-  const [bannerName, setBannerName] = useState<string | null>(null);
-  const [qrName, setQrName] = useState<string | null>(null);
 
   const cleanCashtag = cashtag.replace(/^\$/, "").replace(/[^A-Za-z0-9_]/g, "");
   const cashtagChanged = cleanCashtag !== (seller.cashapp_tag ?? "");
@@ -23,68 +21,47 @@ export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
       <div className="space-y-7">
         {/* Logo and banner */}
-        <div className="panel p-6">
+        <div className="panel p-5 sm:p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">
-            Logo and banner
+            Your look
           </h2>
           <p className="mt-1.5 text-sm text-ink-soft">
-            Your logo shows on your storefront, on every listing you post and
-            next to your name across the site. Square works best. Under 3MB.
+            The banner runs across the top of your shop and your picture sits on
+            every listing you post. Upload straight from your phone or your
+            computer.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center gap-5">
-            <ShopAvatar
-              shopName={seller.shop_name}
-              logoImageId={seller.logo_image_id}
-              size={88}
+          <div className="mt-6 space-y-6">
+            <ImageField
+              name="banner"
+              label={seller.banner_image_id ? "Replace banner" : "Banner image"}
+              hint="Wide shot, roughly 1600×500. Keep anything important away from the bottom left, where your picture overlaps."
+              shape="wide"
+              maxEdge={2000}
+              currentSrc={
+                seller.banner_image_id ? `/api/images/${seller.banner_image_id}` : null
+              }
             />
-            <div className="min-w-0 flex-1 basis-full sm:basis-56">
-              <label className={label} htmlFor="logo">
-                {seller.logo_image_id ? "Replace logo" : "Upload logo"}
-              </label>
-              <input
-                id="logo"
-                name="logo"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                onChange={(e) => setLogoName(e.target.files?.[0]?.name ?? null)}
-                className="w-full rounded-2xl border border-line border-dashed bg-white px-4 py-4 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-xs file:font-bold file:tracking-wide file:text-paper file:uppercase"
-              />
-              {logoName && (
-                <p className="mt-2 truncate text-xs font-semibold text-kelp">{logoName}</p>
-              )}
-            </div>
-          </div>
 
-          <div className="mt-7">
-            <label className={label} htmlFor="banner">
-              {seller.banner_image_id ? "Replace banner" : "Upload banner"}
-            </label>
-            {seller.banner_image_id && (
-              <div className="relative mb-3 h-28 overflow-hidden rounded-2xl bg-paper-dim">
-                <Image
-                  src={`/api/images/${seller.banner_image_id}`}
-                  alt="Your shop banner"
-                  fill
-                  sizes="600px"
-                  className="object-cover"
+            <div className="border-t border-line pt-6">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0">
+                  <ShopAvatar
+                    shopName={seller.shop_name}
+                    logoImageId={seller.logo_image_id}
+                    size={72}
+                  />
+                </div>
+                <ImageField
+                  name="logo"
+                  label={seller.logo_image_id ? "Replace your picture" : "Shop picture"}
+                  hint="Square works best — a logo, or your own face. Shown as a circle."
+                  shape="circle"
+                  maxEdge={800}
+                  className="min-w-0 flex-1"
                 />
               </div>
-            )}
-            <input
-              id="banner"
-              name="banner"
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              onChange={(e) => setBannerName(e.target.files?.[0]?.name ?? null)}
-              className="w-full rounded-2xl border border-line border-dashed bg-white px-4 py-4 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-xs file:font-bold file:tracking-wide file:text-paper file:uppercase"
-            />
-            {bannerName && (
-              <p className="mt-2 truncate text-xs font-semibold text-kelp">{bannerName}</p>
-            )}
-            <p className="mt-2 text-xs text-ink-faint">
-              Wide image, roughly 1600×500. Leave empty to keep what you have.
-            </p>
+            </div>
           </div>
         </div>
 
@@ -221,24 +198,14 @@ export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
 
           {/* Either upload the screenshot from Cash App, or let us draw it. */}
           <div className="mt-5">
-            <label className={label} htmlFor="cashapp_qr">
-              Upload your own code
-            </label>
-            <input
-              id="cashapp_qr"
+            <ImageField
               name="cashapp_qr"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setQrName(e.target.files?.[0]?.name ?? null)}
-              className="w-full rounded-2xl border border-line border-dashed bg-white px-4 py-4 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-xs file:font-bold file:tracking-wide file:text-paper file:uppercase"
+              label="Upload your own code"
+              hint="Screenshot your Cash App QR, or leave this empty and we generate one from your $cashtag."
+              shape="square"
+              maxEdge={1000}
+              quality={0.92}
             />
-            {qrName && (
-              <p className="mt-2 truncate text-xs font-semibold text-kelp">{qrName}</p>
-            )}
-            <p className="mt-2 text-xs text-ink-faint">
-              Screenshot your Cash App QR, or leave this empty and we generate
-              one from your $cashtag.
-            </p>
           </div>
 
           {seller.qr_image_id && (

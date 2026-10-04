@@ -62,6 +62,20 @@ function hashPassword(password) {
   return `scrypt$${salt}$${scryptSync(password, salt, 64).toString("hex")}`;
 }
 
+/** Pulls a placeholder image and stores it the same way an upload would. */
+async function storeRemoteImage(url, sellerId, purpose) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  const mime = res.headers.get("content-type")?.split(";")[0] ?? "image/jpeg";
+  const rows = await sql.query(
+    `insert into images (seller_id, mime, bytes, byte_size, purpose)
+     values ($1, $2, $3, $4, $5) returning id`,
+    [sellerId, mime, bytes, bytes.byteLength, purpose],
+  );
+  return rows[0].id;
+}
+
 async function storeQr(cashtag, sellerId) {
   const png = await QRCode.toBuffer(`https://cash.app/$${cashtag}`, {
     type: "png",
@@ -80,8 +94,13 @@ async function storeQr(cashtag, sellerId) {
 
 const handles = SHOPS.map((s) => s.handle);
 
-// Clear only the demo shops, so a real signup is never touched.
-await sql.query(`delete from sellers where handle = any($1::text[])`, [handles]);
+// Upsert rather than delete: items.seller_id cascades, so removing a demo shop
+// would take its listings with it.
+
+const stock = await sql`select count(*)::int as n from items`;
+if (stock[0].n === 0) {
+  console.log("No listings in the database — run `npm run db:seed` first.\n");
+}
 
 const categories = Object.fromEntries(
   (await sql`select id, slug from categories`).map((r) => [r.slug, r.id]),
@@ -94,11 +113,41 @@ for (const shop of SHOPS) {
     values (${shop.handle}, ${shop.shop_name}, ${shop.email}, ${hashPassword(PASSWORD)},
             ${shop.tagline}, ${shop.bio}, ${shop.location}, ${shop.cashapp_tag},
             ${shop.featured}, 'active')
+    on conflict (handle) do update set
+      shop_name = excluded.shop_name,
+      email = excluded.email,
+      password_hash = excluded.password_hash,
+      tagline = excluded.tagline,
+      bio = excluded.bio,
+      location = excluded.location,
+      cashapp_tag = excluded.cashapp_tag,
+      featured = excluded.featured,
+      status = 'active',
+      updated_at = now()
     returning id`;
   const sellerId = rows[0].id;
 
+  // Replace this shop's old branding rather than piling up rows.
+  await sql`delete from images where seller_id = ${sellerId}
+            and purpose in ('logo','banner','cashapp-qr')`;
+
   const qrId = await storeQr(shop.cashapp_tag, sellerId);
-  await sql`update sellers set qr_image_id = ${qrId} where id = ${sellerId}`;
+
+  // Placeholder branding so the storefront shows a real banner and picture.
+  const logoId = await storeRemoteImage(
+    `https://picsum.photos/seed/${shop.handle}-logo/400/400`,
+    sellerId,
+    "logo",
+  );
+  const bannerId = await storeRemoteImage(
+    `https://picsum.photos/seed/${shop.handle}-banner/1600/500`,
+    sellerId,
+    "banner",
+  );
+
+  await sql`update sellers set qr_image_id = ${qrId}, logo_image_id = ${logoId},
+                               banner_image_id = ${bannerId}
+            where id = ${sellerId}`;
 
   const categoryIds = shop.categories.map((slug) => categories[slug]).filter(Boolean);
   await sql.query(
