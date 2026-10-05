@@ -275,6 +275,21 @@
   100% { transform: translateX(-12%) rotate(-3deg); }
 }
 
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.07); }
+}
+
+@keyframes bid-throb {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.045); }
+}
+
+@keyframes strike {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 /* Scroll reveal: hidden until <Reveal> adds .is-in. */
 @utility reveal {
   opacity: 0;
@@ -345,6 +360,21 @@
 
 .swim {
   animation: swim 9s ease-in-out infinite;
+}
+
+.kenburns {
+  animation: kenburns 16s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.bid-throb {
+  animation: bid-throb 2.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.strike {
+  transform-origin: left center;
+  animation: strike 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Light sweep across a button or card. */
@@ -418,9 +448,16 @@
   .blob,
   .float-slow,
   .swim,
+  .kenburns,
+  .bid-throb,
+  .strike,
   .live-dot::before,
   .sheen:hover::after {
     animation: none !important;
+  }
+
+  .strike {
+    transform: none;
   }
 
   .reveal,

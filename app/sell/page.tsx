@@ -112,6 +112,7 @@ export default async function SellPage() {
               "Your own storefront at /shop/your-name",
               "Your logo on every listing you post",
               "A generated, scannable Cash App code",
+              "Auction a piece instead of selling it buy-now",
               "A dashboard for listings and orders",
               "Buyer addresses and order notes",
               "Zero fees, zero commission",

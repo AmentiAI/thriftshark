@@ -28,8 +28,12 @@ export default async function DashboardAuctionsPage() {
           Your auctions
         </h2>
         <p className="mt-2 text-ink-soft">
-          {live.length} live · {past.length} finished. A win becomes a normal
-          order with your Cash App code on it.
+          {live.length} live · {past.length} finished. New pieces can go on the
+          block from{" "}
+          <Link href="/dashboard/items/new" className="font-semibold underline hover:text-reef-dark">
+            Add a listing
+          </Link>
+          . A win becomes a normal order with your Cash App code on it.
         </p>
       </header>
 

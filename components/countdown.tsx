@@ -21,10 +21,13 @@ export function Countdown({
   endsAt,
   className = "",
   compact = false,
+  surface = "ink",
 }: {
   endsAt: string;
   className?: string;
   compact?: boolean;
+  /** `glass` is for clocks sitting on a dark panel. */
+  surface?: "ink" | "glass";
 }) {
   const router = useRouter();
   const target = new Date(endsAt).getTime();
@@ -76,7 +79,11 @@ export function Countdown({
         <div
           key={label}
           className={`min-w-14 rounded-2xl px-3 py-2 text-center ${
-            urgent ? "bg-coral text-white" : "bg-ink text-paper"
+            urgent
+              ? "bg-coral text-white"
+              : surface === "glass"
+                ? "bg-white/10 text-paper"
+                : "bg-ink text-paper"
           }`}
         >
           <p className="font-display text-2xl leading-none font-extrabold tabular-nums">

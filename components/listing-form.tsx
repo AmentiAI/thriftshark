@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   createListing,
   updateListing,
@@ -10,7 +10,7 @@ import {
   type FormState,
 } from "@/lib/actions";
 import { ImageField } from "@/components/image-field";
-import { CONDITIONS, imageSrc, type Category, type Item } from "@/lib/types";
+import { AUCTION_DURATIONS, CONDITIONS, imageSrc, type Category, type Item } from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
@@ -28,10 +28,12 @@ const AUCTION_NOTE =
 
 export function ListingForm({ categories, item }: { categories: Category[]; item?: Item }) {
   const editing = Boolean(item);
+  const [destination, setDestination] = useState<"rack" | "auction">("rack");
   const [state, action, pending] = useActionState<FormState, FormData>(
     editing ? updateListing : createListing,
     null,
   );
+  const auctioning = !editing && destination === "auction";
 
   const dollars = (cents: number | null | undefined) =>
     cents === null || cents === undefined ? "" : (cents / 100).toFixed(2);
@@ -126,9 +128,9 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <label className={label} htmlFor="price">
-                Price (USD)
-              </label>
+            <label className={label} htmlFor="price">
+              {auctioning ? "Rack price (USD)" : "Price (USD)"}
+            </label>
               <input
                 id="price"
                 name="price"
@@ -138,6 +140,11 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
                 placeholder="68.00"
                 className="field"
               />
+              {auctioning && (
+                <p className="mt-1.5 text-xs text-ink-faint">
+                  What you would take on the rack. The floor can open lower.
+                </p>
+              )}
             </div>
             <div>
               <label className={label} htmlFor="compare_at">
@@ -199,35 +206,139 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
             </div>
           </div>
         </div>
+
+        {auctioning && (
+          <div className="panel space-y-5 p-6">
+            <h2 className="font-display text-lg font-extrabold tracking-tight">The lot</h2>
+            <p className="text-sm text-ink-soft">
+              It comes off buy-now the moment you publish. You can pull it only
+              before the first bid.
+            </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className={label} htmlFor="start_price">
+                  Opening bid
+                </label>
+                <input
+                  id="start_price"
+                  name="start_price"
+                  required
+                  inputMode="decimal"
+                  placeholder="20.00"
+                  className="field"
+                />
+              </div>
+              <div>
+                <label className={label} htmlFor="reserve_price">
+                  Reserve (optional)
+                </label>
+                <input
+                  id="reserve_price"
+                  name="reserve_price"
+                  inputMode="decimal"
+                  placeholder="68.00"
+                  className="field"
+                />
+                <p className="mt-1.5 text-xs text-ink-faint">
+                  Hidden. Miss it and the piece goes back on the rack.
+                </p>
+              </div>
+              <div>
+                <label className={label} htmlFor="increment">
+                  Bid increment
+                </label>
+                <input
+                  id="increment"
+                  name="increment"
+                  required
+                  inputMode="decimal"
+                  defaultValue="1.00"
+                  className="field"
+                />
+              </div>
+              <div>
+                <label className={label} htmlFor="hours">
+                  Runs for
+                </label>
+                <select id="hours" name="hours" defaultValue="72" className="field">
+                  {AUCTION_DURATIONS.map((d) => (
+                    <option key={d.hours} value={d.hours}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
         <div className="panel p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">Publish</h2>
 
-          <div className="mt-4">
-            <label className={label} htmlFor="status">
-              Visibility
-            </label>
-            {item?.status === "auction" ? (
-              <p className="rounded-2xl bg-paper-dim px-4 py-3 text-xs text-ink-soft">
-                {AUCTION_NOTE}
-              </p>
-            ) : (
-              <select
-                id="status"
-                name="status"
-                defaultValue={item?.status ?? "available"}
-                className="field"
-              >
-                {SELLER_STATUSES.map(([value, text]) => (
-                  <option key={value} value={value}>
-                    {text}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {!editing && (
+            <fieldset className="mt-4">
+              <legend className={label}>Where it goes</legend>
+              <div className="grid gap-2">
+                {(
+                  [
+                    ["rack", "On the rack", "Buyers pay your price today."],
+                    ["auction", "Auction house", "Bidders fight the clock."],
+                  ] as const
+                ).map(([value, title, body]) => {
+                  const active = destination === value;
+                  return (
+                    <label
+                      key={value}
+                      className={`tap cursor-pointer rounded-2xl px-4 py-3 ring-1 transition ${
+                        active ? "bg-ink text-paper ring-ink" : "bg-white ring-black/10 hover:ring-ink"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="destination"
+                        value={value}
+                        checked={active}
+                        onChange={() => setDestination(value)}
+                        className="sr-only"
+                      />
+                      <span className="block text-sm font-bold">{title}</span>
+                      <span className={`mt-0.5 block text-xs ${active ? "text-paper/70" : "text-ink-faint"}`}>
+                        {body}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+
+          {!auctioning && (
+            <div className="mt-4">
+              <label className={label} htmlFor="status">
+                Visibility
+              </label>
+              {item?.status === "auction" ? (
+                <p className="rounded-2xl bg-paper-dim px-4 py-3 text-xs text-ink-soft">
+                  {AUCTION_NOTE}
+                </p>
+              ) : (
+                <select
+                  id="status"
+                  name="status"
+                  defaultValue={item?.status ?? "available"}
+                  className="field"
+                >
+                  {SELLER_STATUSES.map(([value, text]) => (
+                    <option key={value} value={value}>
+                      {text}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           <div className="mt-4">
             <label className={label} htmlFor="condition">
@@ -258,13 +369,18 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
             </p>
           )}
 
-          <button disabled={pending} className="btn btn-lime mt-5 w-full">
-            {pending
-              ? "Saving…"
-              : editing
-                ? "Save changes"
-                : "Put it on the rack"}
+          <button disabled={pending} className="btn btn-lime sheen mt-5 w-full">
+            {pending ? "Saving…" : editing ? "Save changes" : auctioning ? "Open the lot" : "Put it on the rack"}
           </button>
+
+          {item && item.status === "available" && (
+            <Link
+              href="/dashboard/auctions"
+              className="mt-3 block text-center text-sm font-semibold underline hover:text-reef-dark"
+            >
+              Put this one on the block instead
+            </Link>
+          )}
 
           {item && (
             <Link

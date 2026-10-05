@@ -496,13 +496,16 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     return { error: "Add at least one photo — nothing sells without one." };
   }
 
+  const lot = text(formData.get("destination")) === "auction" ? readAuctionFields(formData) : null;
+  if (lot && "error" in lot) return { error: lot.error };
+
   const slug = await uniqueSlug(d.title);
   const rows = (await sql`
     insert into items (slug, title, description, price_cents, compare_at_cents, category_id,
                        brand, item_size, condition, color, status, featured, seller_id)
     values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${d.compare_at_cents},
             ${d.category_id}, ${d.brand}, ${d.item_size}, ${d.condition}, ${d.color},
-            ${d.status}, false, ${seller.id})
+            ${lot ? "auction" : d.status}, false, ${seller.id})
     returning id
   `) as { id: number }[];
 
@@ -517,9 +520,24 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
               values (${id}, ${url}, ${d.title}, ${position++})`;
   }
 
+  let auctionId: number | null = null;
+  if (lot) {
+    try {
+      auctionId = await insertLiveAuction(seller.id, id, lot);
+    } catch {
+      await sql`update items set status = 'available', updated_at = now()
+                where id = ${id} and seller_id = ${seller.id}`;
+      return { error: "Could not open the lot. The piece is on the rack instead — try Auctions." };
+    }
+  }
+
   revalidatePath("/shop");
   revalidatePath("/");
   revalidatePath(`/shop/${seller.handle}`);
+  if (auctionId) {
+    revalidatePath("/auctions");
+    redirect(`/auctions/${auctionId}`);
+  }
   redirect(`/dashboard/items/${id}?saved=1`);
 }
 
@@ -654,31 +672,62 @@ const auctionSchema = z.object({
   hours: z.number().int().min(1).max(336),
 });
 
+type LotTerms = {
+  start_cents: number;
+  reserve_cents: number | null;
+  increment_cents: number;
+  hours: number;
+};
+
+/** Opening bid, reserve, increment, and run length from a listing or auction form. */
+function readAuctionFields(formData: FormData): LotTerms | { error: string } {
+  const parsed = auctionSchema
+    .omit({ item_id: true })
+    .safeParse({
+      start_cents: toCents(text(formData.get("start_price"))) ?? -1,
+      reserve_cents: text(formData.get("reserve_price"))
+        ? toCents(text(formData.get("reserve_price")))
+        : null,
+      increment_cents: toCents(text(formData.get("increment"))) ?? 100,
+      hours: Number(text(formData.get("hours"))) || 72,
+    });
+
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (parsed.data.reserve_cents !== null && parsed.data.reserve_cents < parsed.data.start_cents) {
+    return { error: "A reserve below the starting bid does nothing — raise it or clear it." };
+  }
+  return parsed.data;
+}
+
+/** Opens a live lot and takes the piece off buy-now. Returns the auction id. */
+async function insertLiveAuction(sellerId: number, itemId: number, lot: LotTerms) {
+  const created = (await sql`
+    insert into auctions (item_id, seller_id, start_cents, reserve_cents,
+                          increment_cents, ends_at)
+    values (${itemId}, ${sellerId}, ${lot.start_cents}, ${lot.reserve_cents},
+            ${lot.increment_cents}, now() + (${lot.hours} * interval '1 hour'))
+    returning id
+  `) as { id: number }[];
+
+  await sql`update items set status = 'auction', updated_at = now()
+            where id = ${itemId} and seller_id = ${sellerId}`;
+
+  return created[0].id;
+}
+
 /** Moves one of the seller's listings onto the block. */
 export async function createAuction(_prev: FormState, formData: FormData): Promise<FormState> {
   const seller = await requireSeller();
 
-  const parsed = auctionSchema.safeParse({
-    item_id: Number(text(formData.get("item_id"))),
-    start_cents: toCents(text(formData.get("start_price"))) ?? -1,
-    reserve_cents: text(formData.get("reserve_price"))
-      ? toCents(text(formData.get("reserve_price")))
-      : null,
-    increment_cents: toCents(text(formData.get("increment"))) ?? 100,
-    hours: Number(text(formData.get("hours"))) || 72,
-  });
-
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const d = parsed.data;
-
-  if (d.reserve_cents !== null && d.reserve_cents < d.start_cents) {
-    return { error: "A reserve below the starting bid does nothing — raise it or clear it." };
-  }
+  const lot = readAuctionFields(formData);
+  if ("error" in lot) return { error: lot.error };
+  const itemId = Number(text(formData.get("item_id")));
+  if (!Number.isInteger(itemId) || itemId <= 0) return { error: "Pick a piece to auction." };
 
   // Only the seller's own listing, and only one that is free to auction.
   const rows = (await sql`
     select id, status from items
-    where id = ${d.item_id} and seller_id = ${seller.id}
+    where id = ${itemId} and seller_id = ${seller.id}
   `) as { id: number; status: string }[];
 
   const item = rows[0];
@@ -686,25 +735,17 @@ export async function createAuction(_prev: FormState, formData: FormData): Promi
   if (item.status === "sold") return { error: "That piece is already sold." };
   if (item.status === "auction") return { error: "That piece is already on the block." };
 
-  const existing = (await sql`select 1 from auctions where item_id = ${d.item_id}`) as unknown[];
+  const existing = (await sql`select 1 from auctions where item_id = ${itemId}`) as unknown[];
   if (existing.length > 0) {
     return { error: "That piece has been auctioned before. Duplicate it as a new listing to run it again." };
   }
 
-  const created = (await sql`
-    insert into auctions (item_id, seller_id, start_cents, reserve_cents,
-                          increment_cents, ends_at)
-    values (${d.item_id}, ${seller.id}, ${d.start_cents}, ${d.reserve_cents},
-            ${d.increment_cents}, now() + (${d.hours} * interval '1 hour'))
-    returning id
-  `) as { id: number }[];
-
-  await sql`update items set status = 'auction', updated_at = now() where id = ${d.item_id}`;
+  const auctionId = await insertLiveAuction(seller.id, itemId, lot);
 
   revalidatePath("/auctions");
   revalidatePath("/shop");
   revalidatePath(`/shop/${seller.handle}`);
-  redirect(`/auctions/${created[0].id}`);
+  redirect(`/auctions/${auctionId}`);
 }
 
 export async function cancelAuction(formData: FormData) {

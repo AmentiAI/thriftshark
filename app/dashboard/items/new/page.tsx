@@ -15,8 +15,8 @@ export default async function NewListingPage() {
           Add a listing
         </h2>
         <p className="mt-2 text-ink-soft">
-          Photos and measurements do the selling. Everything is one-of-one, so
-          once it sells it comes off the rack automatically.
+          Photos and measurements do the selling. Put it on the rack for a set
+          price, or send it straight to the auction house.
         </p>
       </header>
       <ListingForm categories={categories} />
