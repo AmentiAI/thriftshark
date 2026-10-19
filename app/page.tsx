@@ -2,398 +2,230 @@ import Link from "next/link";
 import Image from "next/image";
 import { ItemCard } from "@/components/item-card";
 import { SellerCard } from "@/components/seller-card";
-import { ShopRail } from "@/components/shop-rail";
-import { LiveDrop } from "@/components/live-drop";
 import { AuctionCard } from "@/components/auction-card";
-import { SharkMark } from "@/components/logo";
-import { Reveal } from "@/components/motion/reveal";
-import { CountUp } from "@/components/motion/count-up";
-import { StaggerWords } from "@/components/motion/stagger-words";
-import { TiltCard } from "@/components/motion/tilt-card";
-import { Spotlight } from "@/components/motion/spotlight";
 import { liveAuctions } from "@/lib/auctions";
+import { categoryImage } from "@/lib/category-images";
 import {
   getCategories,
   getCategoryCounts,
   getFeaturedItems,
   getLatestItems,
   getStockedSellers,
-  listSellers,
   marketplaceStats,
 } from "@/lib/queries";
+
 export const dynamic = "force-dynamic";
 
-const STEPS = [
-  {
-    title: "Open your shop",
-    body: "Name it, claim your link, drop in your $cashtag. No fees, no approval queue — live in about a minute.",
-  },
-  {
-    title: "Put your logo on it",
-    body: "Upload a logo and a banner. Your name and your mark ride along on every listing you post.",
-  },
-  {
-    title: "List your merch",
-    body: "Six photos, a price, a size. One-of-one stock, so it leaves the rack the second it sells.",
-  },
-  {
-    title: "Get paid direct",
-    body: "Buyers scan your Cash App code and send you the total. Not a cent passes through us.",
-  },
-];
-
 export default async function HomePage() {
-  const [featured, latest, categories, counts, railSellers, gridSellers, stats, auctions] =
+  const [featured, latest, categories, counts, gridSellers, stats, auctions] =
     await Promise.all([
-      getFeaturedItems(4),
-      getLatestItems(8),
+      getFeaturedItems(8),
+      getLatestItems(12),
       getCategories(),
       getCategoryCounts(),
-      listSellers({ featuredFirst: true, limit: 14 }),
       getStockedSellers(6),
       marketplaceStats(),
       liveAuctions(4),
     ]);
 
+  const trending = featured.length > 0 ? featured : latest.slice(0, 8);
+  const fresh = latest.slice(0, 12);
+
   return (
     <>
-      {/* ---------------- Hero ---------------- */}
-      <section className="relative isolate overflow-hidden bg-ink text-paper">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <span className="blob -top-40 -right-24 h-[34rem] w-[34rem] bg-reef/35" />
-          <span
-            className="blob top-1/3 -left-32 h-[26rem] w-[26rem] bg-foam/25"
-            style={{ "--blob-duration": "34s" } as React.CSSProperties}
-          />
-          <span
-            className="blob -bottom-32 left-1/3 h-[22rem] w-[22rem] bg-gold/20"
-            style={{ "--blob-duration": "41s" } as React.CSSProperties}
-          />
-        </div>
-
-        <div className="wrap relative grid items-center gap-14 pt-16 pb-12 lg:grid-cols-[1.08fr_0.92fr] lg:pt-24">
-          <div>
-            <Reveal variant="left">
-              <p className="eyebrow-pill">
-                <SharkMark className="h-3.5 w-3.5 swim" />
-                <span className="live-dot relative mr-1 inline-block h-1.5 w-1.5 rounded-full text-white" />
-                {stats.shops} shops · {stats.listings} finds live
-              </p>
-            </Reveal>
-
-            <h1 className="mt-6 font-display text-6xl leading-[0.84] font-extrabold tracking-[-0.05em] sm:text-7xl lg:text-[6.6rem]">
-              <StaggerWords text="Your closet." className="block" />
-              <StaggerWords
-                text="Your shop."
-                className="block text-reef"
-                delay={320}
-              />
+      {/* Hero — brand crest is the visual anchor */}
+      <section className="border-b border-line bg-void text-white">
+        <div className="wrap grid items-center gap-8 py-12 sm:py-14 lg:grid-cols-[1fr_1.05fr] lg:gap-6 lg:py-16">
+          <div className="min-w-0 lg:max-w-lg">
+            <p className="text-xs font-semibold tracking-[0.16em] text-white/50 uppercase">
+              Thrift Sharks · {stats.shops} shops
+            </p>
+            <h1 className="mt-3 font-display text-4xl leading-[0.95] font-extrabold tracking-[-0.035em] sm:text-5xl lg:text-[3.5rem]">
+              Buy one-of-one.
+              <span className="mt-1 block text-foam">Sell for free.</span>
             </h1>
-
-            <Reveal delay={420}>
-              <p className="mt-7 max-w-md text-lg leading-relaxed text-paper/70">
-                A marketplace for one-of-one secondhand. Open a shop in a
-                minute, put your own logo on it, list your merch — and get paid
-                straight to your Cash App.
-              </p>
-            </Reveal>
-
-            <Reveal delay={520}>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <Link href="/signup" className="btn btn-lime sheen">
-                  Open your shop
-                </Link>
-                <Link href="/shop" className="btn btn-ghost-light">
-                  Shop {stats.listings} finds
-                </Link>
-              </div>
-            </Reveal>
-
-            <Reveal delay={620}>
-              <dl className="mt-12 grid max-w-lg grid-cols-3 gap-3">
-                {[
-                  { value: stats.shops, label: "shops open" },
-                  { value: stats.listings, label: "pieces for sale" },
-                  { value: stats.sold, label: "already gone" },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl bg-white/6 px-3 py-4 ring-1 ring-white/10 transition hover:bg-white/10 sm:px-4"
-                  >
-                    <dt className="font-display text-2xl font-extrabold tracking-tight whitespace-nowrap text-reef sm:text-3xl">
-                      <CountUp to={stat.value} />
-                    </dt>
-                    <dd className="mt-1 text-[11px] text-paper/60 sm:text-xs">
-                      {stat.label}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </Reveal>
+            <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
+              Independent shops. Honest condition. Paid securely through Stripe.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/shop" className="btn bg-white text-ink hover:bg-paper-dim">
+                Shop now
+              </Link>
+              <Link href="/signup" className="btn btn-ghost-light">
+                Open a shop
+              </Link>
+            </div>
           </div>
 
-          <Reveal variant="scale" delay={200} className="relative">
-            <TiltCard max={6} className="relative">
-              <div className="relative aspect-[3/2]">
-                <Image
-                  src="/crest.png"
-                  alt="Thrift Sharks"
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 42vw, 100vw"
-                  className="object-contain"
-                />
-              </div>
-            </TiltCard>
-          </Reveal>
-        </div>
-
-        {/* Just-listed ticker */}
-        <div className="relative border-t border-white/10 py-5">
-          <p className="wrap mb-3 flex items-center gap-2 text-[11px] font-bold tracking-[0.2em] text-paper/50 uppercase">
-            <span className="live-dot relative inline-block h-2 w-2 rounded-full text-reef" />
-            Just listed
-          </p>
-          <LiveDrop items={latest} />
+          <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+            <div className="relative mx-auto aspect-square w-full max-w-[22rem] sm:max-w-[26rem] lg:max-w-[32rem]">
+              <Image
+                src="/crest.png"
+                alt="Thrift Sharks"
+                fill
+                priority
+                sizes="(min-width: 1024px) 32rem, 90vw"
+                className="object-contain object-center drop-shadow-[0_20px_50px_rgb(0_0_0/0.45)]"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ---------------- Shop rail ---------------- */}
-      {railSellers.length > 0 && (
-        <section className="border-b border-line bg-paper-dim/40 py-8">
-          <p className="wrap mb-5 text-[11px] font-bold tracking-[0.2em] text-ink-faint uppercase">
-            Sellers you can buy from today
-          </p>
-          <ShopRail sellers={railSellers} />
+      {/* Fresh drops — merch first */}
+      <section className="wrap py-10 sm:py-12">
+        <div className="flex items-end justify-between gap-4">
+          <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+            Fresh drops
+          </h2>
+          <Link href="/shop?sort=newest" className="text-sm font-semibold text-ink-faint hover:text-ink">
+            See all
+          </Link>
+        </div>
+
+        {fresh.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-dashed border-line bg-paper-dim px-6 py-16 text-center">
+            <p className="font-display text-xl font-bold tracking-tight">Nothing listed yet</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
+              Be the first shop on the rack — listing takes about a minute.
+            </p>
+            <Link href="/signup" className="btn btn-ink mt-6">
+              Open a shop
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-4">
+            {fresh.map((item, i) => (
+              <ItemCard key={item.id} item={item} priority={i < 4} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Categories */}
+      <section className="border-y border-line bg-paper-dim/60">
+        <div className="wrap py-8 sm:py-10">
+          <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+            Shop by category
+          </h2>
+          <div className="mt-5 scroll-x flex gap-2.5 pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible lg:grid-cols-7">
+            {categories.map((c) => {
+              const n = counts[c.slug] ?? 0;
+              const src = categoryImage(c.slug);
+              return (
+                <Link
+                  key={c.slug}
+                  href={`/shop?category=${c.slug}`}
+                  className="group relative min-w-[8.5rem] overflow-hidden rounded-xl bg-paper-dim sm:min-w-0"
+                >
+                  <div className="relative aspect-[4/5]">
+                    {src ? (
+                      <Image
+                        src={src}
+                        alt=""
+                        fill
+                        sizes="(min-width: 1024px) 12vw, 40vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-paper-dim" />
+                    )}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 p-3">
+                      <p className="text-sm font-semibold text-white">{c.name}</p>
+                      <p className="mt-0.5 text-xs text-white/70">
+                        {n > 0 ? `${n} live` : "Browse"}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {trending.length > 0 && (
+        <section className="wrap py-10 sm:py-12">
+          <div className="flex items-end justify-between gap-4">
+            <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+              Worth a look
+            </h2>
+            <Link href="/shop" className="text-sm font-semibold text-ink-faint hover:text-ink">
+              Shop all
+            </Link>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-4">
+            {trending.map((item) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+          </div>
         </section>
       )}
 
-      {/* ---------------- Just landed ---------------- */}
-      <section className="wrap py-20">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <Reveal>
-            <p className="eyebrow text-ink-faint">Fresh off the rack</p>
-            <h2 className="mt-2 font-display text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-              Just landed
-            </h2>
-          </Reveal>
-          <Reveal delay={120}>
-            <Link href="/shop?sort=newest" className="btn btn-ghost !px-4 !py-2 text-xs">
-              See everything new
-            </Link>
-          </Reveal>
-        </div>
-
-        <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
-          {latest.map((item, i) => (
-            <Reveal key={item.id} variant="scale" delay={i * 70}>
-              <TiltCard max={5}>
-                <ItemCard item={item} priority={i < 2} />
-              </TiltCard>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ---------------- Auction house ---------------- */}
       {auctions.length > 0 && (
-        <section className="relative isolate overflow-hidden bg-ink py-20 text-paper">
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <span className="blob -top-32 right-0 h-96 w-96 bg-coral/25" />
-            <span
-              className="blob -bottom-28 -left-16 h-80 w-80 bg-reef/30"
-              style={{ "--blob-duration": "37s" } as React.CSSProperties}
-            />
-          </div>
-
-          <div className="wrap">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <Reveal>
-                <p className="eyebrow-pill">
-                  <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-white" />
-                  Auction house
-                </p>
-                <h2 className="mt-4 font-display text-4xl leading-[0.95] font-extrabold tracking-[-0.04em] sm:text-5xl">
-                  Going, going…
-                </h2>
-                <p className="mt-3 max-w-xl text-paper/65">
-                  Hard close, no extensions. Highest bid when the clock runs out
-                  takes the lot.
-                </p>
-              </Reveal>
-              <Reveal delay={140}>
-                <Link href="/auctions" className="btn btn-lime sheen">
-                  All live lots
-                </Link>
-              </Reveal>
+        <section className="border-t border-line">
+          <div className="wrap py-10 sm:py-12">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+                Live auctions
+              </h2>
+              <Link href="/auctions" className="text-sm font-semibold text-ink-faint hover:text-ink">
+                All lots
+              </Link>
             </div>
-
-            <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
-              {auctions.map((auction, i) => (
-                <Reveal key={auction.id} variant="scale" delay={i * 80}>
-                  <AuctionCard auction={auction} />
-                </Reveal>
+            <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-4">
+              {auctions.map((auction) => (
+                <AuctionCard key={auction.id} auction={auction} />
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* ---------------- Shops ---------------- */}
       {gridSellers.length > 0 && (
-        <section className="wrap pb-20">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <Reveal>
-              <p className="eyebrow-pill">The shops</p>
-              <h2 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-                Who&apos;s selling
+        <section className="border-t border-line bg-paper-dim/40">
+          <div className="wrap py-10 sm:py-12">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+                Shops
               </h2>
-              <p className="mt-3 max-w-xl text-ink-soft">
-                Independent sellers running their own storefronts. Find the ones
-                whose taste you trust and watch what they post.
-              </p>
-            </Reveal>
-            <Reveal delay={120}>
-              <Link href="/sellers" className="btn btn-ink">
+              <Link href="/sellers" className="text-sm font-semibold text-ink-faint hover:text-ink">
                 All {stats.shops} shops
               </Link>
-            </Reveal>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {gridSellers.map((seller, i) => (
-              <Reveal key={seller.id} delay={i * 80}>
-                <SellerCard seller={seller} />
-              </Reveal>
-            ))}
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {gridSellers.map((seller) => (
+                <SellerCard key={seller.id} seller={seller} />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* ---------------- Categories ---------------- */}
-      <section className="wrap pb-20">
-        <div className="flex items-end justify-between gap-4">
-          <Reveal>
-            <p className="eyebrow text-ink-faint">Categories</p>
-            <h2 className="mt-2 font-display text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-              Dig through
+      <section className="border-t border-line">
+        <div className="wrap flex flex-col items-start justify-between gap-6 py-12 sm:flex-row sm:items-center sm:py-14">
+          <div className="max-w-lg">
+            <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              Selling is free
             </h2>
-          </Reveal>
-          <Reveal delay={120}>
-            <Link href="/shop" className="btn btn-ghost !px-4 !py-2 text-xs">
-              All categories
+            <p className="mt-2 text-sm text-ink-soft sm:text-base">
+              Your storefront, your payouts. List in under a minute.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/signup" className="btn btn-ink">
+              Start your shop
             </Link>
-          </Reveal>
-        </div>
-
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((c, i) => (
-            <Reveal key={c.slug} variant="scale" delay={i * 60}>
-              <Link
-                href={`/shop?category=${c.slug}`}
-                className={`sheen group flex min-h-48 flex-col justify-between rounded-[1.6rem] p-6 transition duration-300 hover:-translate-y-1.5 ${
-                  i % 4 === 0 ? "bg-ink text-paper" : "bg-white ring-1 ring-black/5"
-                }`}
-              >
-                <p
-                  className={`font-display text-4xl font-extrabold tracking-tight ${
-                    i % 4 === 0 ? "text-reef" : "text-ink"
-                  }`}
-                >
-                  <CountUp to={counts[c.slug] ?? 0} duration={1100} />
-                </p>
-                <div>
-                  <h3 className="font-display text-2xl font-extrabold tracking-tight">
-                    <span className="underline-grow">{c.name}</span>
-                  </h3>
-                  {c.blurb && (
-                    <p
-                      className={`mt-1.5 text-sm leading-snug ${
-                        i % 4 === 0 ? "text-paper/65" : "text-ink-soft"
-                      }`}
-                    >
-                      {c.blurb}
-                    </p>
-                  )}
-                </div>
-              </Link>
-            </Reveal>
-          ))}
+            <Link href="/sell" className="btn btn-ghost">
+              How it works
+            </Link>
+          </div>
         </div>
       </section>
-
-      {/* ---------------- Featured ---------------- */}
-      {featured.length > 0 && (
-        <section className="wrap pb-20">
-          <Reveal>
-            <p className="eyebrow-pill">Featured</p>
-            <h2 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-              Picked out this week
-            </h2>
-          </Reveal>
-          <div className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-4">
-            {featured.map((item, i) => (
-              <Reveal key={item.id} variant="scale" delay={i * 70}>
-                <TiltCard max={5}>
-                  <ItemCard item={item} />
-                </TiltCard>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ---------------- Seller pitch ---------------- */}
-      <Spotlight className="overflow-hidden bg-ink text-paper">
-        <section className="wrap py-20">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <Reveal>
-              <p className="eyebrow-pill">Start selling</p>
-              <h2 className="mt-4 max-w-xl font-display text-4xl leading-[0.95] font-extrabold tracking-[-0.04em] sm:text-6xl">
-                Sell your own merch, keep every dollar.
-              </h2>
-              <p className="mt-4 max-w-xl text-paper/65">
-                Four steps, no fees, no commission. The money goes from the
-                buyer&apos;s Cash App straight into yours.
-              </p>
-            </Reveal>
-            <Reveal delay={140}>
-              <Link href="/signup" className="btn btn-lime sheen">
-                Open your shop free
-              </Link>
-            </Reveal>
-          </div>
-
-          <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, i) => (
-              <Reveal key={step.title} as="li" delay={i * 110}>
-                <div className="group h-full rounded-[1.6rem] bg-white/6 p-6 ring-1 ring-white/10 transition duration-300 hover:-translate-y-1.5 hover:bg-white/12">
-                  <p className="font-display text-4xl font-extrabold text-reef transition group-hover:text-gold">
-                    {String(i + 1).padStart(2, "0")}
-                  </p>
-                  <h3 className="mt-4 font-display text-xl font-bold tracking-tight">
-                    {step.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-paper/65">{step.body}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ol>
-
-          <Reveal delay={200}>
-            <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8 text-sm text-paper/55">
-              {["0% commission", "No listing fees", "Live instantly", "Paid to Cash App"].map(
-                (line) => (
-                  <span key={line} className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-reef" />
-                    {line}
-                  </span>
-                ),
-              )}
-            </div>
-          </Reveal>
-        </section>
-      </Spotlight>
     </>
   );
 }

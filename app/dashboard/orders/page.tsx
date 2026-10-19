@@ -21,9 +21,9 @@ export default async function DashboardOrdersPage() {
           Your orders
         </h2>
         <p className="mt-2 text-sm text-ink-soft">
-          {orders.length} {orders.length === 1 ? "order" : "orders"} · {unpaid} waiting
-          on a Cash App payment. Mark an order paid once the money lands, then
-          ship it.
+          {orders.length} {orders.length === 1 ? "order" : "orders"} · {unpaid} awaiting
+          payment. Stripe marks orders paid automatically; you can also update
+          status when you ship.
         </p>
       </header>
 
@@ -91,7 +91,7 @@ export default async function DashboardOrdersPage() {
                 ))}
               </ul>
 
-              <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+              <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <dt className="font-bold tracking-wide text-ink-faint uppercase">Subtotal</dt>
                   <dd className="mt-0.5">{money(order.subtotal_cents)}</dd>
@@ -104,11 +104,20 @@ export default async function DashboardOrdersPage() {
                 </div>
                 <div>
                   <dt className="font-bold tracking-wide text-ink-faint uppercase">
-                    They should send
+                    Platform fee
+                  </dt>
+                  <dd className="mt-0.5">{money(order.platform_fee_cents ?? 0)}</dd>
+                </div>
+                <div>
+                  <dt className="font-bold tracking-wide text-ink-faint uppercase">
+                    Buyer pays
                   </dt>
                   <dd className="mt-0.5 font-bold">{money(order.total_cents)}</dd>
                 </div>
               </dl>
+              <p className="mt-2 text-xs text-ink-faint">
+                You receive item + shipping; the platform fee goes to Thrift Sharks.
+              </p>
 
               {order.fulfilment === "ship" && (
                 <address className="mt-4 rounded-2xl bg-paper-dim px-4 py-3 text-xs leading-relaxed not-italic text-ink-soft">

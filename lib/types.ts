@@ -7,6 +7,8 @@ export type Category = {
 };
 
 export type ItemImage = {
+  /** The item_images row. Absent on images built outside a query. */
+  id?: number;
   url: string | null;
   image_id: number | null;
   alt: string | null;
@@ -26,6 +28,13 @@ export type Seller = {
   banner_image_id: number | null;
   qr_image_id: number | null;
   qr_is_custom: boolean;
+  banner_x: number;
+  banner_y: number;
+  logo_x: number;
+  logo_y: number;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean;
+  stripe_payouts_enabled: boolean;
   status: "active" | "suspended";
   featured: boolean;
   created_at: string;
@@ -40,10 +49,12 @@ export type SellerCard = {
   tagline: string | null;
   bio: string | null;
   location: string | null;
-  cashapp_tag: string | null;
   logo_image_id: number | null;
   banner_image_id: number | null;
-  qr_image_id: number | null;
+  banner_x: number;
+  banner_y: number;
+  logo_x: number;
+  logo_y: number;
   featured: boolean;
   created_at: string;
   item_count: number;
@@ -59,12 +70,21 @@ export type ShopSettings = {
   tagline: string | null;
   bio: string | null;
   location: string | null;
-  cashapp_tag: string | null;
   logo_image_id: number | null;
   banner_image_id: number | null;
-  qr_image_id: number | null;
-  qr_is_custom: boolean;
+  banner_x: number;
+  banner_y: number;
+  logo_x: number;
+  logo_y: number;
+  stripe_account_id: string | null;
+  stripe_charges_enabled: boolean;
+  stripe_payouts_enabled: boolean;
 };
+
+/** CSS object-position for a banner or profile photo. 50, 50 is the centre. */
+export function focalStyle(x: number | null | undefined, y: number | null | undefined) {
+  return { objectPosition: `${x ?? 50}% ${y ?? 50}%` };
+}
 
 export function toShopSettings(seller: Seller): ShopSettings {
   return {
@@ -75,11 +95,15 @@ export function toShopSettings(seller: Seller): ShopSettings {
     tagline: seller.tagline,
     bio: seller.bio,
     location: seller.location,
-    cashapp_tag: seller.cashapp_tag,
     logo_image_id: seller.logo_image_id,
     banner_image_id: seller.banner_image_id,
-    qr_image_id: seller.qr_image_id,
-    qr_is_custom: seller.qr_is_custom,
+    banner_x: seller.banner_x ?? 50,
+    banner_y: seller.banner_y ?? 50,
+    logo_x: seller.logo_x ?? 50,
+    logo_y: seller.logo_y ?? 50,
+    stripe_account_id: seller.stripe_account_id ?? null,
+    stripe_charges_enabled: Boolean(seller.stripe_charges_enabled),
+    stripe_payouts_enabled: Boolean(seller.stripe_payouts_enabled),
   };
 }
 
@@ -104,7 +128,6 @@ export type Item = {
   seller_handle: string | null;
   seller_shop_name: string | null;
   seller_logo_image_id: number | null;
-  seller_cashapp_tag: string | null;
   brand: string | null;
   item_size: string | null;
   condition: Condition;
@@ -166,9 +189,9 @@ export type Order = {
   seller_id: number | null;
   seller_handle: string | null;
   seller_shop_name: string | null;
-  seller_cashapp_tag: string | null;
-  seller_qr_image_id: number | null;
   seller_logo_image_id: number | null;
+  seller_stripe_account_id: string | null;
+  seller_stripe_charges_enabled: boolean;
   email: string;
   customer_name: string;
   phone: string | null;
@@ -180,13 +203,44 @@ export type Order = {
   country: string;
   subtotal_cents: number;
   shipping_cents: number;
+  platform_fee_cents: number;
   total_cents: number;
   fulfilment: "ship" | "pickup";
   status: "new" | "packed" | "shipped" | "picked-up" | "cancelled";
   payment_status: "pending" | "paid" | "refunded";
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
   notes: string | null;
   created_at: string;
   lines: OrderLine[];
+};
+
+export type DmSender = "buyer" | "seller";
+
+export type DmMessage = {
+  id: number;
+  thread_id: number;
+  sender: DmSender;
+  body: string;
+  created_at: string;
+};
+
+/** A conversation row for lists and headers. Never includes the buyer key. */
+export type DmThread = {
+  id: number;
+  seller_id: number;
+  item_id: number | null;
+  buyer_name: string;
+  buyer_email: string;
+  created_at: string;
+  updated_at: string;
+  shop_name: string;
+  handle: string;
+  item_title: string | null;
+  item_slug: string | null;
+  last_body: string | null;
+  last_sender: DmSender | null;
+  message_count: number;
 };
 
 export type Message = {
@@ -224,7 +278,6 @@ export type Auction = {
   seller_handle: string;
   seller_shop_name: string;
   seller_logo_image_id: number | null;
-  seller_cashapp_tag: string | null;
   bid_count: number;
   high_cents: number | null;
   high_bidder: string | null;
@@ -243,7 +296,16 @@ export const AUCTION_DURATIONS: { hours: number; label: string }[] = [
 export const SHIPPING_FLAT_CENTS = 800;
 export const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
 
+/** Flat platform fee charged to the buyer on every shop order ($5). */
+export const PLATFORM_FEE_CENTS = 500;
+
 export function shippingFor(subtotalCents: number, fulfilment: "ship" | "pickup") {
   if (fulfilment === "pickup" || subtotalCents === 0) return 0;
   return subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : SHIPPING_FLAT_CENTS;
+}
+
+/** Platform fee for a checkout bag — $5 per shop (one Stripe charge each). */
+export function platformFeeForShopCount(shopCount: number) {
+  if (shopCount <= 0) return 0;
+  return PLATFORM_FEE_CENTS * shopCount;
 }

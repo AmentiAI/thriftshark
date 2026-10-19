@@ -30,7 +30,7 @@ const STEPS = [
 export default function AboutPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-ink text-paper">
+      <section className="relative overflow-hidden bg-void text-ink">
         <div className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-reef/25 blur-3xl" />
         <div className="wrap relative max-w-3xl py-20">
           <p className="eyebrow-pill">
@@ -40,7 +40,7 @@ export default function AboutPage() {
           <h1 className="mt-6 font-display text-5xl leading-[0.92] font-extrabold tracking-[-0.05em] sm:text-7xl">
             Someone has to go through all of it.
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-paper/70">
+          <p className="mt-6 text-lg leading-relaxed text-ink/70">
             Thrift Shark started in 2019 as two people, a van and a storage
             unit full of other people&apos;s decisions. The idea has not changed:
             do the digging so that everything on the rack is already worth your
@@ -73,19 +73,19 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-ink py-16 text-paper">
+      <section className="bg-void py-16 text-ink">
         <div className="wrap">
           <h2 className="font-display text-4xl font-extrabold tracking-[-0.04em]">
             Four steps, every single piece
           </h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, i) => (
-              <div key={step.title} className="rounded-[1.6rem] bg-white/6 p-6 ring-1 ring-white/10">
+              <div key={step.title} className="rounded-[1.6rem] bg-paper-dim/6 p-6 ring-1 ring-white/10">
                 <p className="font-display text-4xl font-extrabold text-reef">
                   0{i + 1}
                 </p>
                 <h3 className="mt-4 font-display text-xl font-bold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-paper/65">{step.body}</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/65">{step.body}</p>
               </div>
             ))}
           </div>
@@ -105,9 +105,9 @@ export default function AboutPage() {
             &ldquo;collect in store&rdquo; at checkout.
           </p>
         </div>
-        <div className="panel bg-ink p-8 text-paper">
+        <div className="panel bg-void p-8 text-ink">
           <h2 className="font-display text-3xl font-extrabold tracking-tight">Work with us</h2>
-          <p className="mt-3 leading-relaxed text-paper/70">
+          <p className="mt-3 leading-relaxed text-ink/70">
             We buy and trade in good secondhand clothing every week, and we take
             on the occasional whole-wardrobe clear-out.
           </p>

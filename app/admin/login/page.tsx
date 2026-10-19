@@ -16,7 +16,7 @@ export default async function LoginPage() {
 
   return (
     <div className="wrap max-w-sm py-24">
-      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ink text-reef">
+      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-void text-reef">
         <SharkMark className="h-7 w-7" />
       </span>
       <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight">Staff login</h1>

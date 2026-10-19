@@ -83,7 +83,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
                 Bidding open
               </span>
             ) : (
-              <span className="rounded-full bg-ink px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-paper uppercase">
+              <span className="rounded-full bg-void px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-ink uppercase">
                 {auction.status === "sold" ? "Sold" : "Ended unsold"}
               </span>
             )}
@@ -104,7 +104,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
 
           <Link
             href={`/shop/${auction.seller_handle}`}
-            className="mt-4 inline-flex items-center gap-2.5 rounded-full bg-white py-1.5 pr-4 pl-1.5 ring-1 ring-black/5 transition hover:ring-ink"
+            className="mt-4 inline-flex items-center gap-2.5 rounded-full bg-paper-dim py-1.5 pr-4 pl-1.5 ring-1 ring-white/10 transition hover:ring-reef"
           >
             <ShopAvatar
               shopName={auction.seller_shop_name}
@@ -158,8 +158,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
                   <div className="rounded-2xl bg-kelp/10 px-4 py-3 text-sm">
                     <strong>Won at {money(current)}</strong>
                     {auction.high_bidder && ` by ${maskName(auction.high_bidder)}`}. The
-                    winner pays {auction.seller_shop_name} over Cash App
-                    {auction.seller_cashapp_tag && ` ($${auction.seller_cashapp_tag})`}.
+                    winner pays {auction.seller_shop_name} through Stripe checkout.
                   </div>
                   <ClaimWinForm auctionId={auction.id} />
                 </div>
@@ -186,7 +185,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
 
           <dl className="mt-8 grid grid-cols-2 gap-3 text-sm">
             {spec.map(([k, v]) => (
-              <div key={k} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-black/5">
+              <div key={k} className="rounded-2xl bg-paper-dim px-4 py-3 ring-1 ring-white/10">
                 <dt className="text-[11px] font-bold tracking-[0.14em] text-ink-faint uppercase">
                   {k}
                 </dt>
@@ -263,8 +262,8 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
             </li>
             <li>
               <strong className="text-ink">Paying.</strong> The win turns into a
-              normal order carrying {auction.seller_shop_name}&apos;s Cash App
-              code. You scan it, send the total, they ship.
+              normal order. The winner pays {auction.seller_shop_name} through
+              Stripe checkout, then the shop ships.
             </li>
           </ol>
         </div>

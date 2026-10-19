@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Outfit, Syne } from "next/font/google";
+import { Plus_Jakarta_Sans, Syne } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
-const body = Outfit({
+const body = Plus_Jakarta_Sans({
   variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
@@ -21,15 +21,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Thrift Shark — open a shop, sell your merch",
-    template: "%s · Thrift Shark",
+    default: "Thrift Sharks — one-of-one secondhand",
+    template: "%s · Thrift Sharks",
   },
   description:
-    "A marketplace for one-of-one secondhand. Open your own shop in minutes, list your merch, and get paid straight to Cash App.",
+    "The marketplace for one-of-one secondhand. Hunt rare pieces, open your shop free, get paid through Stripe.",
   openGraph: {
-    title: "Thrift Shark — open a shop, sell your merch",
+    title: "Thrift Sharks — one-of-one secondhand",
     description:
-      "A marketplace for one-of-one secondhand. Your shop, your logo, paid to Cash App.",
+      "Hunt rare pieces, open your shop free, get paid through Stripe.",
     type: "website",
     url: siteUrl,
   },

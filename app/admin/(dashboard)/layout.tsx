@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
     <div className="wrap py-10">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-5">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-ink text-reef">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-void text-reef">
             <SharkMark className="h-5 w-5" />
           </span>
           <h1 className="font-display text-xl font-extrabold tracking-tight">Shop admin</h1>

@@ -73,7 +73,7 @@ export default async function ContactPage(props: PageProps<"/contact">) {
             <h2 className="eyebrow text-ink-soft">Common questions</h2>
             <dl className="mt-4 space-y-3">
               {FAQ.map((entry) => (
-                <div key={entry.q} className="rounded-2xl bg-white p-4 ring-1 ring-black/5">
+                <div key={entry.q} className="rounded-2xl bg-paper-dim p-4 ring-1 ring-white/10">
                   <dt className="font-semibold">{entry.q}</dt>
                   <dd className="mt-1.5 text-sm leading-relaxed text-ink-soft">{entry.a}</dd>
                 </div>

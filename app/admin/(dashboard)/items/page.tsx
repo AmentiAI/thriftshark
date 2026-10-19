@@ -26,7 +26,7 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
             {status ? ` with status “${status}”` : " across every status"}
           </p>
         </div>
-        <Link href="/admin/sellers" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
+        <Link href="/admin/sellers" className="bg-void px-5 py-3 text-sm font-semibold tracking-wide text-ink uppercase">
           Manage shops
         </Link>
       </header>
@@ -34,7 +34,7 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
       <nav className="mb-6 flex flex-wrap gap-2 text-sm">
         <Link
           href="/admin/items"
-          className={`border px-3 py-1.5 ${!status ? "border-ink bg-ink text-paper" : "border-line hover:border-ink"}`}
+          className={`border px-3 py-1.5 ${!status ? "border-ink bg-void text-ink" : "border-line hover:border-ink"}`}
         >
           All
         </Link>
@@ -43,7 +43,7 @@ export default async function AdminItemsPage(props: PageProps<"/admin/items">) {
             key={s}
             href={`/admin/items?status=${s}`}
             className={`border px-3 py-1.5 capitalize ${
-              status === s ? "border-ink bg-ink text-paper" : "border-line hover:border-ink"
+              status === s ? "border-ink bg-void text-ink" : "border-line hover:border-ink"
             }`}
           >
             {s}

@@ -56,15 +56,16 @@ export default async function ShopPage(props: PageProps<"/shop">) {
     <div className="wrap py-12">
       <header className="pb-8">
         <p className="eyebrow-pill">
-          {query.includeSold ? "Shop + sold archive" : "In stock now"}
+          {query.includeSold ? "Shop + archive" : `${totalInStock} in stock`}
         </p>
-        <h1 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] break-anywhere sm:mt-5 sm:text-5xl lg:text-6xl">
-          {activeCategory?.name ?? (query.q ? `“${query.q}”` : "Everything we have")}
+        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-[-0.03em] break-anywhere sm:text-4xl">
+          {activeCategory?.name ?? (query.q ? `“${query.q}”` : "Shop")}
         </h1>
-        <p className="mt-3 max-w-2xl text-ink-soft sm:mt-4 sm:text-lg">
-          {activeCategory?.blurb ??
-            "Single-piece inventory, measured by hand. Filter it down, then move fast — there is only ever one of each."}
-        </p>
+        {(activeCategory?.blurb || query.q) && (
+          <p className="mt-2 max-w-xl text-sm text-ink-soft">
+            {activeCategory?.blurb ?? "Results for your search."}
+          </p>
+        )}
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
@@ -139,10 +140,10 @@ export default async function ShopPage(props: PageProps<"/shop">) {
                     key={n}
                     href={pageHref(n)}
                     aria-current={n === result.page ? "page" : undefined}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm ${
                       n === result.page
-                        ? "bg-ink font-semibold text-paper"
-                        : "bg-white ring-1 ring-black/10 hover:bg-reef hover:text-white"
+                        ? "bg-reef font-semibold text-white"
+                        : "bg-paper-dim text-ink-soft ring-1 ring-line hover:text-ink"
                     }`}
                   >
                     {n}

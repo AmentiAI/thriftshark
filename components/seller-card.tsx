@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShopAvatar } from "@/components/shop-avatar";
-import type { SellerCard as SellerCardType } from "@/lib/types";
+import { focalStyle, type SellerCard as SellerCardType } from "@/lib/types";
 
 export function SellerCard({
   seller,
@@ -13,9 +13,8 @@ export function SellerCard({
   return (
     <Link
       href={`/shop/${seller.handle}`}
-      className="group flex flex-col overflow-hidden rounded-[1.6rem] bg-white ring-1 ring-black/5 transition hover:-translate-y-1 hover:ring-ink"
+      className="group flex flex-col overflow-hidden rounded-xl border border-line bg-paper transition hover:border-ink"
     >
-      {/* The shop's own banner, so the directory looks like the shops do. */}
       <div className="relative h-28 sm:h-32">
         {seller.banner_image_id ? (
           <Image
@@ -24,55 +23,50 @@ export function SellerCard({
             fill
             priority={priority}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition duration-700 group-hover:scale-[1.04]"
+            className="object-cover"
+            style={focalStyle(seller.banner_x, seller.banner_y)}
           />
         ) : (
-          <div className="absolute inset-0 bg-ink">
-            <div className="absolute inset-0 bg-[radial-gradient(260px_140px_at_80%_-10%,rgb(0_132_255/0.7),transparent_60%),radial-gradient(200px_120px_at_5%_120%,rgb(62_198_255/0.55),transparent_60%)]" />
-            <div className="hatch absolute inset-0" />
-          </div>
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-br from-zinc-200 via-paper-dim to-zinc-100"
+          />
         )}
         {seller.featured && (
-          <span className="absolute top-3 right-3 rounded-full bg-gold px-2.5 py-1 text-[10px] font-bold tracking-[0.12em] text-ink uppercase">
+          <span className="absolute top-2 right-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-ink uppercase shadow-sm">
             Featured
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col px-5 pb-5">
-        <div className="-mt-9 flex items-end gap-3">
-          <div className="rounded-full bg-white p-1 shadow-lg ring-1 ring-black/5">
-            <ShopAvatar
-              shopName={seller.shop_name}
-              logoImageId={seller.logo_image_id}
-              size={64}
-            />
-          </div>
+      <div className="flex flex-1 flex-col px-4 pb-4">
+        <div className="relative z-10 -mt-7 w-fit rounded-full bg-paper p-1 ring-1 ring-line">
+          <ShopAvatar
+            shopName={seller.shop_name}
+            logoImageId={seller.logo_image_id}
+            size={56}
+            focalX={seller.logo_x}
+            focalY={seller.logo_y}
+          />
         </div>
 
-        <h3 className="mt-3 font-display text-xl leading-tight font-extrabold tracking-tight break-anywhere group-hover:text-reef-dark">
+        <h3 className="mt-3 font-display text-lg font-bold tracking-tight group-hover:underline">
           {seller.shop_name}
         </h3>
-        <p className="mt-1 truncate text-xs font-semibold text-ink-faint">
+        <p className="mt-0.5 truncate text-xs text-ink-faint">
           @{seller.handle}
           {seller.location && ` · ${seller.location}`}
         </p>
 
         {seller.tagline && (
-          <p className="mt-3 line-clamp-2 text-sm leading-snug text-ink-soft">
-            {seller.tagline}
-          </p>
+          <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{seller.tagline}</p>
         )}
 
-        <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
-          <span className="rounded-full bg-paper-dim px-3 py-1 text-xs font-bold">
+        <div className="mt-auto flex gap-3 pt-3 text-xs text-ink-faint">
+          <span>
             {seller.item_count} {seller.item_count === 1 ? "listing" : "listings"}
           </span>
-          {seller.sold_count > 0 && (
-            <span className="rounded-full bg-paper-dim px-3 py-1 text-xs font-bold">
-              {seller.sold_count} sold
-            </span>
-          )}
+          {seller.sold_count > 0 && <span>{seller.sold_count} sold</span>}
         </div>
       </div>
     </Link>

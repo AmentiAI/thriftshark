@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      // Listing forms carry up to six photos. The browser shrinks them before
+      // Listing forms carry up to ten photos. The browser shrinks them before
       // upload (components/image-field.tsx), so a real submission is a couple
       // of MB; this ceiling is headroom for a browser that could not.
       bodySizeLimit: "40mb",

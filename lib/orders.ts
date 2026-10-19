@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
-import { shippingFor } from "@/lib/types";
+import { PLATFORM_FEE_CENTS, shippingFor } from "@/lib/types";
 import { getItemsByIds } from "@/lib/queries";
 
 export type CheckoutDetails = {
@@ -23,9 +23,9 @@ function orderNumber() {
 }
 
 /**
- * A bag can hold pieces from several shops, and each shop gets paid separately
- * over Cash App — so checkout writes one order per seller, tied together by a
- * group token that the confirmation page looks up.
+ * A bag can hold pieces from several shops, and each shop is paid separately
+ * through Stripe Connect — so checkout writes one order per seller, tied
+ * together by a group token that the confirmation page looks up.
  *
  * It is still a single statement: `for update` plus the `guard` CTE mean that
  * if any piece is claimed mid-checkout, nothing at all is written and the buyer
@@ -57,6 +57,24 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
     };
   }
 
+  const sellerIds = [...new Set(items.map((i) => i.seller_id!))];
+  const payoutReady = (await sql.query(
+    `select id, shop_name from sellers
+     where id = any($1::int[]) and coalesce(stripe_charges_enabled, false) = true`,
+    [sellerIds],
+  )) as { id: number; shop_name: string }[];
+  if (payoutReady.length !== sellerIds.length) {
+    const ready = new Set(payoutReady.map((s) => s.id));
+    const blocked = items
+      .filter((i) => i.seller_id && !ready.has(i.seller_id))
+      .map((i) => i.seller_shop_name ?? "A shop");
+    const names = [...new Set(blocked)].join(", ");
+    return {
+      ok: false as const,
+      error: `${names} ${blocked.length === 1 ? "is" : "are"} not taking card payments yet. Remove those pieces or try again later.`,
+    };
+  }
+
   // One order per shop, each with its own shipping threshold.
   const bySeller = new Map<number, typeof items>();
   for (const item of items) {
@@ -66,15 +84,17 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
   }
 
   const groupToken = randomBytes(9).toString("base64url");
-  const sellerIds: number[] = [];
+  const orderSellerIds: number[] = [];
   const orderNumbers: string[] = [];
   const shippingCents: number[] = [];
+  const platformFees: number[] = [];
 
   for (const [sellerId, sellerItems] of bySeller) {
     const subtotal = sellerItems.reduce((sum, i) => sum + i.price_cents, 0);
-    sellerIds.push(sellerId);
+    orderSellerIds.push(sellerId);
     orderNumbers.push(orderNumber());
     shippingCents.push(shippingFor(subtotal, details.fulfilment));
+    platformFees.push(PLATFORM_FEE_CENTS);
   }
 
   const rows = (await sql.query(
@@ -88,22 +108,23 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
        select 1 where (select count(*) from avail) = $2::int
      ),
      shops as (
-       select * from unnest($3::int[], $4::text[], $5::int[])
-                       as t(seller_id, order_number, shipping_cents)
+       select * from unnest($3::int[], $4::text[], $5::int[], $6::int[])
+                       as t(seller_id, order_number, shipping_cents, platform_fee_cents)
      ),
      new_orders as (
        insert into orders (order_number, seller_id, group_token, email, customer_name,
          phone, address_line1, address_line2, city, region, postal_code, country,
-         fulfilment, notes, subtotal_cents, shipping_cents, total_cents)
-       select h.order_number, h.seller_id, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-              $16, $17,
+         fulfilment, notes, subtotal_cents, shipping_cents, platform_fee_cents, total_cents)
+       select h.order_number, h.seller_id, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+              $17, $18,
               sum(a.price_cents)::int,
               h.shipping_cents,
-              (sum(a.price_cents) + h.shipping_cents)::int
+              h.platform_fee_cents,
+              (sum(a.price_cents) + h.shipping_cents + h.platform_fee_cents)::int
        from shops h
        join avail a on a.seller_id = h.seller_id
        where exists (select 1 from guard)
-       group by h.seller_id, h.order_number, h.shipping_cents
+       group by h.seller_id, h.order_number, h.shipping_cents, h.platform_fee_cents
        returning id, seller_id
      ),
      lines as (
@@ -124,9 +145,10 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
     [
       ids,
       ids.length,
-      sellerIds,
+      orderSellerIds,
       orderNumbers,
       shippingCents,
+      platformFees,
       groupToken,
       details.email,
       details.customer_name,

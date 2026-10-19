@@ -95,7 +95,7 @@ create table if not exists subscribers (
 );
 
 -- ---------------------------------------------------------------------------
--- Marketplace: sellers run their own storefronts and get paid over Cash App.
+-- Marketplace: sellers run their own storefronts and get paid via Stripe Connect.
 -- ---------------------------------------------------------------------------
 
 create table if not exists images (
@@ -142,8 +142,14 @@ create index if not exists items_seller_idx       on items  (seller_id, status);
 create index if not exists orders_seller_idx      on orders (seller_id, created_at desc);
 create index if not exists orders_group_idx       on orders (group_token);
 
--- A seller can upload their own Cash App code instead of the generated one.
+-- Legacy QR columns (unused); kept so older rows migrate cleanly.
 alter table sellers add column if not exists qr_is_custom boolean not null default false;
+
+-- Where the banner and profile photo sit inside their frames (object-position %).
+alter table sellers add column if not exists banner_x smallint not null default 50;
+alter table sellers add column if not exists banner_y smallint not null default 50;
+alter table sellers add column if not exists logo_x smallint not null default 50;
+alter table sellers add column if not exists logo_y smallint not null default 50;
 
 -- ---------------------------------------------------------------------------
 -- Auction house. A listing can be put up for timed bidding instead of a fixed
@@ -184,3 +190,49 @@ create table if not exists bids (
 );
 
 create index if not exists bids_auction_idx on bids (auction_id, amount_cents desc, id);
+
+-- Direct messages. A buyer is a browser cookie, not an account: one thread per
+-- shop, and staff can read every thread.
+create table if not exists dm_threads (
+  id           serial primary key,
+  seller_id    int not null references sellers(id) on delete cascade,
+  item_id      int references items(id) on delete set null,
+  buyer_name   text not null,
+  buyer_email  text not null,
+  buyer_key    text not null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create unique index if not exists dm_threads_pair_idx on dm_threads (seller_id, buyer_key);
+create index if not exists dm_threads_seller_idx on dm_threads (seller_id, updated_at desc);
+create index if not exists dm_threads_buyer_idx on dm_threads (buyer_key, updated_at desc);
+
+create table if not exists dm_messages (
+  id          serial primary key,
+  thread_id   int not null references dm_threads(id) on delete cascade,
+  sender      text not null check (sender in ('buyer', 'seller')),
+  body        text not null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists dm_messages_thread_idx on dm_messages (thread_id, created_at, id);
+
+-- Stripe Connect: sellers get paid on their own Express account (direct charges).
+alter table sellers
+  add column if not exists stripe_account_id text unique,
+  add column if not exists stripe_charges_enabled boolean not null default false,
+  add column if not exists stripe_payouts_enabled boolean not null default false;
+
+alter table orders
+  add column if not exists stripe_checkout_session_id text,
+  add column if not exists stripe_payment_intent_id text;
+
+-- Flat platform fee (buyer-paid) collected via Stripe application_fee_amount.
+alter table orders
+  add column if not exists platform_fee_cents int not null default 0
+    check (platform_fee_cents >= 0);
+
+create index if not exists orders_stripe_session_idx
+  on orders (stripe_checkout_session_id)
+  where stripe_checkout_session_id is not null;

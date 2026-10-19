@@ -8,55 +8,49 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Open your shop",
   description:
-    "Open a Thrift Shark shop in about a minute. Your own storefront, your logo, paid straight to Cash App.",
+    "Open a Thrift Sharks shop in about a minute. Your storefront, paid through Stripe.",
 };
 
 const PERKS = [
-  ["Free to open", "No listing fees, no monthly fee. List what you want, when you want."],
-  ["Your storefront", "Your own page at /shop/your-name, with your logo, banner and bio."],
-  ["Paid to Cash App", "Buyers scan your Cash App code and pay you directly. We never hold your money."],
-  ["Live immediately", "Your shop is public the moment you sign up. No waiting on approval."],
+  ["Free to open", "No listing fees. No monthly fee."],
+  ["Your storefront", "Your page at /shop/you — logo, banner, bio."],
+  ["Paid via Stripe", "Buyers pay you by card at checkout."],
+  ["Live immediately", "Public the moment you sign up."],
 ];
 
 export default async function SignupPage() {
   if (await currentSeller()) redirect("/dashboard");
 
   return (
-    <div className="wrap grid gap-12 py-12 lg:grid-cols-[1fr_1.1fr] lg:py-16">
-      <div className="order-2 rounded-[2rem] bg-ink p-6 text-paper sm:p-10 lg:order-1">
+    <div className="wrap grid gap-10 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-14">
+      <div className="order-2 lg:order-1">
         <p className="eyebrow-pill">Start selling</p>
-        <h1 className="mt-5 font-display text-4xl leading-[0.9] font-extrabold tracking-[-0.05em] sm:text-5xl">
-          Your shop,
-          <span className="block text-reef">your money.</span>
+        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Your shop, your money
         </h1>
-        <p className="mt-5 leading-relaxed text-paper/70">
-          Thrift Shark is a marketplace, not a middleman. You run the shop, set
-          the prices and keep every dollar — buyers pay your Cash App directly.
+        <p className="mt-3 max-w-md text-ink-soft">
+          A marketplace, not a middleman. You set prices; buyers cover a small
+          platform fee at checkout.
         </p>
-
-        <dl className="mt-10 space-y-6">
+        <dl className="mt-8 space-y-4">
           {PERKS.map(([title, body], i) => (
-            <div key={title} className="flex gap-4">
-              <span className="font-display text-2xl leading-none font-extrabold text-reef">
+            <div key={title} className="flex gap-3 border-t border-line pt-4">
+              <span className="w-7 shrink-0 text-sm font-semibold text-ink-faint">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
-                <dt className="font-bold">{title}</dt>
-                <dd className="mt-1 text-sm leading-relaxed text-paper/65">{body}</dd>
+                <dt className="font-semibold">{title}</dt>
+                <dd className="mt-0.5 text-sm text-ink-faint">{body}</dd>
               </div>
             </div>
           ))}
         </dl>
       </div>
 
-      <div className="order-1 panel p-5 sm:p-9 lg:order-2">
-        <h2 className="font-display text-2xl font-extrabold tracking-tight">
-          Open your shop
-        </h2>
-        <p className="mt-1.5 text-sm text-ink-soft">
-          Takes about a minute. You can add your logo and photos right after.
-        </p>
-        <div className="mt-7">
+      <div className="order-1 panel p-5 sm:p-8 lg:order-2">
+        <h2 className="font-display text-xl font-bold tracking-tight">Open your shop</h2>
+        <p className="mt-1 text-sm text-ink-faint">About a minute. Add photos after.</p>
+        <div className="mt-6">
           <SignupForm />
         </div>
       </div>

@@ -6,7 +6,13 @@ import { useActionState, useState } from "react";
 import { useBagItems } from "@/components/bag-view";
 import { money } from "@/lib/format";
 import { placeOrder, type FormState } from "@/lib/actions";
-import { FREE_SHIPPING_THRESHOLD_CENTS, imageSrc, shippingFor } from "@/lib/types";
+import {
+  FREE_SHIPPING_THRESHOLD_CENTS,
+  PLATFORM_FEE_CENTS,
+  imageSrc,
+  platformFeeForShopCount,
+  shippingFor,
+} from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase";
 
@@ -16,7 +22,9 @@ export function CheckoutForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, null);
 
   const shipping = shippingFor(subtotal, fulfilment);
-  const total = subtotal + shipping;
+  const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
+  const platformFee = platformFeeForShopCount(shopCount || 1);
+  const total = subtotal + shipping + platformFee;
 
   if (loading) {
     return <p className="py-20 text-center text-ink-faint">Loading your bag…</p>;
@@ -82,7 +90,7 @@ export function CheckoutForm() {
               <label
                 key={value}
                 className={`cursor-pointer rounded-2xl border p-4 transition ${
-                  fulfilment === value ? "border-ink bg-reef/40" : "border-line bg-white hover:border-ink"
+                  fulfilment === value ? "border-ink bg-reef/40" : "border-line bg-paper-dim hover:border-ink"
                 }`}
               >
                 <span className="flex items-center gap-2">
@@ -163,7 +171,7 @@ export function CheckoutForm() {
                       alt=""
                       fill
                       sizes="48px"
-                      className="object-contain bg-white p-0.5"
+                      className="object-contain bg-paper-dim p-0.5"
                     />
                   )}
                 </div>
@@ -187,6 +195,13 @@ export function CheckoutForm() {
               </dt>
               <dd className="font-medium">{shipping === 0 ? "Free" : money(shipping)}</dd>
             </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">
+                Platform fee
+                {shopCount > 1 ? ` (${shopCount} shops)` : ""}
+              </dt>
+              <dd className="font-medium">{money(platformFee)}</dd>
+            </div>
             <div className="flex justify-between border-t border-line pt-3 font-display text-base font-bold">
               <dt>Total due</dt>
               <dd>{money(total)}</dd>
@@ -207,8 +222,9 @@ export function CheckoutForm() {
           </button>
 
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
-            No card is charged here. We hold your pieces, email a payment link,
-            and ship as soon as it clears.
+            Next you’ll pay by card on Stripe. A {money(PLATFORM_FEE_CENTS)}{" "}
+            platform fee per shop keeps Thrift Sharks running — sellers still
+            receive their item and shipping totals.
           </p>
         </div>
       </aside>

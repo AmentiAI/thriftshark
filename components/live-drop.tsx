@@ -17,16 +17,16 @@ export function LiveDrop({ items }: { items: Item[] }) {
           <Link
             key={item.id}
             href={`/item/${item.slug}`}
-            className="group flex w-72 shrink-0 items-center gap-3 rounded-2xl bg-white/8 p-3 ring-1 ring-white/10 transition hover:bg-white/15"
+            className="group flex w-72 shrink-0 items-center gap-3 rounded-2xl bg-paper-dim/8 p-3 ring-1 ring-white/10 transition hover:bg-paper-dim/15"
           >
-            <div className="relative h-16 w-13 shrink-0 overflow-hidden rounded-xl bg-white">
+            <div className="relative h-16 w-13 shrink-0 overflow-hidden rounded-xl bg-paper-dim">
               {src && (
                 <Image src={src} alt="" fill sizes="52px" className="object-cover" />
               )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">{item.title}</p>
-              <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-paper/60">
+              <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-ink/60">
                 {item.seller_shop_name && (
                   <ShopAvatar
                     shopName={item.seller_shop_name}

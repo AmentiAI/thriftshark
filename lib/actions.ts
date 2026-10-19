@@ -13,7 +13,19 @@ import {
   startSellerSession,
   verifyPassword,
 } from "@/lib/seller-auth";
-import { generateCashappQr, normaliseCashtag, storeUpload } from "@/lib/images";
+import { ensureBuyerKey, currentBuyerKey } from "@/lib/buyer-auth";
+import { storeUpload } from "@/lib/images";
+import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
+import {
+  createCheckoutSessionForOrder,
+  syncSellerFromStripeAccount,
+} from "@/lib/stripe-connect";
+import {
+  getStripe,
+  publicBusinessUrl,
+  requestOrigin,
+  stripeConfigured,
+} from "@/lib/stripe";
 import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS } from "@/lib/types";
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -74,7 +86,136 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
   if (!result.ok) return { error: result.error };
 
   revalidatePath("/shop");
+
+  // Stripe Connect: one Checkout Session per shop order when that seller is ready.
+  // Single-shop carts go straight to Stripe; multi-shop carts land on the receipt
+  // so the buyer can pay each shop separately.
+  if (stripeConfigured()) {
+    const orders = await getOrderGroup(result.groupToken);
+    const ready = orders.filter(
+      (o) => o.seller_stripe_charges_enabled && o.seller_stripe_account_id,
+    );
+    if (ready.length === 1 && orders.length === 1) {
+      const session = await createCheckoutSessionForOrder(ready[0]);
+      if (session.ok) redirect(session.url);
+    } else {
+      for (const order of ready) {
+        await createCheckoutSessionForOrder(order);
+      }
+    }
+  }
+
   redirect(`/order/${result.groupToken}`);
+}
+
+/** Buyer resumes / starts Stripe Checkout for one order on the receipt page. */
+export async function payOrderWithStripe(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!stripeConfigured()) {
+    return { error: "Card checkout is not configured yet." };
+  }
+
+  const token = text(formData.get("token"));
+  const orderId = Number(text(formData.get("order_id")));
+  if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+    return { error: "That order is missing." };
+  }
+
+  let orders = await getOrderGroup(token);
+  if (orders.length === 0) {
+    const single = await getOrderByNumber(token);
+    if (single) orders = [single];
+  }
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) return { error: "That order is not on this receipt." };
+
+  const session = await createCheckoutSessionForOrder(order);
+  if (!session.ok) return { error: session.error };
+  redirect(session.url);
+}
+
+/** Build a fresh Express Account Link for this seller (or create the account first). */
+export async function createSellerAccountLink(sellerId: number) {
+  const seller = await requireSeller();
+  if (seller.id !== sellerId) throw new Error("Not signed in");
+  if (!stripeConfigured()) throw new Error("STRIPE_SECRET_KEY is not set");
+
+  const stripe = getStripe();
+  // Must match the tab the seller is on — NEXT_PUBLIC_SITE_URL is often wrong
+  // when next dev picks 3001/3002 because 3000 is taken.
+  const base = await requestOrigin();
+  let accountId = seller.stripe_account_id;
+
+  if (!accountId) {
+    // Stripe rejects localhost for business_profile.url ("Not a valid URL").
+    const shopUrl = publicBusinessUrl(`/shop/${seller.handle}`);
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: "US",
+      email: seller.email,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      business_profile: {
+        name: seller.shop_name,
+        product_description: "Secondhand clothing and accessories sold on Thrift Sharks.",
+        mcc: "5931",
+        ...(shopUrl ? { url: shopUrl } : {}),
+      },
+      metadata: {
+        seller_id: String(seller.id),
+        handle: seller.handle,
+      },
+    });
+    accountId = account.id;
+    await sql`
+      update sellers
+      set stripe_account_id = ${accountId}, updated_at = now()
+      where id = ${seller.id} and stripe_account_id is null
+    `;
+  } else {
+    // Already finished? Skip Stripe and land on the dashboard.
+    const account = await stripe.accounts.retrieve(accountId);
+    await syncSellerFromStripeAccount(accountId);
+    if (account.details_submitted && account.charges_enabled) {
+      return { done: true as const, url: `${base}/dashboard/shop?stripe=done` };
+    }
+  }
+
+  const link = await stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: `${base}/dashboard/shop?stripe=refresh`,
+    return_url: `${base}/dashboard/shop?stripe=done`,
+    type: "account_onboarding",
+  });
+
+  return { done: false as const, url: link.url };
+}
+
+/** Seller: create Express account (if needed) and open Stripe-hosted onboarding. */
+export async function startStripeOnboarding(): Promise<void> {
+  const seller = await requireSeller();
+  const link = await createSellerAccountLink(seller.id);
+  redirect(link.url);
+}
+
+/** Seller returned from Stripe — refresh charges/payouts flags immediately. */
+export async function refreshStripeStatus(): Promise<void> {
+  const seller = await requireSeller();
+  if (!seller.stripe_account_id || !stripeConfigured()) {
+    redirect("/dashboard/shop");
+  }
+  try {
+    await syncSellerFromStripeAccount(seller.stripe_account_id);
+  } catch {
+    // Still bounce back; the panel shows current DB flags.
+  }
+  revalidatePath("/dashboard/shop");
+  revalidatePath("/dashboard");
+  redirect("/dashboard/shop");
 }
 
 const contactSchema = z.object({
@@ -101,6 +242,117 @@ export async function sendMessage(_prev: FormState, formData: FormData): Promise
             ${parsed.data.body}, ${Number.isInteger(itemId) && itemId > 0 ? itemId : null})
   `;
   return { ok: "Message sent. We usually reply within a day." };
+}
+
+const dmStartSchema = z.object({
+  name: z.string().min(2, "Tell the shop your name.").max(80, "That name is too long."),
+  email: z.string().email("Enter a valid email address.").max(200),
+  body: z.string().min(1, "Write a message.").max(2000, "Keep it under 2,000 characters."),
+});
+
+const dmReplySchema = z
+  .string()
+  .min(1, "Write a message.")
+  .max(2000, "Keep it under 2,000 characters.");
+
+/** Start or continue a direct message with one shop. */
+export async function openDm(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await getSellerByHandle(text(formData.get("handle")));
+  if (!seller) return { error: "That shop is not taking messages." };
+
+  const parsed = dmStartSchema.safeParse({
+    name: text(formData.get("name")),
+    email: text(formData.get("email")).toLowerCase(),
+    body: text(formData.get("body")),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const rawItem = Number(text(formData.get("item_id")));
+  let itemId: number | null = null;
+  if (Number.isInteger(rawItem) && rawItem > 0) {
+    const owned = (await sql`
+      select id from items where id = ${rawItem} and seller_id = ${seller.id}
+    `) as { id: number }[];
+    if (owned[0]) itemId = owned[0].id;
+  }
+
+  const key = await ensureBuyerKey();
+  const rows = (await sql`
+    with thread as (
+      insert into dm_threads (seller_id, buyer_name, buyer_email, buyer_key, item_id)
+      values (${seller.id}, ${parsed.data.name}, ${parsed.data.email}, ${key}, ${itemId})
+      on conflict (seller_id, buyer_key) do update
+        set buyer_name = excluded.buyer_name,
+            buyer_email = excluded.buyer_email,
+            item_id = coalesce(excluded.item_id, dm_threads.item_id),
+            updated_at = now()
+      returning id
+    )
+    insert into dm_messages (thread_id, sender, body)
+    select id, 'buyer', ${parsed.data.body} from thread
+    returning thread_id
+  `) as { thread_id: number }[];
+
+  revalidatePath("/inbox");
+  revalidatePath("/dashboard/messages");
+  revalidatePath("/admin/messages");
+  redirect(`/inbox/${rows[0].thread_id}`);
+}
+
+export async function replyAsBuyer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const key = await currentBuyerKey();
+  if (!key) return { error: "Open this conversation from the browser you started it in." };
+
+  const id = Number(text(formData.get("thread_id")));
+  const body = dmReplySchema.safeParse(text(formData.get("body")));
+  if (!Number.isInteger(id) || id <= 0) return { error: "That conversation is missing." };
+  if (!body.success) return { error: body.error.issues[0].message };
+
+  const owned = (await sql`
+    update dm_threads set updated_at = now()
+    where id = ${id} and buyer_key = ${key}
+    returning id
+  `) as { id: number }[];
+  if (!owned[0]) return { error: "That conversation is not yours." };
+
+  await sql`
+    insert into dm_messages (thread_id, sender, body)
+    values (${id}, 'buyer', ${body.data})
+  `;
+
+  revalidatePath("/inbox");
+  revalidatePath(`/inbox/${id}`);
+  revalidatePath("/dashboard/messages");
+  revalidatePath(`/dashboard/messages/${id}`);
+  revalidatePath("/admin/messages");
+  redirect(`/inbox/${id}`);
+}
+
+export async function replyAsSeller(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const id = Number(text(formData.get("thread_id")));
+  const body = dmReplySchema.safeParse(text(formData.get("body")));
+  if (!Number.isInteger(id) || id <= 0) return { error: "That conversation is missing." };
+  if (!body.success) return { error: body.error.issues[0].message };
+
+  const owned = (await sql`
+    update dm_threads set updated_at = now()
+    where id = ${id} and seller_id = ${seller.id}
+    returning id
+  `) as { id: number }[];
+  if (!owned[0]) return { error: "That conversation is not yours." };
+
+  await sql`
+    insert into dm_messages (thread_id, sender, body)
+    values (${id}, 'seller', ${body.data})
+  `;
+
+  revalidatePath("/inbox");
+  revalidatePath(`/inbox/${id}`);
+  revalidatePath("/dashboard/messages");
+  revalidatePath(`/dashboard/messages/${id}`);
+  revalidatePath("/admin/messages");
+  redirect(`/dashboard/messages/${id}`);
 }
 
 export async function subscribe(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -170,14 +422,6 @@ function readItemForm(formData: FormData) {
     status: text(formData.get("status")) || "available",
     featured: formData.get("featured") === "on",
   });
-}
-
-function readImageUrls(formData: FormData) {
-  return text(formData.get("image_urls"))
-    .split(/[\n,]/)
-    .map((s) => s.trim())
-    .filter((s) => /^https?:\/\//.test(s))
-    .slice(0, 8);
 }
 
 async function uniqueSlug(title: string, ignoreId?: number) {
@@ -265,7 +509,6 @@ const signupSchema = z.object({
   handle: handleSchema,
   email: z.string().email("Enter a valid email address."),
   password: z.string().min(8, "Use a password of at least 8 characters."),
-  cashapp_tag: z.string().min(1, "Add your $cashtag so buyers can pay you."),
   tagline: z.string().nullable(),
   location: z.string().nullable(),
 });
@@ -278,7 +521,6 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
     handle: handleInput,
     email: text(formData.get("email")).toLowerCase(),
     password: text(formData.get("password")),
-    cashapp_tag: text(formData.get("cashapp_tag")),
     tagline: optional(formData.get("tagline")),
     location: optional(formData.get("location")),
   });
@@ -288,11 +530,6 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
 
   if (RESERVED_HANDLES.has(d.handle)) {
     return { error: `“${d.handle}” is reserved. Try another shop link.` };
-  }
-
-  const cashtag = normaliseCashtag(d.cashapp_tag);
-  if (!cashtag) {
-    return { error: "That $cashtag does not look right. Letters and numbers only." };
   }
 
   const clashes = (await sql`
@@ -307,19 +544,13 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
   }
 
   const rows = (await sql`
-    insert into sellers (handle, shop_name, email, password_hash, tagline, location, cashapp_tag)
+    insert into sellers (handle, shop_name, email, password_hash, tagline, location)
     values (${d.handle}, ${d.shop_name}, ${d.email}, ${hashPassword(d.password)},
-            ${d.tagline}, ${d.location}, ${cashtag})
+            ${d.tagline}, ${d.location})
     returning id
   `) as { id: number }[];
 
   const sellerId = rows[0].id;
-
-  // Build their scannable Cash App code straight away so the shop can take money.
-  const qrId = await generateCashappQr(cashtag, sellerId);
-  if (qrId) {
-    await sql`update sellers set qr_image_id = ${qrId} where id = ${sellerId}`;
-  }
 
   await startSellerSession(sellerId);
   revalidatePath("/sellers");
@@ -360,7 +591,6 @@ const shopSchema = z.object({
   tagline: z.string().nullable(),
   bio: z.string().nullable(),
   location: z.string().nullable(),
-  cashapp_tag: z.string().min(1, "Buyers pay you by $cashtag, so it cannot be blank."),
 });
 
 export async function updateShop(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -372,7 +602,6 @@ export async function updateShop(_prev: FormState, formData: FormData): Promise<
     tagline: optional(formData.get("tagline")),
     bio: optional(formData.get("bio")),
     location: optional(formData.get("location")),
-    cashapp_tag: text(formData.get("cashapp_tag")),
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -388,11 +617,6 @@ export async function updateShop(_prev: FormState, formData: FormData): Promise<
     if (taken.length > 0) {
       return { error: `thriftshark.com/shop/${d.handle} is taken.` };
     }
-  }
-
-  const cashtag = normaliseCashtag(d.cashapp_tag);
-  if (!cashtag) {
-    return { error: "That $cashtag does not look right. Letters and numbers only." };
   }
 
   // Logo and banner are optional on every save; keep what is there otherwise.
@@ -413,37 +637,22 @@ export async function updateShop(_prev: FormState, formData: FormData): Promise<
     bannerId = stored.id;
   }
 
-  // A seller can upload the code straight from their Cash App screen; we only
-  // generate one when they have not supplied their own.
-  let qrId = seller.qr_image_id;
-  const uploadedQr = formData.get("cashapp_qr");
-
-  if (uploadedQr instanceof File && uploadedQr.size > 0) {
-    const stored = await storeUpload(uploadedQr, seller.id, "cashapp-qr");
-    if (!stored.ok) return { error: stored.error };
-    qrId = stored.id;
-  } else if (text(formData.get("regenerate_qr")) === "1") {
-    qrId = (await generateCashappQr(cashtag, seller.id)) ?? qrId;
-  } else if (!qrId) {
-    qrId = (await generateCashappQr(cashtag, seller.id)) ?? qrId;
-  } else if (cashtag !== seller.cashapp_tag && !seller.qr_is_custom) {
-    // Cashtag changed and the code was one we generated, so refresh it.
-    qrId = (await generateCashappQr(cashtag, seller.id)) ?? qrId;
-  }
-
-  const qrIsCustom =
-    uploadedQr instanceof File && uploadedQr.size > 0
-      ? true
-      : text(formData.get("regenerate_qr")) === "1"
-        ? false
-        : seller.qr_is_custom;
+  const place = (raw: FormDataEntryValue | null, fallback: number) => {
+    const n = Number(text(raw));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.round(Math.min(100, Math.max(0, n)));
+  };
 
   await sql`
     update sellers set
       shop_name = ${d.shop_name}, handle = ${d.handle}, tagline = ${d.tagline},
-      bio = ${d.bio}, location = ${d.location}, cashapp_tag = ${cashtag},
-      logo_image_id = ${logoId}, banner_image_id = ${bannerId}, qr_image_id = ${qrId},
-      qr_is_custom = ${qrIsCustom}, updated_at = now()
+      bio = ${d.bio}, location = ${d.location},
+      logo_image_id = ${logoId}, banner_image_id = ${bannerId},
+      banner_x = ${place(formData.get("banner_x"), seller.banner_x ?? 50)},
+      banner_y = ${place(formData.get("banner_y"), seller.banner_y ?? 50)},
+      logo_x = ${place(formData.get("logo_x"), seller.logo_x ?? 50)},
+      logo_y = ${place(formData.get("logo_y"), seller.logo_y ?? 50)},
+      updated_at = now()
     where id = ${seller.id}
   `;
 
@@ -459,10 +668,10 @@ async function readPhotos(formData: FormData, sellerId: number) {
   const files = formData
     .getAll("photos")
     .filter((f): f is File => f instanceof File && f.size > 0)
-    .slice(0, 6);
+    .slice(0, 10);
 
   const total = files.reduce((sum, f) => sum + f.size, 0);
-  if (total > 30 * 1024 * 1024) {
+  if (total > 40 * 1024 * 1024) {
     return {
       ok: false as const,
       error: `Those photos add up to ${(total / 1024 / 1024).toFixed(0)}MB. Add them in two goes, or let the page shrink them first.`,
@@ -472,10 +681,102 @@ async function readPhotos(formData: FormData, sellerId: number) {
   const ids: number[] = [];
   for (const file of files) {
     const stored = await storeUpload(file, sellerId, "item");
-    if (!stored.ok) return { ok: false as const, error: stored.error };
+    if (!stored.ok) {
+      await deleteOrphanImages(sellerId, ids);
+      return { ok: false as const, error: stored.error };
+    }
     ids.push(stored.id);
   }
   return { ok: true as const, ids };
+}
+
+/**
+ * The order the seller left the photo set in: `e:<item_images id>` for a photo
+ * already on the listing, `n:<index>` for the nth uploaded file. Null when the
+ * form did not send one (no JavaScript), which means "uploads in pick order".
+ */
+function readPhotoOrder(formData: FormData) {
+  const raw = formData.get("photos_order");
+  if (typeof raw !== "string") return null;
+  const tokens: { kind: "e" | "n"; n: number }[] = [];
+  for (const part of raw.split(",")) {
+    const m = /^([en]):(\d{1,9})$/.exec(part.trim());
+    if (m) tokens.push({ kind: m[1] as "e" | "n", n: Number(m[2]) });
+  }
+  return tokens.slice(0, 10);
+}
+
+/**
+ * Makes the listing's photos exactly what the seller left on screen: drops the
+ * ones they removed, adds the new uploads and renumbers the lot. With no order
+ * (no JavaScript) new uploads replace the set and none keeps it. Returns how
+ * many photos the listing ends up with.
+ */
+async function savePhotoSet(
+  itemId: number,
+  sellerId: number,
+  alt: string,
+  uploaded: number[],
+  order: { kind: "e" | "n"; n: number }[] | null,
+) {
+  const current = (await sql`
+    select im.id, im.image_id from item_images im
+    join items i on i.id = im.item_id
+    where im.item_id = ${itemId} and i.seller_id = ${sellerId}
+    order by im.position, im.id
+  `) as { id: number; image_id: number | null }[];
+
+  const plan: ({ row: number } | { image: number })[] = [];
+  if (order) {
+    const owned = new Set(current.map((r) => r.id));
+    const seen = new Set<string>();
+    for (const t of order) {
+      const key = `${t.kind}:${t.n}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (t.kind === "e" && owned.has(t.n)) plan.push({ row: t.n });
+      if (t.kind === "n" && uploaded[t.n] !== undefined) plan.push({ image: uploaded[t.n] });
+    }
+  } else if (uploaded.length > 0) {
+    for (const image of uploaded) plan.push({ image });
+  } else {
+    for (const r of current) plan.push({ row: r.id });
+  }
+  const placed = new Set(plan.flatMap((p) => ("image" in p ? [p.image] : [])));
+  await deleteOrphanImages(sellerId, uploaded.filter((image) => !placed.has(image)));
+  if (plan.length === 0) return 0;
+
+  const keep = plan.flatMap((p) => ("row" in p ? [p.row] : []));
+  const dropped = current.filter((r) => !keep.includes(r.id));
+
+  let position = 0;
+  for (const p of plan) {
+    if ("row" in p) {
+      await sql`update item_images set position = ${position++}, alt = ${alt}
+                where id = ${p.row} and item_id = ${itemId}`;
+    } else {
+      await sql`insert into item_images (item_id, image_id, alt, position)
+                values (${itemId}, ${p.image}, ${alt}, ${position++})`;
+    }
+  }
+
+  if (dropped.length > 0) {
+    await sql`delete from item_images
+              where item_id = ${itemId} and id = any(${dropped.map((r) => r.id)}::int[])`;
+    await deleteOrphanImages(sellerId, dropped.flatMap((r) => (r.image_id ? [r.image_id] : [])));
+  }
+  return plan.length;
+}
+
+/** Frees stored photo bytes nothing points at any more. */
+async function deleteOrphanImages(sellerId: number, imageIds: number[]) {
+  if (imageIds.length === 0) return;
+  await sql`
+    delete from images im
+    where im.id = any(${imageIds}::int[]) and im.seller_id = ${sellerId}
+      and im.purpose = 'item'
+      and not exists (select 1 from item_images ii where ii.image_id = im.id)
+  `;
 }
 
 export async function createListing(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -488,16 +789,14 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     return { error: "Start an auction from the Auctions tab, not from the status field." };
   }
 
-  const photos = await readPhotos(formData, seller.id);
-  if (!photos.ok) return { error: photos.error };
-
-  const urls = readImageUrls(formData);
-  if (photos.ids.length === 0 && urls.length === 0) {
-    return { error: "Add at least one photo — nothing sells without one." };
-  }
-
   const lot = text(formData.get("destination")) === "auction" ? readAuctionFields(formData) : null;
   if (lot && "error" in lot) return { error: lot.error };
+
+  const photos = await readPhotos(formData, seller.id);
+  if (!photos.ok) return { error: photos.error };
+  if (photos.ids.length === 0) {
+    return { error: "Add at least one photo — nothing sells without one." };
+  }
 
   const slug = await uniqueSlug(d.title);
   const rows = (await sql`
@@ -510,15 +809,7 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
   `) as { id: number }[];
 
   const id = rows[0].id;
-  let position = 0;
-  for (const imageId of photos.ids) {
-    await sql`insert into item_images (item_id, image_id, alt, position)
-              values (${id}, ${imageId}, ${d.title}, ${position++})`;
-  }
-  for (const url of urls) {
-    await sql`insert into item_images (item_id, url, alt, position)
-              values (${id}, ${url}, ${d.title}, ${position++})`;
-  }
+  await savePhotoSet(id, seller.id, d.title, photos.ids, readPhotoOrder(formData));
 
   let auctionId: number | null = null;
   if (lot) {
@@ -560,9 +851,12 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
   const onBlock = owned[0].status === "auction";
   const status = onBlock ? "auction" : d.status === "auction" ? "available" : d.status;
 
+  const order = readPhotoOrder(formData);
+  if (order && order.length === 0) {
+    return { error: "Keep at least one photo — nothing sells without one." };
+  }
   const photos = await readPhotos(formData, seller.id);
   if (!photos.ok) return { error: photos.error };
-  const urls = readImageUrls(formData);
 
   const slug = await uniqueSlug(d.title, id);
   await sql`
@@ -575,23 +869,15 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
     where id = ${id} and seller_id = ${seller.id}
   `;
 
-  // New photos replace the old set; sending none keeps what is there.
-  if (photos.ids.length > 0 || urls.length > 0) {
-    await sql`delete from item_images where item_id = ${id}`;
-    let position = 0;
-    for (const imageId of photos.ids) {
-      await sql`insert into item_images (item_id, image_id, alt, position)
-                values (${id}, ${imageId}, ${d.title}, ${position++})`;
-    }
-    for (const url of urls) {
-      await sql`insert into item_images (item_id, url, alt, position)
-                values (${id}, ${url}, ${d.title}, ${position++})`;
-    }
+  const kept = await savePhotoSet(id, seller.id, d.title, photos.ids, order);
+  if (kept === 0) {
+    return { error: "Keep at least one photo — nothing sells without one." };
   }
 
   revalidatePath("/shop");
   revalidatePath(`/shop/${seller.handle}`);
   revalidatePath(`/item/${slug}`);
+  revalidatePath(`/dashboard/items/${id}`);
   return { ok: "Listing saved." };
 }
 
@@ -599,7 +885,12 @@ export async function deleteListing(formData: FormData) {
   const seller = await requireSeller();
   const id = Number(text(formData.get("id")));
   if (Number.isInteger(id) && id > 0) {
+    const photos = (await sql`
+      select im.image_id from item_images im join items i on i.id = im.item_id
+      where i.id = ${id} and i.seller_id = ${seller.id} and im.image_id is not null
+    `) as { image_id: number }[];
     await sql`delete from items where id = ${id} and seller_id = ${seller.id}`;
+    await deleteOrphanImages(seller.id, photos.map((p) => p.image_id));
   }
   revalidatePath("/shop");
   revalidatePath(`/shop/${seller.handle}`);

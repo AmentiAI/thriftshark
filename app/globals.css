@@ -1,55 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* Thrift Sharks logo: ocean navy, electric blue, water cyan, chain gold. */
-  --color-ink: #07182c;
-  --color-ink-soft: #3a4e68;
-  --color-ink-faint: #6a7e96;
-  --color-paper: #f4f8fc;
-  --color-paper-dim: #e5eef8;
-  --color-line: #d3e1f0;
-  --color-reef: #0084ff;
-  --color-reef-dark: #0057b8;
-  --color-foam: #3ec6ff;
-  --color-gold: #e8b423;
-  --color-coral: #e31c3d;
-  --color-blood: #7a0c1e;
-  --color-kelp: #128a4a;
+  /*
+   Light marketplace floor — Grailed/Depop pattern:
+   white page, near-black type, clothes supply the colour.
+   Blue accent from the crest; blood only on the thin promo ticker.
+  */
+  --color-void: #0a0a0a;
+  --color-ink: #111111;
+  --color-ink-soft: #525252;
+  --color-ink-faint: #737373;
+  --color-paper: #ffffff;
+  --color-paper-dim: #f4f4f5;
+  --color-line: #e4e4e7;
+  --color-reef: #0066ff;
+  --color-reef-dark: #0052cc;
+  --color-foam: #0066ff;
+  --color-gold: #b45309;
+  --color-coral: #dc2626;
+  --color-blood: #991b1b;
+  --color-kelp: #15803d;
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-card: 1.5rem;
+  --radius-card: 0.75rem;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    color-scheme: light;
+    overflow-x: clip;
   }
 
   body {
     background-color: var(--color-paper);
-    background-image:
-      radial-gradient(900px 420px at 100% -10%, rgb(0 132 255 / 0.18), transparent 60%),
-      radial-gradient(700px 380px at -10% 20%, rgb(62 198 255 / 0.16), transparent 55%);
-    background-attachment: scroll;
-    background-repeat: no-repeat;
     color: var(--color-ink);
     font-family: var(--font-sans);
     overflow-x: clip;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     -webkit-text-size-adjust: 100%;
-  }
-
-  /* Only pin the gradient where it is cheap; iOS repaints fixed layers badly. */
-  @media (width >= 64rem) {
-    body {
-      background-attachment: fixed;
-    }
-  }
-
-  html {
-    overflow-x: clip;
   }
 
   ::selection {
@@ -58,12 +50,15 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 3px;
+    outline: 2px solid var(--color-reef);
+    outline-offset: 2px;
   }
 
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-  select,
+  select {
+    border-radius: 9999px;
+  }
+
   textarea {
     border-radius: 1rem;
   }
@@ -74,26 +69,23 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.4rem;
     border-radius: 9999px;
-    padding: 0.95rem 1.45rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    padding: 0.8rem 1.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
     transition:
-      background-color 160ms ease,
-      color 160ms ease,
-      border-color 160ms ease,
-      transform 160ms ease;
-  }
-
-  .btn:hover {
-    transform: translateY(-1px);
+      background-color 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease,
+      opacity 120ms ease;
   }
 
   .btn:disabled {
-    transform: none;
-    opacity: 0.55;
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   @media (hover: none) {
@@ -105,12 +97,11 @@
 
   .btn-ink {
     background-color: var(--color-ink);
-    color: var(--color-paper);
+    color: #fff;
   }
 
   .btn-ink:hover {
-    background-color: var(--color-reef);
-    color: #fff;
+    background-color: #000;
   }
 
   .btn-lime {
@@ -119,123 +110,117 @@
   }
 
   .btn-lime:hover {
-    background-color: var(--color-gold);
-    color: var(--color-ink);
+    background-color: var(--color-reef-dark);
   }
 
   .btn-ghost {
-    border: 1px solid color-mix(in srgb, var(--color-ink) 16%, transparent);
-    background-color: #fff;
+    border: 1px solid var(--color-line);
+    background-color: transparent;
     color: var(--color-ink);
   }
 
   .btn-ghost:hover {
     border-color: var(--color-ink);
-    background-color: var(--color-ink);
-    color: var(--color-paper);
+    background-color: var(--color-paper-dim);
   }
 
   .btn-ghost-light {
-    border: 1px solid rgb(255 255 255 / 0.28);
-    color: var(--color-paper);
+    border: 1px solid rgb(255 255 255 / 0.55);
+    color: #fff;
   }
 
   .btn-ghost-light:hover {
-    border-color: var(--color-reef);
-    background-color: var(--color-reef);
-    color: #fff;
+    border-color: #fff;
+    background-color: rgb(255 255 255 / 0.1);
   }
 
   .field {
     width: 100%;
-    border-radius: 1rem;
+    border-radius: 9999px;
     border: 1px solid var(--color-line);
-    background-color: #fff;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
     /* 16px on phones: anything smaller makes iOS Safari zoom on focus. */
-    padding: 0.85rem 1rem;
+    padding: 0.85rem 1.1rem;
     font-size: 1rem;
     outline: none;
-    transition: border-color 160ms ease, box-shadow 160ms ease;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  /* Multi-line fields need a real box, not a pill. */
+  textarea.field {
+    border-radius: 1rem;
+    min-height: 10rem;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .field::placeholder {
+    color: var(--color-ink-faint);
   }
 
   @media (width >= 40rem) {
     .field {
-      padding: 0.8rem 1rem;
+      padding: 0.7rem 1rem;
       font-size: 0.875rem;
     }
   }
 
   .field:focus {
     border-color: var(--color-ink);
-    box-shadow: 0 0 0 4px rgb(0 132 255 / 0.28);
+    box-shadow: 0 0 0 3px rgb(0 0 0 / 0.06);
   }
 
   .panel {
-    border-radius: 1.75rem;
+    border-radius: 1rem;
     border: 1px solid var(--color-line);
-    background-color: #fff;
-    box-shadow: 0 24px 60px -36px rgb(0 0 0 / 0.45);
+    background-color: var(--color-paper);
   }
 
   .eyebrow-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    border-radius: 9999px;
-    background-color: var(--color-reef);
-    padding: 0.35rem 0.7rem;
     font-size: 0.6875rem;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--color-ink-faint);
   }
 }
 
 @utility wrap {
   margin-inline: auto;
   width: 100%;
-  max-width: 80rem;
+  max-width: 75rem;
   padding-inline: 1.25rem;
 }
 
 @utility eyebrow {
   font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 @keyframes ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 .ticker-track {
   display: flex;
   width: max-content;
-  animation: ticker 32s linear infinite;
+  animation: ticker 36s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ticker-track {
     animation: none;
   }
-
-  .btn:hover {
-    transform: none;
-  }
 }
 
-/* ---------------------------------------------------------------------------
-   Motion layer. Everything here animates transform/opacity only, and every
-   animation is switched off under prefers-reduced-motion at the bottom.
-   --------------------------------------------------------------------------- */
-
+/* Motion — transform/opacity only */
 @keyframes marquee-left {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
@@ -247,14 +232,13 @@
 }
 
 @keyframes float-slow {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(0, -18px, 0) rotate(-1.5deg); }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -10px, 0); }
 }
 
 @keyframes drift {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  33%  { transform: translate3d(6%, -8%, 0) scale(1.12); }
-  66%  { transform: translate3d(-5%, 6%, 0) scale(0.95); }
+  50%  { transform: translate3d(3%, -3%, 0) scale(1.04); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
@@ -264,25 +248,25 @@
 }
 
 @keyframes pulse-ring {
-  0%   { transform: scale(0.85); opacity: 0.8; }
-  70%  { transform: scale(1.6);  opacity: 0; }
-  100% { transform: scale(1.6);  opacity: 0; }
+  0%   { transform: scale(0.85); opacity: 0.7; }
+  70%  { transform: scale(1.45); opacity: 0; }
+  100% { transform: scale(1.45); opacity: 0; }
 }
 
 @keyframes swim {
-  0%   { transform: translateX(-12%) rotate(-3deg); }
-  50%  { transform: translateX(12%) rotate(3deg); }
-  100% { transform: translateX(-12%) rotate(-3deg); }
+  0%   { transform: translateX(-6%); }
+  50%  { transform: translateX(6%); }
+  100% { transform: translateX(-6%); }
 }
 
 @keyframes kenburns {
   from { transform: scale(1); }
-  to   { transform: scale(1.07); }
+  to   { transform: scale(1.04); }
 }
 
 @keyframes bid-throb {
   0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.045); }
+  50%      { transform: scale(1.03); }
 }
 
 @keyframes strike {
@@ -290,32 +274,30 @@
   to   { transform: scaleX(1); }
 }
 
-/* Scroll reveal: hidden until <Reveal> adds .is-in. */
 @utility reveal {
   opacity: 0;
-  transform: translate3d(0, 28px, 0);
+  transform: translate3d(0, 16px, 0);
   transition:
-    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
 }
 
 @utility reveal-left {
   opacity: 0;
-  transform: translate3d(-32px, 0, 0);
+  transform: translate3d(-16px, 0, 0);
   transition:
-    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
 
 @utility reveal-scale {
   opacity: 0;
-  transform: scale(0.94);
+  transform: scale(0.98);
   transition:
-    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
 }
 
@@ -324,7 +306,6 @@
   transform: none !important;
 }
 
-/* Infinite marquee. The track holds two copies of its children. */
 .marquee {
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
@@ -344,40 +325,22 @@
   animation-play-state: paused;
 }
 
-/* Ambient background blobs behind dark sections. */
 .blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(72px);
-  animation: drift var(--blob-duration, 26s) ease-in-out infinite;
-  will-change: transform;
+  filter: blur(80px);
+  animation: drift var(--blob-duration, 28s) ease-in-out infinite;
 }
 
-.float-slow {
-  animation: float-slow 7s ease-in-out infinite;
-  will-change: transform;
-}
-
-.swim {
-  animation: swim 9s ease-in-out infinite;
-}
-
-.kenburns {
-  animation: kenburns 16s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.bid-throb {
-  animation: bid-throb 2.6s ease-in-out infinite;
-  will-change: transform;
-}
-
+.float-slow { animation: float-slow 8s ease-in-out infinite; }
+.swim { animation: swim 10s ease-in-out infinite; }
+.kenburns { animation: kenburns 18s ease-in-out infinite alternate; }
+.bid-throb { animation: bid-throb 2.6s ease-in-out infinite; }
 .strike {
   transform-origin: left center;
-  animation: strike 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: strike 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Light sweep across a button or card. */
 .sheen {
   position: relative;
   overflow: hidden;
@@ -390,20 +353,16 @@
   inset: 0 auto 0 0;
   z-index: 1;
   width: 40%;
-  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.35), transparent);
   transform: translateX(-120%);
   pointer-events: none;
 }
 
 .sheen:hover::after {
-  animation: shimmer 900ms ease-out;
+  animation: shimmer 800ms ease-out;
 }
 
-/* Live dot for the "just listed" feed. */
-.live-dot {
-  position: relative;
-}
-
+.live-dot { position: relative; }
 .live-dot::before {
   content: "";
   position: absolute;
@@ -413,20 +372,17 @@
   animation: pulse-ring 2s ease-out infinite;
 }
 
-/* Pointer-tracked spotlight, fed by --x/--y from <Spotlight>. */
 .spotlight {
   background-image: radial-gradient(
     420px circle at var(--x, 50%) var(--y, 0%),
-    rgb(0 132 255 / 0.28),
+    rgb(0 102 255 / 0.08),
     transparent 65%
   );
-  transition: opacity 300ms ease;
 }
 
-/* Tilt card, fed by --rx/--ry from <TiltCard>. */
 .tilt {
   transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
   transform-style: preserve-3d;
 }
 
@@ -434,13 +390,13 @@
   background-image: linear-gradient(currentColor, currentColor);
   background-position: 0 100%;
   background-repeat: no-repeat;
-  background-size: 0% 2px;
-  transition: background-size 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  background-size: 0% 1.5px;
+  transition: background-size 260ms ease;
 }
 
 .group:hover .underline-grow,
 .underline-grow:hover {
-  background-size: 100% 2px;
+  background-size: 100% 1.5px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -456,9 +412,7 @@
     animation: none !important;
   }
 
-  .strike {
-    transform: none;
-  }
+  .strike { transform: none; }
 
   .reveal,
   .reveal-left,
@@ -468,13 +422,9 @@
     transition: none;
   }
 
-  .tilt {
-    transform: none;
-  }
+  .tilt { transform: none; }
 }
 
-/* A box that scrolls sideways on small screens, so wide tables and rails never
-   widen the page itself. Edges are faded to hint there is more. */
 @utility scroll-x {
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -486,8 +436,60 @@
   display: none;
 }
 
-/* Keeps a long word or URL from pushing a card wider than the screen. */
 @utility break-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+/* Legal / long-form docs */
+.legal-prose h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.legal-prose h3 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.legal-prose p,
+.legal-prose li {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--color-ink-soft);
+}
+
+.legal-prose p + p {
+  margin-top: 0.75rem;
+}
+
+.legal-prose ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.legal-prose li + li {
+  margin-top: 0.35rem;
+}
+
+.legal-prose a {
+  color: var(--color-ink);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-prose strong {
+  color: var(--color-ink);
+  font-weight: 600;
 }

@@ -19,14 +19,14 @@ export function NewsletterForm() {
           type="email"
           required
           placeholder="you@email.com"
-          className="min-w-0 flex-1 rounded-full border border-paper/20 bg-white/5 px-5 py-3.5 text-base text-paper sm:text-sm placeholder:text-paper/45 focus:border-reef focus:outline-none"
+          className="field min-w-0 flex-1"
         />
-        <button disabled={pending} className="btn btn-lime disabled:opacity-60">
+        <button disabled={pending} className="btn btn-lime shrink-0 disabled:opacity-60">
           {pending ? "Adding…" : "Notify me"}
         </button>
       </div>
       {state?.error && <p className="text-sm text-coral">{state.error}</p>}
-      {state?.ok && <p className="text-sm text-reef">{state.ok}</p>}
+      {state?.ok && <p className="text-sm text-foam">{state.ok}</p>}
     </form>
   );
 }

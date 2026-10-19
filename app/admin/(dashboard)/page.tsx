@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { money, shortDate } from "@/lib/format";
-import { adminListMessages, adminListOrders, adminStats } from "@/lib/queries";
+import { adminListOrders, adminStats, listAdminThreads } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders, messages] = await Promise.all([
+  const [stats, orders, threads] = await Promise.all([
     adminStats(),
     adminListOrders(),
-    adminListMessages(),
+    listAdminThreads(),
   ]);
 
   const tiles = [
@@ -17,12 +17,13 @@ export default async function AdminDashboard() {
     ["Sold", String(stats.sold), "/admin/items?status=sold"],
     ["Drafts", String(stats.drafts), "/admin/items?status=draft"],
     ["Orders to pack", String(stats.new_orders), "/admin/orders"],
+    ["Waiting DMs", String(stats.waiting_dms), "/admin/messages"],
     ["Stock value", money(stats.stock_value_cents), "/admin/items"],
     ["Order revenue", money(stats.revenue_cents), "/admin/orders"],
   ];
 
   const recentOrders = orders.slice(0, 6);
-  const openMessages = messages.filter((m) => !m.handled).slice(0, 5);
+  const waiting = threads.filter((thread) => thread.last_sender === "buyer").slice(0, 5);
 
   return (
     <div className="space-y-12">
@@ -92,9 +93,9 @@ export default async function AdminDashboard() {
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl font-bold">
             Unanswered messages{" "}
-            {stats.open_messages > 0 && (
+            {waiting.length > 0 && (
               <span className="ml-1 bg-coral px-2 py-0.5 align-middle text-xs text-white">
-                {stats.open_messages}
+                {waiting.length}
               </span>
             )}
           </h2>
@@ -103,21 +104,24 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        {openMessages.length === 0 ? (
+        {waiting.length === 0 ? (
           <p className="mt-4 border border-line bg-paper-dim/40 px-5 py-10 text-center text-sm text-ink-soft">
             Inbox clear.
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-line border-y border-line">
-            {openMessages.map((m) => (
-              <li key={m.id} className="py-3">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <p className="font-medium">
-                    {m.name} <span className="text-ink-faint">· {m.email}</span>
-                  </p>
-                  <p className="text-xs text-ink-faint">{shortDate(m.created_at)}</p>
-                </div>
-                <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{m.body}</p>
+            {waiting.map((thread) => (
+              <li key={thread.id} className="py-3">
+                <Link href={`/admin/messages/${thread.id}`} className="block">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <p className="font-medium">
+                      {thread.buyer_name}{" "}
+                      <span className="text-ink-faint">→ {thread.shop_name}</span>
+                    </p>
+                    <p className="text-xs text-ink-faint">{shortDate(thread.updated_at)}</p>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{thread.last_body}</p>
+                </Link>
               </li>
             ))}
           </ul>
@@ -127,7 +131,7 @@ export default async function AdminDashboard() {
       <section className="border border-line bg-paper-dim/40 p-6">
         <h2 className="font-display text-lg font-bold">Quick actions</h2>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/admin/sellers" className="bg-ink px-5 py-3 text-sm font-semibold tracking-wide text-paper uppercase">
+          <Link href="/admin/sellers" className="bg-void px-5 py-3 text-sm font-semibold tracking-wide text-ink uppercase">
             Manage shops
           </Link>
           <Link href="/admin/items?status=draft" className="border border-ink px-5 py-3 text-sm font-semibold tracking-wide uppercase">

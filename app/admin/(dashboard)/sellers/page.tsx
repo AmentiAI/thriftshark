@@ -32,8 +32,8 @@ export default async function AdminSellersPage() {
           {sellers.map((seller) => (
             <li
               key={seller.id}
-              className={`flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 sm:gap-4 sm:p-4 ring-1 ${
-                seller.status === "suspended" ? "ring-coral/40" : "ring-black/5"
+              className={`flex flex-wrap items-center gap-3 rounded-2xl bg-paper-dim p-3 sm:gap-4 sm:p-4 ring-1 ${
+                seller.status === "suspended" ? "ring-coral/40" : "ring-white/10"
               }`}
             >
               <ShopAvatar
@@ -61,7 +61,6 @@ export default async function AdminSellersPage() {
                 )}
                 <p className="mt-0.5 text-xs text-ink-faint">
                   @{seller.handle} · {seller.email}
-                  {seller.cashapp_tag && ` · $${seller.cashapp_tag}`}
                 </p>
                 <p className="text-xs text-ink-faint">
                   {seller.item_count} listings · {seller.order_count} orders · joined{" "}

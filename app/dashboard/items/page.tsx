@@ -71,7 +71,7 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
             return (
               <li
                 key={item.id}
-                className="flex flex-wrap items-center gap-4 rounded-2xl bg-white p-3 ring-1 ring-black/5"
+                className="flex flex-wrap items-center gap-4 rounded-2xl bg-paper-dim p-3 ring-1 ring-white/10"
               >
                 <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-paper-dim">
                   {src && (

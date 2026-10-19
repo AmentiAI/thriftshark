@@ -1,94 +1,99 @@
 import Link from "next/link";
 import { toggleMessageHandled } from "@/lib/actions";
-import { shortDate } from "@/lib/format";
+import { shortDate, shortWhen } from "@/lib/format";
+import { sellerMessages, listSellerThreads } from "@/lib/queries";
 import { requireSeller } from "@/lib/seller-auth";
-import { sellerMessages } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardMessagesPage() {
   const seller = await requireSeller();
-  const messages = await sellerMessages(seller.id);
-  const open = messages.filter((m) => !m.handled).length;
+  const [threads, older] = await Promise.all([
+    listSellerThreads(seller.id),
+    sellerMessages(seller.id),
+  ]);
+  const waiting = threads.filter((thread) => thread.last_sender === "buyer").length;
 
   return (
     <div>
       <header className="mb-7">
-        <h2 className="font-display text-3xl font-extrabold tracking-[-0.03em]">
-          Buyer questions
-        </h2>
+        <h2 className="font-display text-3xl font-extrabold tracking-[-0.03em]">Messages</h2>
         <p className="mt-2 text-sm text-ink-soft">
-          {open} waiting on a reply · {messages.length} total. These come from
-          the &ldquo;ask about this piece&rdquo; link on your listings.
+          {waiting} waiting on you · {threads.length} conversation{threads.length === 1 ? "" : "s"}.
+          Buyers reach you from Message seller. Reply here.
         </p>
       </header>
 
-      {messages.length === 0 ? (
+      {threads.length === 0 ? (
         <div className="panel px-6 py-20 text-center">
-          <h3 className="font-display text-2xl font-extrabold tracking-tight">
-            No questions yet
-          </h3>
+          <h3 className="font-display text-2xl font-extrabold tracking-tight">No messages yet</h3>
           <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-            Buyers asking about a measurement or a flaw will show up here. The
-            faster you answer, the more you sell.
+            When a buyer messages your shop, the conversation shows up here.
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {messages.map((m) => (
-            <li
-              key={m.id}
-              className={`panel break-anywhere p-5 sm:p-6 ${m.handled ? "opacity-70" : "ring-2 ring-reef/30"}`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-display font-bold">
-                    {m.subject || "No subject"}
-                    {!m.handled && (
+          {threads.map((thread) => (
+            <li key={thread.id}>
+              <Link
+                href={`/dashboard/messages/${thread.id}`}
+                className={`panel block break-anywhere p-5 transition hover:-translate-y-0.5 ${
+                  thread.last_sender === "buyer" ? "ring-2 ring-reef/30" : ""
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-display text-lg font-extrabold tracking-tight">
+                    {thread.buyer_name}
+                    {thread.last_sender === "buyer" && (
                       <span className="ml-2 rounded-full bg-coral px-2 py-0.5 align-middle text-[11px] font-bold text-white uppercase">
                         New
                       </span>
                     )}
                   </p>
-                  <p className="mt-1 text-sm text-ink-soft">
-                    {m.name} ·{" "}
-                    <a href={`mailto:${m.email}`} className="underline hover:text-reef-dark">
-                      {m.email}
-                    </a>
-                    {m.item_id && (
-                      <>
-                        {" · "}
-                        <Link href={`/dashboard/items/${m.item_id}`} className="underline">
-                          about your listing
-                        </Link>
-                      </>
-                    )}
-                  </p>
+                  <p className="shrink-0 text-xs text-ink-faint">{shortWhen(thread.updated_at)}</p>
                 </div>
-                <p className="text-xs text-ink-faint">{shortDate(m.created_at)}</p>
-              </div>
+                <p className="mt-1 text-xs text-ink-faint">{thread.buyer_email}</p>
+                {thread.last_body && (
+                  <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{thread.last_body}</p>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
-              <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-ink-soft">
-                {m.body}
-              </p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <a
-                  href={`mailto:${m.email}?subject=Re:%20${encodeURIComponent(m.subject || "your question")}`}
-                  className="btn btn-ink !px-4 !py-2 text-xs"
-                >
-                  Reply by email
-                </a>
-                <form action={toggleMessageHandled}>
+      {older.length > 0 && (
+        <section className="mt-14">
+          <h3 className="font-display text-xl font-extrabold tracking-tight">Older questions</h3>
+          <p className="mt-1 text-sm text-ink-soft">
+            These arrived through the contact form, before direct messages.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {older.map((m) => (
+              <li key={m.id} className={`panel break-anywhere p-5 ${m.handled ? "opacity-70" : ""}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-display font-bold">{m.subject || "No subject"}</p>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      {m.name} ·{" "}
+                      <a href={`mailto:${m.email}`} className="underline hover:text-reef-dark">
+                        {m.email}
+                      </a>
+                    </p>
+                  </div>
+                  <p className="text-xs text-ink-faint">{shortDate(m.created_at)}</p>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed whitespace-pre-line text-ink-soft">{m.body}</p>
+                <form action={toggleMessageHandled} className="mt-4">
                   <input type="hidden" name="id" value={m.id} />
                   <button className="text-sm underline hover:text-reef-dark">
                     {m.handled ? "Mark unanswered" : "Mark answered"}
                   </button>
                 </form>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

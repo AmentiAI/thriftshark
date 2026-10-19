@@ -1,6 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
-import { FREE_SHIPPING_THRESHOLD_CENTS, SHIPPING_FLAT_CENTS } from "@/lib/types";
+import {
+  FREE_SHIPPING_THRESHOLD_CENTS,
+  PLATFORM_FEE_CENTS,
+  SHIPPING_FLAT_CENTS,
+} from "@/lib/types";
 import type { Auction } from "@/lib/types";
 
 const AUCTION_COLUMNS = `
@@ -9,13 +13,13 @@ const AUCTION_COLUMNS = `
   i.slug as item_slug, i.title as item_title, i.description as item_description,
   i.brand as item_brand, i.item_size, i.condition as item_condition,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
-  s.logo_image_id as seller_logo_image_id, s.cashapp_tag as seller_cashapp_tag,
+  s.logo_image_id as seller_logo_image_id,
   (select count(*)::int from bids b where b.auction_id = a.id)            as bid_count,
   (select max(b.amount_cents)::int from bids b where b.auction_id = a.id) as high_cents,
   (select b.bidder_name from bids b where b.auction_id = a.id
     order by b.amount_cents desc, b.id asc limit 1)                       as high_bidder,
   coalesce(
-    (select json_agg(json_build_object('url', im.url, 'image_id', im.image_id, 'alt', im.alt)
+    (select json_agg(json_build_object('id', im.id, 'url', im.url, 'image_id', im.image_id, 'alt', im.alt)
             order by im.position, im.id)
      from item_images im where im.item_id = i.id),
     '[]'::json
@@ -84,11 +88,14 @@ export async function settleDueAuctions(auctionId?: number) {
        ),
        new_order as (
          insert into orders (order_number, seller_id, group_token, email, customer_name,
-           subtotal_cents, shipping_cents, total_cents, fulfilment, notes)
+           subtotal_cents, shipping_cents, platform_fee_cents, total_cents, fulfilment, notes)
          select $2, w.seller_id, $3, w.bidder_email, w.bidder_name,
                 w.amount_cents,
                 case when w.amount_cents >= $4::int then 0 else $5::int end,
-                w.amount_cents + case when w.amount_cents >= $4::int then 0 else $5::int end,
+                $6::int,
+                w.amount_cents
+                  + case when w.amount_cents >= $4::int then 0 else $5::int end
+                  + $6::int,
                 'ship',
                 'Auction win — buyer still needs to send a shipping address.'
          from winner w
@@ -117,7 +124,7 @@ export async function settleDueAuctions(auctionId?: number) {
          settled_at = now()
        where id = (select id from due)`,
       [id, orderNumber(), randomBytes(9).toString("base64url"),
-       FREE_SHIPPING_THRESHOLD_CENTS, SHIPPING_FLAT_CENTS],
+       FREE_SHIPPING_THRESHOLD_CENTS, SHIPPING_FLAT_CENTS, PLATFORM_FEE_CENTS],
     );
   }
 

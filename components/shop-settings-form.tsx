@@ -1,8 +1,6 @@
 "use client";
 
-import Image from "next/image";
 import { useActionState, useState } from "react";
-import { ShopAvatar } from "@/components/shop-avatar";
 import { ImageField } from "@/components/image-field";
 import { updateShop, type FormState } from "@/lib/actions";
 import type { ShopSettings } from "@/lib/types";
@@ -12,60 +10,58 @@ const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft up
 export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateShop, null);
   const [handle, setHandle] = useState(seller.handle);
-  const [cashtag, setCashtag] = useState(seller.cashapp_tag ?? "");
-
-  const cleanCashtag = cashtag.replace(/^\$/, "").replace(/[^A-Za-z0-9_]/g, "");
-  const cashtagChanged = cleanCashtag !== (seller.cashapp_tag ?? "");
+  const [bannerPos, setBannerPos] = useState({ x: seller.banner_x ?? 50, y: seller.banner_y ?? 50 });
+  const [logoPos, setLogoPos] = useState({ x: seller.logo_x ?? 50, y: seller.logo_y ?? 50 });
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+      <input type="hidden" name="banner_x" value={bannerPos.x} />
+      <input type="hidden" name="banner_y" value={bannerPos.y} />
+      <input type="hidden" name="logo_x" value={logoPos.x} />
+      <input type="hidden" name="logo_y" value={logoPos.y} />
       <div className="space-y-7">
-        {/* Logo and banner */}
         <div className="panel p-5 sm:p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">
             Your look
           </h2>
           <p className="mt-1.5 text-sm text-ink-soft">
             The banner runs across the top of your shop and your picture sits on
-            every listing you post. Upload straight from your phone or your
-            computer.
+            it. Drag either photo to choose what stays in the frame, then save.
           </p>
 
           <div className="mt-6 space-y-6">
             <ImageField
               name="banner"
-              label={seller.banner_image_id ? "Replace banner" : "Banner image"}
-              hint="Wide shot, roughly 1600×500. Keep anything important away from the bottom left, where your picture overlaps."
+              label={seller.banner_image_id ? "Banner" : "Banner image"}
+              hint="Drag the photo to reposition it. A wide shot works best."
               shape="wide"
               maxEdge={2000}
+              focalX={bannerPos.x}
+              focalY={bannerPos.y}
+              onFocal={(x, y) => setBannerPos({ x, y })}
               currentSrc={
                 seller.banner_image_id ? `/api/images/${seller.banner_image_id}` : null
               }
             />
 
             <div className="border-t border-line pt-6">
-              <div className="flex items-start gap-4">
-                <div className="shrink-0">
-                  <ShopAvatar
-                    shopName={seller.shop_name}
-                    logoImageId={seller.logo_image_id}
-                    size={72}
-                  />
-                </div>
-                <ImageField
-                  name="logo"
-                  label={seller.logo_image_id ? "Replace your picture" : "Shop picture"}
-                  hint="Square works best — a logo, or your own face. Shown as a circle."
-                  shape="circle"
-                  maxEdge={800}
-                  className="min-w-0 flex-1"
-                />
-              </div>
+              <ImageField
+                name="logo"
+                label={seller.logo_image_id ? "Profile picture" : "Shop picture"}
+                hint="Drag to centre a face or a logo. It shows as a circle."
+                shape="circle"
+                maxEdge={800}
+                focalX={logoPos.x}
+                focalY={logoPos.y}
+                onFocal={(x, y) => setLogoPos({ x, y })}
+                currentSrc={
+                  seller.logo_image_id ? `/api/images/${seller.logo_image_id}` : null
+                }
+              />
             </div>
           </div>
         </div>
 
-        {/* Identity */}
         <div className="panel space-y-5 p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">
             Shop details
@@ -151,81 +147,11 @@ export function ShopSettingsForm({ seller }: { seller: ShopSettings }) {
       <aside className="space-y-5 lg:sticky lg:top-28 lg:self-start">
         <div className="panel p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">
-            Getting paid
+            Save changes
           </h2>
           <p className="mt-1.5 text-sm text-ink-soft">
-            Buyers scan this code and send you the total directly.
+            Payouts are set up with Stripe in the panel above this form.
           </p>
-
-          <div className="mt-5">
-            <label className={label} htmlFor="cashapp_tag">
-              Your $cashtag
-            </label>
-            <input
-              id="cashapp_tag"
-              name="cashapp_tag"
-              required
-              value={cashtag}
-              onChange={(e) => setCashtag(e.target.value)}
-              placeholder="$yourname"
-              className="field"
-            />
-          </div>
-
-          {seller.qr_image_id ? (
-            <div className="mt-5 rounded-2xl bg-white p-3 ring-1 ring-black/5">
-              <Image
-                src={`/api/images/${seller.qr_image_id}`}
-                alt={`Your Cash App code, $${seller.cashapp_tag}`}
-                width={240}
-                height={240}
-                className="mx-auto h-40 w-40"
-              />
-              <p className="mt-2 text-center font-display font-extrabold">
-                ${seller.cashapp_tag}
-              </p>
-              <p className="mt-0.5 text-center text-[11px] font-semibold text-ink-faint">
-                {seller.qr_is_custom ? "Your uploaded code" : "Generated from your $cashtag"}
-              </p>
-            </div>
-          ) : (
-            <p className="mt-4 rounded-2xl bg-paper-dim px-4 py-3 text-xs text-ink-soft">
-              {cleanCashtag
-                ? `Save to generate a scannable code for $${cleanCashtag}.`
-                : "Add a $cashtag and we will generate your scannable code on save."}
-            </p>
-          )}
-
-          {/* Either upload the screenshot from Cash App, or let us draw it. */}
-          <div className="mt-5">
-            <ImageField
-              name="cashapp_qr"
-              label="Upload your own code"
-              hint="Screenshot your Cash App QR, or leave this empty and we generate one from your $cashtag."
-              shape="square"
-              maxEdge={1000}
-              quality={0.92}
-            />
-          </div>
-
-          {seller.qr_image_id && (
-            <label className="mt-4 flex cursor-pointer items-start gap-2 text-xs text-ink-soft">
-              <input
-                type="checkbox"
-                name="regenerate_qr"
-                value="1"
-                className="mt-0.5 accent-ink"
-              />
-              <span>
-                {seller.qr_is_custom
-                  ? "Replace my uploaded code with a freshly generated one"
-                  : "Regenerate my code"}
-                {cashtagChanged && cleanCashtag && (
-                  <strong className="block text-ink"> for ${cleanCashtag}</strong>
-                )}
-              </span>
-            </label>
-          )}
 
           {state?.error && (
             <p className="mt-5 rounded-2xl border-l-4 border-coral bg-coral/10 px-3 py-2.5 text-sm">

@@ -7,33 +7,25 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Sell your merch",
   description:
-    "Open a free Thrift Shark shop: your own storefront and logo, your listings, paid straight to your Cash App. No fees, no approval queue.",
+    "Open a free Thrift Sharks shop. Your storefront, your listings, paid through Stripe.",
 };
 
 const FAQ = [
   {
     q: "What does it cost?",
-    a: "Nothing. No listing fee, no monthly fee, and we take no cut of your sales. Buyers pay you directly over Cash App, so there is nothing for us to skim.",
+    a: "No listing fee and no monthly fee. Buyers pay a $5 platform fee per shop order. Stripe’s card processing fee also applies.",
   },
   {
     q: "How do I get paid?",
-    a: "You add your $cashtag when you sign up and we turn it into a scannable Cash App code. It sits on your storefront and on every order from your shop. The buyer scans it and sends you the total.",
+    a: "Connect Stripe on your storefront. Buyers pay by card at checkout; you receive the item price and shipping. The $5 platform fee goes to Thrift Sharks.",
   },
   {
     q: "When do I know an order is real?",
-    a: "An order appears in your dashboard the moment it is placed, with the buyer's address and what they owe. Watch for the Cash App payment, mark the order paid, then ship it.",
+    a: "It hits your dashboard with the address and amount. Stripe marks it paid when the charge succeeds, then you ship.",
   },
   {
-    q: "Can I sell more than one of something?",
-    a: "Not yet. Every listing is one-of-one, which is what keeps the marketplace honest — when a piece sells it comes off the rack automatically so nobody can buy it twice.",
-  },
-  {
-    q: "What can I list?",
-    a: "Secondhand clothing, shoes, accessories and household oddities. Clean, accurately described and actually yours to sell. Anything misdescribed gets the shop suspended.",
-  },
-  {
-    q: "Do I need a logo?",
-    a: "No, but your shop looks far better with one. Until you upload one we show your initials. You can add a logo and a wide banner any time from your dashboard.",
+    q: "Can I sell multiples?",
+    a: "Not yet. Every listing is one-of-one — when it sells, it comes off the rack.",
   },
 ];
 
@@ -42,97 +34,68 @@ export default async function SellPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-ink text-paper">
-        <div className="pointer-events-none absolute -top-32 -right-16 h-[30rem] w-[30rem] rounded-full bg-reef/25 blur-3xl" />
-        <div className="wrap relative max-w-3xl py-20">
-          <p className="eyebrow-pill">Sell on Thrift Shark</p>
-          <h1 className="mt-6 font-display text-6xl leading-[0.88] font-extrabold tracking-[-0.05em] sm:text-7xl">
-            Keep every
-            <span className="block text-reef">dollar.</span>
+      <section className="border-b border-line">
+        <div className="wrap max-w-2xl py-12 sm:py-16">
+          <p className="eyebrow-pill">Sell on Thrift Sharks</p>
+          <h1 className="mt-3 font-display text-4xl font-extrabold tracking-[-0.035em] sm:text-5xl">
+            Sell without listing fees
           </h1>
-          <p className="mt-6 max-w-xl leading-relaxed text-paper/70 sm:text-lg">
-            Open your own storefront, put your logo on it, and list whatever you
-            have. Buyers scan your Cash App code and pay you — not us. There is
-            no fee and no waiting to be approved.
+          <p className="mt-4 text-base text-ink-soft sm:text-lg">
+            Your storefront. Stripe payouts. Buyers cover a $5 platform fee per
+            order.
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link href="/signup" className="btn btn-lime">
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href="/signup" className="btn btn-ink">
               Open your shop free
             </Link>
-            <Link href="/sellers" className="btn btn-ghost-light">
-              See the {stats.shops} shops already here
+            <Link href="/sellers" className="btn btn-ghost">
+              See {stats.shops} shops
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="wrap py-16">
-        <h2 className="font-display text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-          How it works
-        </h2>
-        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="wrap py-12">
+        <h2 className="font-display text-2xl font-bold tracking-tight">How it works</h2>
+        <ol className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Sign up", "Shop name, your link, your $cashtag. About a minute, and your shop is public straight away."],
-            ["Dress it up", "Upload a logo and banner, write a line about what you hunt for."],
-            ["List your merch", "Up to six photos per piece, a price, a size and honest condition notes."],
-            ["Ship and get paid", "Order lands in your dashboard, buyer scans your code, you post it out."],
-          ].map(([title, body], i) => (
-            <li key={title} className="rounded-[1.6rem] bg-white p-6 ring-1 ring-black/5">
-              <p className="font-display text-4xl font-extrabold text-reef">
-                {String(i + 1).padStart(2, "0")}
-              </p>
-              <h3 className="mt-4 font-display text-xl font-bold tracking-tight">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{body}</p>
+            ["01", "Sign up", "Shop name and handle."],
+            ["02", "Connect Stripe", "Finish payout setup so buyers can pay."],
+            ["03", "List", "Up to 10 photos, price, size, condition."],
+            ["04", "Get paid", "Buyer checks out — you ship."],
+          ].map(([n, title, body]) => (
+            <li key={title} className="rounded-xl border border-line p-5">
+              <p className="text-xs font-semibold text-ink-faint">{n}</p>
+              <h3 className="mt-2 font-semibold">{title}</h3>
+              <p className="mt-1 text-sm text-ink-soft">{body}</p>
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="wrap grid gap-12 pb-16 lg:grid-cols-[1.2fr_1fr]">
-        <div>
-          <h2 className="font-display text-3xl font-extrabold tracking-[-0.04em]">
-            Questions sellers actually ask
-          </h2>
-          <dl className="mt-8 divide-y divide-line border-y border-line">
-            {FAQ.map((entry) => (
-              <div key={entry.q} className="py-5">
-                <dt className="font-display text-lg font-bold tracking-tight">{entry.q}</dt>
-                <dd className="mt-2 leading-relaxed text-ink-soft">{entry.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <aside className="panel h-fit p-7 lg:sticky lg:top-28">
-          <h2 className="font-display text-2xl font-extrabold tracking-tight">
-            What you get
-          </h2>
-          <ul className="mt-5 space-y-3 text-sm">
-            {[
-              "Your own storefront at /shop/your-name",
-              "Your logo on every listing you post",
-              "A generated, scannable Cash App code",
-              "Auction a piece instead of selling it buy-now",
-              "A dashboard for listings and orders",
-              "Buyer addresses and order notes",
-              "Zero fees, zero commission",
-            ].map((line) => (
-              <li key={line} className="flex gap-2.5">
-                <span className="font-bold text-kelp">✓</span>
-                <span className="text-ink-soft">{line}</span>
-              </li>
-            ))}
-          </ul>
-          <Link href="/signup" className="btn btn-lime mt-7 w-full">
-            Open your shop
-          </Link>
-          <p className="mt-4 text-center text-xs text-ink-faint">
-            Already selling?{" "}
-            <Link href="/login" className="underline hover:text-reef-dark">
-              Sign in
+      <section className="border-t border-line">
+        <div className="wrap grid gap-10 py-12 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <h2 className="font-display text-2xl font-bold tracking-tight">FAQ</h2>
+            <dl className="mt-6 divide-y divide-line border-y border-line">
+              {FAQ.map((entry) => (
+                <div key={entry.q} className="py-5">
+                  <dt className="font-semibold">{entry.q}</dt>
+                  <dd className="mt-1.5 text-sm text-ink-soft">{entry.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <aside className="rounded-xl border border-line bg-paper-dim p-6 lg:self-start">
+            <h2 className="font-display text-xl font-bold tracking-tight">Ready?</h2>
+            <p className="mt-2 text-sm text-ink-soft">
+              {stats.shops} shops · {stats.listings} finds live
+            </p>
+            <Link href="/signup" className="btn btn-ink mt-5 w-full">
+              Create your shop
             </Link>
-          </p>
-        </aside>
+          </aside>
+        </div>
       </section>
     </>
   );

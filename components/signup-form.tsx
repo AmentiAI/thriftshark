@@ -80,23 +80,6 @@ export function SignupForm() {
         </div>
       </div>
 
-      <div>
-        <label className={label} htmlFor="cashapp_tag">
-          Your $cashtag
-        </label>
-        <input
-          id="cashapp_tag"
-          name="cashapp_tag"
-          required
-          placeholder="$yourname"
-          className="field"
-        />
-        <p className="mt-1.5 text-xs text-ink-faint">
-          We turn this into a scannable Cash App code on your storefront and on
-          every order, so buyers pay you directly. You can change it any time.
-        </p>
-      </div>
-
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label className={label} htmlFor="tagline">
@@ -117,19 +100,36 @@ export function SignupForm() {
         </div>
       </div>
 
+      <p className="rounded-2xl bg-paper-dim px-4 py-3 text-xs leading-relaxed text-ink-soft">
+        After you open, connect Stripe on your storefront so buyers can pay you by
+        card. Money goes to your bank — Thrift Sharks never holds it.
+      </p>
+
       {state?.error && (
         <p className="rounded-2xl border-l-4 border-coral bg-coral/10 px-4 py-3 text-sm">
           {state.error}
         </p>
       )}
 
-      <button disabled={pending} className="btn btn-lime w-full">
+      <p className="text-xs leading-relaxed text-ink-faint">
+        By opening a shop you agree to our{" "}
+        <Link href="/terms" className="font-medium text-ink underline underline-offset-2">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="font-medium text-ink underline underline-offset-2">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
+      <button disabled={pending} className="btn btn-ink w-full">
         {pending ? "Opening your shop…" : "Open my shop"}
       </button>
 
       <p className="text-center text-sm text-ink-soft">
         Already selling?{" "}
-        <Link href="/login" className="font-semibold underline hover:text-reef-dark">
+        <Link href="/login" className="font-semibold underline hover:text-ink">
           Sign in
         </Link>
       </p>

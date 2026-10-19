@@ -13,7 +13,7 @@ export function ShopRail({ sellers }: { sellers: SellerCard[] }) {
         <Link
           key={seller.id}
           href={`/shop/${seller.handle}`}
-          className="group flex shrink-0 items-center gap-3 rounded-full bg-white py-2 pr-6 pl-2 ring-1 ring-black/5 transition hover:-translate-y-1 hover:ring-ink"
+          className="group flex shrink-0 items-center gap-3 rounded-full bg-paper-dim py-2 pr-6 pl-2 ring-1 ring-white/10 transition hover:-translate-y-1 hover:ring-reef"
         >
           <ShopAvatar
             shopName={seller.shop_name}

@@ -33,7 +33,7 @@ export default async function DashboardAuctionsPage() {
           <Link href="/dashboard/items/new" className="font-semibold underline hover:text-reef-dark">
             Add a listing
           </Link>
-          . A win becomes a normal order with your Cash App code on it.
+          . A win becomes a normal order the buyer pays through Stripe.
         </p>
       </header>
 
@@ -46,7 +46,7 @@ export default async function DashboardAuctionsPage() {
               return (
                 <li
                   key={auction.id}
-                  className="flex flex-wrap items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-black/5"
+                  className="flex flex-wrap items-center gap-4 rounded-2xl bg-paper-dim p-4 ring-1 ring-white/10"
                 >
                   <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-paper-dim">
                     {src && <Image src={src} alt="" fill sizes="64px" className="object-cover" />}

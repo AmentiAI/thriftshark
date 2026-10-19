@@ -10,14 +10,13 @@ export function AddToBag({ id, soldOut }: { id: number; soldOut: boolean }) {
     return (
       <div className="space-y-3">
         <button disabled className="btn w-full cursor-not-allowed bg-paper-dim text-ink-faint">
-          Sold — gone for good
+          Sold
         </button>
-        <p className="text-sm text-ink-soft">
-          Every piece here is one of one.{" "}
-          <Link href="/shop" className="font-semibold underline">
-            See what is still swimming
+        <p className="text-sm text-ink-faint">
+          One of one — it&apos;s gone.{" "}
+          <Link href="/shop" className="font-semibold text-ink underline-offset-2 hover:underline">
+            Keep shopping
           </Link>
-          .
         </p>
       </div>
     );
@@ -29,15 +28,15 @@ export function AddToBag({ id, soldOut }: { id: number; soldOut: boolean }) {
     <div className="space-y-3">
       {inBag ? (
         <Link href="/cart" className="btn btn-ghost w-full">
-          In your bag — review it
+          In your bag — checkout
         </Link>
       ) : (
         <button onClick={() => add(id)} className="btn btn-ink w-full">
           Add to bag
         </button>
       )}
-      <p className="text-sm text-ink-soft">
-        One of a kind. Adding it to your bag does not hold it — checkout does.
+      <p className="text-sm text-ink-faint">
+        One of a kind. Your bag doesn&apos;t hold it — checkout does.
       </p>
     </div>
   );

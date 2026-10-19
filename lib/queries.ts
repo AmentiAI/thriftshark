@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db";
-import type { Category, Item, Message, Order, Seller, SellerCard } from "@/lib/types";
+import type { Category, DmMessage, DmThread, Item, Message, Order, Seller, SellerCard } from "@/lib/types";
 
 const ITEM_COLUMNS = `
   i.id, i.slug, i.title, i.description, i.price_cents, i.compare_at_cents,
@@ -7,9 +7,9 @@ const ITEM_COLUMNS = `
   i.featured, i.created_at, i.seller_id,
   c.name as category_name, c.slug as category_slug,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
-  s.logo_image_id as seller_logo_image_id, s.cashapp_tag as seller_cashapp_tag,
+  s.logo_image_id as seller_logo_image_id,
   coalesce(
-    (select json_agg(json_build_object('url', im.url, 'image_id', im.image_id, 'alt', im.alt)
+    (select json_agg(json_build_object('id', im.id, 'url', im.url, 'image_id', im.image_id, 'alt', im.alt)
             order by im.position, im.id)
      from item_images im where im.item_id = i.id),
     '[]'::json
@@ -24,8 +24,9 @@ const ITEM_FROM = `
 `;
 
 const SELLER_CARD_COLUMNS = `
-  s.id, s.handle, s.shop_name, s.tagline, s.bio, s.location, s.cashapp_tag,
-  s.logo_image_id, s.banner_image_id, s.qr_image_id, s.featured, s.created_at,
+  s.id, s.handle, s.shop_name, s.tagline, s.bio, s.location,
+  s.logo_image_id, s.banner_image_id, s.featured, s.created_at,
+  s.banner_x, s.banner_y, s.logo_x, s.logo_y,
   (select count(*)::int from items it
     where it.seller_id = s.id and it.status = 'available') as item_count,
   (select count(*)::int from items it
@@ -36,9 +37,9 @@ const ORDER_COLUMNS = `
   o.*,
   s.handle      as seller_handle,
   s.shop_name   as seller_shop_name,
-  s.cashapp_tag as seller_cashapp_tag,
-  s.qr_image_id as seller_qr_image_id,
   s.logo_image_id as seller_logo_image_id,
+  s.stripe_account_id as seller_stripe_account_id,
+  coalesce(s.stripe_charges_enabled, false) as seller_stripe_charges_enabled,
   coalesce(
     (select json_agg(json_build_object(
        'id', oi.id, 'item_id', oi.item_id, 'title', oi.title,
@@ -407,6 +408,114 @@ export async function adminListOrders(): Promise<Order[]> {
   )) as Order[];
 }
 
+const DM_THREAD_COLUMNS = `
+  t.id, t.seller_id, t.item_id, t.buyer_name, t.buyer_email, t.created_at, t.updated_at,
+  s.shop_name, s.handle,
+  i.title as item_title, i.slug as item_slug,
+  last.body as last_body, last.sender as last_sender,
+  (select count(*)::int from dm_messages m where m.thread_id = t.id) as message_count
+`;
+
+const DM_THREAD_FROM = `
+  from dm_threads t
+  join sellers s on s.id = t.seller_id
+  left join items i on i.id = t.item_id
+  left join lateral (
+    select body, sender from dm_messages
+    where thread_id = t.id
+    order by created_at desc, id desc
+    limit 1
+  ) last on true
+`;
+
+export async function listBuyerThreads(buyerKey: string): Promise<DmThread[]> {
+  return (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where t.buyer_key = $1
+     order by t.updated_at desc`,
+    [buyerKey],
+  )) as DmThread[];
+}
+
+export async function listSellerThreads(sellerId: number): Promise<DmThread[]> {
+  return (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where t.seller_id = $1
+     order by t.updated_at desc`,
+    [sellerId],
+  )) as DmThread[];
+}
+
+export async function listAdminThreads(query?: string): Promise<DmThread[]> {
+  const q = query?.trim().toLowerCase() ?? "";
+  if (!q) {
+    return (await sql.query(
+      `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+       order by t.updated_at desc
+       limit 200`,
+      [],
+    )) as DmThread[];
+  }
+
+  const like = `%${q}%`;
+  return (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where lower(t.buyer_name) like $1
+        or lower(t.buyer_email) like $1
+        or lower(s.shop_name) like $1
+        or lower(s.handle) like $1
+        or lower(coalesce(i.title, '')) like $1
+        or cast(t.id as text) = $2
+     order by t.updated_at desc
+     limit 200`,
+    [like, q],
+  )) as DmThread[];
+}
+
+export async function findBuyerThread(sellerId: number, buyerKey: string): Promise<DmThread | null> {
+  const rows = (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where t.seller_id = $1 and t.buyer_key = $2`,
+    [sellerId, buyerKey],
+  )) as DmThread[];
+  return rows[0] ?? null;
+}
+
+export async function getBuyerThread(id: number, buyerKey: string): Promise<DmThread | null> {
+  const rows = (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where t.id = $1 and t.buyer_key = $2`,
+    [id, buyerKey],
+  )) as DmThread[];
+  return rows[0] ?? null;
+}
+
+export async function getSellerThread(id: number, sellerId: number): Promise<DmThread | null> {
+  const rows = (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
+     where t.id = $1 and t.seller_id = $2`,
+    [id, sellerId],
+  )) as DmThread[];
+  return rows[0] ?? null;
+}
+
+export async function getAdminThread(id: number): Promise<DmThread | null> {
+  const rows = (await sql.query(
+    `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM} where t.id = $1`,
+    [id],
+  )) as DmThread[];
+  return rows[0] ?? null;
+}
+
+export async function listDmMessages(threadId: number): Promise<DmMessage[]> {
+  return (await sql`
+    select id, thread_id, sender, body, created_at
+    from dm_messages
+    where thread_id = ${threadId}
+    order by created_at, id
+  `) as DmMessage[];
+}
+
 export async function adminListMessages(): Promise<Message[]> {
   return (await sql`
     select * from messages order by handled, created_at desc limit 200
@@ -423,6 +532,14 @@ export async function adminStats() {
       (select count(*)::int from sellers where status = 'suspended')     as suspended,
       (select count(*)::int from orders where status = 'new')           as new_orders,
       (select count(*)::int from messages where not handled)            as open_messages,
+      (select count(*)::int from dm_threads t
+        where (
+          select m.sender from dm_messages m
+          where m.thread_id = t.id
+          order by m.created_at desc, m.id desc
+          limit 1
+        ) = 'buyer'
+      ) as waiting_dms,
       (select coalesce(sum(total_cents), 0)::int from orders
         where payment_status <> 'refunded')                             as revenue_cents,
       (select coalesce(sum(price_cents), 0)::int from items
@@ -435,6 +552,7 @@ export async function adminStats() {
     suspended: number;
     new_orders: number;
     open_messages: number;
+    waiting_dms: number;
     revenue_cents: number;
     stock_value_cents: number;
   }[];

@@ -9,6 +9,7 @@ import {
   conditionLabel,
   FREE_SHIPPING_THRESHOLD_CENTS,
   imageSrc,
+  platformFeeForShopCount,
   shippingFor,
   type Item,
 } from "@/lib/types";
@@ -58,6 +59,8 @@ export function useBagItems() {
 export function BagView() {
   const { items, available, unavailable, subtotal, remove, loading } = useBagItems();
   const shipping = shippingFor(subtotal, "ship");
+  const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
+  const platformFee = platformFeeForShopCount(shopCount || (available.length > 0 ? 1 : 0));
   const toFreeShipping = FREE_SHIPPING_THRESHOLD_CENTS - subtotal;
 
   if (loading) {
@@ -96,7 +99,7 @@ export function BagView() {
                     alt={item.images[0].alt ?? item.title}
                     fill
                     sizes="96px"
-                    className={`object-contain bg-white p-1 ${sold ? "opacity-50 grayscale" : ""}`}
+                    className={`object-contain bg-paper-dim p-1 ${sold ? "opacity-50 grayscale" : ""}`}
                   />
                 )}
               </Link>
@@ -145,9 +148,16 @@ export function BagView() {
               <dt className="text-ink-soft">Shipping</dt>
               <dd className="font-medium">{shipping === 0 ? "Free" : money(shipping)}</dd>
             </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-soft">
+                Platform fee
+                {shopCount > 1 ? ` (${shopCount} shops)` : ""}
+              </dt>
+              <dd className="font-medium">{money(platformFee)}</dd>
+            </div>
             <div className="flex justify-between border-t border-line pt-3 font-display text-base font-bold">
               <dt>Total</dt>
-              <dd>{money(subtotal + shipping)}</dd>
+              <dd>{money(subtotal + shipping + platformFee)}</dd>
             </div>
           </dl>
 

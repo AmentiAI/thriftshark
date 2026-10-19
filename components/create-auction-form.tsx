@@ -41,7 +41,7 @@ export function CreateAuctionForm({ items }: { items: Item[] }) {
                 <li key={option.id}>
                   <label
                     className={`flex cursor-pointer items-center gap-3 rounded-2xl p-2.5 ring-1 transition ${
-                      active ? "bg-paper-dim ring-ink" : "bg-white ring-black/5 hover:ring-ink-faint"
+                      active ? "bg-paper-dim ring-ink" : "bg-paper-dim ring-white/10 hover:ring-reef-faint"
                     }`}
                   >
                     <input

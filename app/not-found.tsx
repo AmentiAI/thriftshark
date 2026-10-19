@@ -4,7 +4,7 @@ import { SharkMark } from "@/components/logo";
 export default function NotFound() {
   return (
     <div className="wrap max-w-xl py-28 text-center">
-      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-ink text-reef">
+      <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-void text-reef">
         <SharkMark className="h-8 w-8" />
       </span>
       <h1 className="mt-6 font-display text-5xl font-extrabold tracking-[-0.04em]">

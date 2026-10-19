@@ -126,7 +126,7 @@ export default async function AdminOrdersPage() {
                     ))}
                   </select>
                 </div>
-                <button className="border border-ink px-4 py-2 text-sm font-semibold tracking-wide uppercase hover:bg-ink hover:text-paper">
+                <button className="border border-ink px-4 py-2 text-sm font-semibold tracking-wide uppercase hover:bg-void hover:text-ink">
                   Update
                 </button>
                 <a

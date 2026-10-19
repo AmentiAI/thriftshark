@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
@@ -9,7 +8,7 @@ import {
   deleteListing,
   type FormState,
 } from "@/lib/actions";
-import { ImageField } from "@/components/image-field";
+import { PhotoSetField } from "@/components/image-field";
 import { AUCTION_DURATIONS, CONDITIONS, imageSrc, type Category, type Item } from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
@@ -38,7 +37,10 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
   const dollars = (cents: number | null | undefined) =>
     cents === null || cents === undefined ? "" : (cents / 100).toFixed(2);
 
-  const existing = (item?.images ?? []).map(imageSrc).filter(Boolean) as string[];
+  const existing = (item?.images ?? []).flatMap((image) => {
+    const src = imageSrc(image);
+    return image.id && src ? [{ id: image.id, src }] : [];
+  });
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
@@ -48,51 +50,19 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
         <div className="panel p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">Photos</h2>
           <p className="mt-1.5 text-sm text-ink-soft">
-            Up to 6, under 3MB each. The first one is the cover. Daylight, plain
-            background, and a close-up of any flaw sells best.
+            Up to 10. The first one is the cover. Front, back, label, and a
+            close-up of any flaw — in daylight on a plain background — sells best.
           </p>
 
-          {existing.length > 0 && (
-            <div className="mt-5">
-              <p className={label}>Currently live</p>
-              <div className="flex flex-wrap gap-2">
-                {existing.map((src) => (
-                  <div
-                    key={src}
-                    className="relative h-20 w-16 overflow-hidden rounded-xl bg-paper-dim ring-1 ring-black/5"
-                  >
-                    <Image src={src} alt="" fill sizes="64px" className="object-cover" />
-                  </div>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-ink-faint">
-                Uploading new photos replaces this set. Leave it empty to keep them.
-              </p>
-            </div>
-          )}
-
           <div className="mt-5">
-            <ImageField
+            <PhotoSetField
+              key={existing.map((e) => e.id).join(",")}
               name="photos"
-              label={existing.length > 0 ? "Replace photos" : "Upload photos"}
-              hint="Up to 6. Straight from your camera roll is fine — we shrink and convert them here."
-              multiple
-              max={6}
+              existing={existing}
+              max={10}
               maxEdge={1800}
             />
           </div>
-
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-semibold text-ink-soft">
-              Or paste image links instead
-            </summary>
-            <textarea
-              name="image_urls"
-              rows={3}
-              placeholder={"https://…/front.jpg\nhttps://…/back.jpg"}
-              className="field mt-3 font-mono sm:text-xs"
-            />
-          </details>
         </div>
 
         <div className="panel space-y-5 p-6">
@@ -291,8 +261,10 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
                   return (
                     <label
                       key={value}
-                      className={`tap cursor-pointer rounded-2xl px-4 py-3 ring-1 transition ${
-                        active ? "bg-ink text-paper ring-ink" : "bg-white ring-black/10 hover:ring-ink"
+                      className={`tap cursor-pointer rounded-2xl px-4 py-3 ring-2 transition ${
+                        active
+                          ? "bg-reef/10 ring-reef"
+                          : "bg-paper-dim ring-transparent hover:ring-line"
                       }`}
                     >
                       <input
@@ -303,10 +275,8 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
                         onChange={() => setDestination(value)}
                         className="sr-only"
                       />
-                      <span className="block text-sm font-bold">{title}</span>
-                      <span className={`mt-0.5 block text-xs ${active ? "text-paper/70" : "text-ink-faint"}`}>
-                        {body}
-                      </span>
+                      <span className="block text-sm font-bold text-ink">{title}</span>
+                      <span className="mt-0.5 block text-xs text-ink-faint">{body}</span>
                     </label>
                   );
                 })}
@@ -393,7 +363,7 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
         </div>
 
         {item && (
-          <div className="rounded-[1.75rem] border border-coral/30 bg-white p-6">
+          <div className="rounded-[1.75rem] border border-coral/30 bg-paper-dim p-6">
             <h2 className="font-display text-lg font-extrabold tracking-tight">Delete</h2>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
               Gone for good, photos included. Past orders keep the title and

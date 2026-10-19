@@ -1,4 +1,3 @@
-import QRCode from "qrcode";
 import { sql } from "@/lib/db";
 
 /**
@@ -93,43 +92,4 @@ export async function getImage(id: number) {
     select mime, bytes, byte_size from images where id = ${id}
   `) as { mime: string; bytes: Buffer; byte_size: number }[];
   return rows[0] ?? null;
-}
-
-/** "$shark" / "shark" / "cash.app/$shark" -> "shark" */
-export function normaliseCashtag(input: string) {
-  return input
-    .trim()
-    .replace(/^https?:\/\/(www\.)?cash\.app\//i, "")
-    .replace(/^\$/, "")
-    .replace(/[^A-Za-z0-9_]/g, "")
-    .slice(0, 20);
-}
-
-export function cashappUrl(cashtag: string) {
-  return `https://cash.app/$${normaliseCashtag(cashtag)}`;
-}
-
-/**
- * Renders the seller's Cash App link as a scannable PNG and stores it like any
- * other image, so the order page can serve it straight from the database.
- */
-export async function generateCashappQr(cashtag: string, sellerId: number) {
-  const clean = normaliseCashtag(cashtag);
-  if (!clean) return null;
-
-  const png = await QRCode.toBuffer(cashappUrl(clean), {
-    type: "png",
-    errorCorrectionLevel: "M",
-    margin: 2,
-    width: 640,
-    color: { dark: "#0c1b2aff", light: "#ffffffff" },
-  });
-
-  const rows = (await sql.query(
-    `insert into images (seller_id, mime, bytes, byte_size, purpose)
-     values ($1, 'image/png', $2, $3, 'cashapp-qr') returning id`,
-    [sellerId, png, png.byteLength],
-  )) as { id: number }[];
-
-  return rows[0].id;
 }

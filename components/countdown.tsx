@@ -78,12 +78,12 @@ export function Countdown({
       {cells.map(([value, label]) => (
         <div
           key={label}
-          className={`min-w-14 rounded-2xl px-3 py-2 text-center ${
+          className={`min-w-14 rounded-xl px-3 py-2 text-center ${
             urgent
               ? "bg-coral text-white"
               : surface === "glass"
-                ? "bg-white/10 text-paper"
-                : "bg-ink text-paper"
+                ? "bg-white/15 text-white"
+                : "bg-paper-dim text-ink"
           }`}
         >
           <p className="font-display text-2xl leading-none font-extrabold tabular-nums">

@@ -1,10 +1,9 @@
 /**
- * Demo marketplace data: four shops that own the seeded inventory, each with a
- * generated Cash App code. Re-runnable; it replaces the demo shops only.
+ * Demo marketplace data: four shops that own the seeded inventory.
+ * Re-runnable; it replaces the demo shops only.
  */
 import { randomBytes, scryptSync } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
-import QRCode from "qrcode";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -15,7 +14,6 @@ const SHOPS = [
     handle: "harbour-road",
     shop_name: "Harbour Road Vintage",
     email: "harbour@example.com",
-    cashapp_tag: "harbourroad",
     tagline: "Workwear, denim and outerwear, mostly 70s and 80s.",
     location: "Portland, OR",
     featured: true,
@@ -26,7 +24,6 @@ const SHOPS = [
     handle: "saltwater-supply",
     shop_name: "Saltwater Supply Co.",
     email: "saltwater@example.com",
-    cashapp_tag: "saltwatersupply",
     tagline: "Tees, flannels and knits with the wear already done for you.",
     location: "Oakland, CA",
     featured: true,
@@ -37,7 +34,6 @@ const SHOPS = [
     handle: "the-good-hanger",
     shop_name: "The Good Hanger",
     email: "hanger@example.com",
-    cashapp_tag: "goodhanger",
     tagline: "Dresses and shoes, hunted one closet at a time.",
     location: "Austin, TX",
     featured: false,
@@ -48,7 +44,6 @@ const SHOPS = [
     handle: "fin-and-found",
     shop_name: "Fin & Found",
     email: "fin@example.com",
-    cashapp_tag: "finandfound",
     tagline: "Bags, belts, glassware and lamps that deserve a second room.",
     location: "Providence, RI",
     featured: false,
@@ -76,26 +71,7 @@ async function storeRemoteImage(url, sellerId, purpose) {
   return rows[0].id;
 }
 
-async function storeQr(cashtag, sellerId) {
-  const png = await QRCode.toBuffer(`https://cash.app/$${cashtag}`, {
-    type: "png",
-    errorCorrectionLevel: "M",
-    margin: 2,
-    width: 640,
-    color: { dark: "#0c1b2aff", light: "#ffffffff" },
-  });
-  const rows = await sql.query(
-    `insert into images (seller_id, mime, bytes, byte_size, purpose)
-     values ($1, 'image/png', $2, $3, 'cashapp-qr') returning id`,
-    [sellerId, png, png.byteLength],
-  );
-  return rows[0].id;
-}
-
 const handles = SHOPS.map((s) => s.handle);
-
-// Upsert rather than delete: items.seller_id cascades, so removing a demo shop
-// would take its listings with it.
 
 const stock = await sql`select count(*)::int as n from items`;
 if (stock[0].n === 0) {
@@ -109,9 +85,9 @@ const categories = Object.fromEntries(
 for (const shop of SHOPS) {
   const rows = await sql`
     insert into sellers (handle, shop_name, email, password_hash, tagline, bio,
-                         location, cashapp_tag, featured, status)
+                         location, featured, status)
     values (${shop.handle}, ${shop.shop_name}, ${shop.email}, ${hashPassword(PASSWORD)},
-            ${shop.tagline}, ${shop.bio}, ${shop.location}, ${shop.cashapp_tag},
+            ${shop.tagline}, ${shop.bio}, ${shop.location},
             ${shop.featured}, 'active')
     on conflict (handle) do update set
       shop_name = excluded.shop_name,
@@ -120,20 +96,15 @@ for (const shop of SHOPS) {
       tagline = excluded.tagline,
       bio = excluded.bio,
       location = excluded.location,
-      cashapp_tag = excluded.cashapp_tag,
       featured = excluded.featured,
       status = 'active',
       updated_at = now()
     returning id`;
   const sellerId = rows[0].id;
 
-  // Replace this shop's old branding rather than piling up rows.
   await sql`delete from images where seller_id = ${sellerId}
-            and purpose in ('logo','banner','cashapp-qr')`;
+            and purpose in ('logo','banner')`;
 
-  const qrId = await storeQr(shop.cashapp_tag, sellerId);
-
-  // Placeholder branding so the storefront shows a real banner and picture.
   const logoId = await storeRemoteImage(
     `https://picsum.photos/seed/${shop.handle}-logo/400/400`,
     sellerId,
@@ -145,31 +116,34 @@ for (const shop of SHOPS) {
     "banner",
   );
 
-  await sql`update sellers set qr_image_id = ${qrId}, logo_image_id = ${logoId},
+  await sql`update sellers set logo_image_id = ${logoId},
                                banner_image_id = ${bannerId}
             where id = ${sellerId}`;
 
-  const categoryIds = shop.categories.map((slug) => categories[slug]).filter(Boolean);
-  await sql.query(
-    `update items set seller_id = $1
-     where category_id = any($2::int[]) and seller_id is distinct from $1`,
-    [sellerId, categoryIds],
-  );
-  const count = await sql`select count(*)::int as n from items where seller_id = ${sellerId}`;
-  console.log(`${shop.shop_name.padEnd(24)} /shop/${shop.handle.padEnd(18)} ${count[0].n} listings`);
+  // Give this shop a slice of the seeded inventory in their categories.
+  const catIds = shop.categories.map((slug) => categories[slug]).filter(Boolean);
+  if (catIds.length > 0) {
+    await sql.query(
+      `update items set seller_id = $1
+       where seller_id is null
+         and category_id = any($2::int[])`,
+      [sellerId, catIds],
+    );
+  }
+
+  console.log(`ok  ${shop.handle} (#${sellerId})`);
 }
 
-// Anything left over goes to the first shop so nothing is orphaned.
-const orphans = await sql`select count(*)::int as n from items where seller_id is null`;
-if (orphans[0].n > 0) {
-  const first = await sql`select id from sellers where handle = ${handles[0]}`;
-  await sql`update items set seller_id = ${first[0].id} where seller_id is null`;
-  console.log(`\n${orphans[0].n} unassigned listings given to ${SHOPS[0].shop_name}`);
+// Any leftover unassigned stock goes to the first shop so nothing is orphaned.
+const firstId = (
+  await sql`select id from sellers where handle = ${handles[0]}`
+)[0]?.id;
+if (firstId) {
+  const leftover = await sql`
+    update items set seller_id = ${firstId} where seller_id is null returning id`;
+  if (leftover.length > 0) {
+    console.log(`ok  assigned ${leftover.length} leftover items to ${handles[0]}`);
+  }
 }
 
-const totals = await sql`
-  select (select count(*)::int from sellers) shops,
-         (select count(*)::int from items where seller_id is not null) owned,
-         (select count(*)::int from images) images`;
-console.log(`\nSeeded:`, totals[0]);
-console.log(`Demo shop password: ${PASSWORD}`);
+console.log(`\nDemo shops ready. Password for all: ${PASSWORD}`);
