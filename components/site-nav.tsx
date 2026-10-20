@@ -133,9 +133,9 @@ export function SiteNav({
       </div>
 
       <div className="border-b border-white/10 bg-black text-white">
-        <div className="wrap relative flex h-14 items-center gap-3 sm:h-[4.25rem] sm:gap-5">
+        <div className="wrap relative flex h-14 items-center gap-2 !px-3 sm:h-[4.25rem] sm:gap-5 sm:!px-5">
           <Link href="/" className="shrink-0" aria-label="Thrift Sharks home" onClick={() => setOpen(false)}>
-            <Wordmark className="h-9 w-auto sm:h-11" />
+            <Wordmark className="h-8 w-auto sm:h-11" />
           </Link>
 
           <Form action="/shop" className="relative mx-auto hidden min-w-0 max-w-xl flex-1 md:block">
@@ -160,7 +160,7 @@ export function SiteNav({
             </button>
           </Form>
 
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-2">
             {giveaway && (
               <GiveawayNav
                 giveaway={giveaway.giveaway}
@@ -233,7 +233,7 @@ export function SiteNav({
                 </Link>
                 <Link
                   href="/login"
-                  className="tap rounded-full px-2.5 py-2 text-sm font-medium text-white/70 hover:text-white"
+                  className="tap shrink-0 rounded-full px-2 py-2 text-sm font-medium whitespace-nowrap text-white/80 hover:text-white"
                 >
                   Log in
                 </Link>
@@ -242,7 +242,30 @@ export function SiteNav({
 
             <Link
               href="/cart"
-              className="btn !border-white/25 !bg-transparent !px-3 !py-2 text-sm !text-white hover:!bg-white/10"
+              aria-label="Bag"
+              className="tap relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-white sm:hidden"
+            >
+              <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden>
+                <path
+                  d="M5 7h10l-.8 9H5.8L5 7z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M7.5 7V5.5a2.5 2.5 0 015 0V7"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <BagCount className="absolute top-0.5 right-0.5" />
+            </Link>
+            <Link
+              href="/cart"
+              className="btn !hidden shrink-0 !border-white/25 !bg-transparent !px-3 !py-2 text-sm whitespace-nowrap !text-white hover:!bg-white/10 sm:!inline-flex"
             >
               Bag
               <BagCount />
@@ -255,7 +278,7 @@ export function SiteNav({
               }}
               aria-expanded={open}
               aria-label="Toggle menu"
-              className="grid h-10 w-10 place-items-center rounded-full text-white lg:hidden"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white sm:h-10 sm:w-10 lg:hidden"
             >
               <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden>
                 <path

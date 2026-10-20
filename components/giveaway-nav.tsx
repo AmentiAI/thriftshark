@@ -69,12 +69,17 @@ export function GiveawayNav({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="tap inline-flex items-center gap-1.5 rounded-full bg-gold px-2.5 py-1.5 text-xs font-bold text-paper"
+        aria-label={left !== null && left > 0 ? `Giveaway, ${pillLeft(left)} left` : "Giveaway"}
+        className="tap inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-gold px-3 text-xs font-bold whitespace-nowrap text-paper"
       >
-        <span className="sm:hidden">Win</span>
+        <span className="font-sans tabular-nums sm:hidden">
+          {left !== null && left > 0 ? pillLeft(left) : "Win"}
+        </span>
         <span className="hidden sm:inline">Giveaway</span>
         {left !== null && left > 0 && (
-          <span className="font-sans font-semibold tracking-normal tabular-nums">{pillLeft(left)}</span>
+          <span className="hidden font-sans font-semibold tracking-normal tabular-nums sm:inline">
+            {pillLeft(left)}
+          </span>
         )}
       </button>
 
