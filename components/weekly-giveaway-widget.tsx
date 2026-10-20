@@ -21,12 +21,15 @@ function formatWeekLabel(weekStart: string) {
 
 export function WeeklyGiveawayWidget({
   giveaway,
-  loggedIn,
   alreadyEntered,
+  account = "guest",
+  buyerVerified = false,
 }: {
   giveaway: WeeklyGiveaway;
-  loggedIn: boolean;
+  loggedIn?: boolean;
   alreadyEntered: boolean;
+  account?: "guest" | "shop" | "buyer";
+  buyerVerified?: boolean;
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     enterWeeklyGiveaway,
@@ -48,7 +51,7 @@ export function WeeklyGiveawayWidget({
         </p>
       </div>
       <p className="mt-1 text-xs text-ink-soft">
-        One entry per shop · {weekLabel}. Resets each Monday.
+        Verified buyers are entered automatically · {weekLabel}
       </p>
 
       <div className="mt-5 rounded-2xl bg-paper-dim px-4 py-3">
@@ -65,32 +68,45 @@ export function WeeklyGiveawayWidget({
           {giveaway.entry_count + (entered && !alreadyEntered ? 1 : 0)}
         </span>{" "}
         {giveaway.entry_count + (entered && !alreadyEntered ? 1 : 0) === 1
-          ? "shop entered"
-          : "shops entered"}
+          ? "entry"
+          : "entries"}
       </p>
 
-      {drawn && giveaway.winner_handle ? (
+      {drawn && (giveaway.winner_handle || giveaway.winner_buyer_name) ? (
         <p className="mt-5 rounded-2xl border border-reef/30 bg-reef/10 px-4 py-3 text-sm">
           Winner:{" "}
-          <Link
-            href={`/shop/${giveaway.winner_handle}`}
-            className="font-semibold underline hover:text-reef-dark"
-          >
-            {giveaway.winner_shop_name ?? `@${giveaway.winner_handle}`}
-          </Link>
+          {giveaway.winner_handle ? (
+            <Link
+              href={`/shop/${giveaway.winner_handle}`}
+              className="font-semibold underline hover:text-reef-dark"
+            >
+              {giveaway.winner_shop_name ?? `@${giveaway.winner_handle}`}
+            </Link>
+          ) : (
+            <span className="font-semibold">{giveaway.winner_buyer_name}</span>
+          )}
         </p>
       ) : open ? (
         <div className="mt-5">
-          {!loggedIn ? (
+          {account === "guest" ? (
             <>
-              <Link href="/login" className="btn btn-ink w-full">
-                Sign in to enter
+              <Link href="/signup" className="btn btn-ink w-full">
+                Create an account
               </Link>
               <p className="mt-2 text-center text-xs text-ink-faint">
-                Shop accounts only.{" "}
-                <Link href="/signup" className="font-semibold underline">
-                  Open a shop
+                Verified buyers are entered every week.{" "}
+                <Link href="/login" className="font-semibold underline">
+                  Sign in
                 </Link>
+              </p>
+            </>
+          ) : account === "buyer" && !buyerVerified ? (
+            <>
+              <Link href="/account" className="btn btn-ink w-full">
+                Get Verified — $10
+              </Link>
+              <p className="mt-2 text-center text-xs text-ink-faint">
+                Green check, this week’s draw, and no platform fee.
               </p>
             </>
           ) : entered ? (

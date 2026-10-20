@@ -17,6 +17,12 @@ import {
 } from "@/lib/seller-auth";
 import { ensureCurrentGiveaway, getGiveawayById } from "@/lib/giveaways";
 import { ensureBuyerKey, currentBuyerKey } from "@/lib/buyer-auth";
+import {
+  currentBuyer,
+  endBuyerSession,
+  isBuyerVerified,
+  startBuyerSession,
+} from "@/lib/buyer-account";
 import { deleteBlobUrls, storeUpload } from "@/lib/images";
 import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
 import {
@@ -25,6 +31,7 @@ import {
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
 import {
+  createBuyerVerifiedCheckout,
   createSellerBillingPortal,
   createVerifiedPassCheckout,
 } from "@/lib/stripe-billing";
@@ -93,10 +100,17 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
     return { error: "We need a street address, city and postcode to ship." };
   }
 
-  const buyer = await currentSeller();
+  const shopper = await currentBuyer();
+  const seller = await currentSeller();
+  if (!shopper && !seller) {
+    return { error: "Create an account and sign in before you check out." };
+  }
   const result = await createOrder(ids, {
     ...details,
-    buyerVerified: Boolean(buyer && isSellerVerified(buyer)),
+    email: shopper?.email ?? seller!.email,
+    buyerVerified: Boolean(
+      (shopper && isBuyerVerified(shopper)) || (seller && isSellerVerified(seller)),
+    ),
   });
   if (!result.ok) return { error: result.error };
 
@@ -121,6 +135,69 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
   }
 
   redirect(`/order/${result.groupToken}`);
+}
+
+/** Buyer leaves one review on a paid order, from the receipt. */
+export async function leaveSellerReview(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const orderId = Number(text(formData.get("order_id")));
+  const token = text(formData.get("token"));
+  const rating = Number(text(formData.get("rating")));
+  const body = optional(formData.get("body"));
+
+  if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+    return { error: "That order is missing." };
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { error: "Pick a rating from 1 to 5." };
+  }
+  if (body && body.length > 500) {
+    return { error: "Keep the review under 500 characters." };
+  }
+
+  const rows = (await sql`
+    select o.id, o.seller_id, o.payment_status, o.customer_name, o.email,
+           s.email as seller_email, s.handle
+    from orders o
+    join sellers s on s.id = o.seller_id
+    where o.id = ${orderId}
+      and (o.group_token = ${token} or o.order_number = ${token})
+  `) as {
+    id: number;
+    seller_id: number;
+    payment_status: string;
+    customer_name: string;
+    email: string;
+    seller_email: string;
+    handle: string;
+  }[];
+
+  const order = rows[0];
+  if (!order) return { error: "That order is not on this receipt." };
+  if (order.payment_status !== "paid") {
+    return { error: "You can review a shop after the order is paid." };
+  }
+  if (order.email.toLowerCase() === order.seller_email.toLowerCase()) {
+    return { error: "You can’t review your own shop." };
+  }
+
+  const reviewer = order.customer_name.split(/\s+/)[0] || "Buyer";
+  const inserted = (await sql`
+    insert into seller_reviews (seller_id, order_id, rating, body, reviewer_name)
+    values (${order.seller_id}, ${order.id}, ${rating}, ${body}, ${reviewer})
+    on conflict (order_id) do nothing
+    returning id
+  `) as { id: number }[];
+
+  if (!inserted[0]) return { error: "This order already has a review." };
+
+  revalidatePath(`/shop/${order.handle}`);
+  revalidatePath(`/order/${token}`);
+  revalidatePath("/sellers");
+  revalidatePath("/dashboard");
+  return { ok: "Review posted." };
 }
 
 /** Buyer resumes / starts Stripe Checkout for one order on the receipt page. */
@@ -178,6 +255,16 @@ export async function refreshStripeStatus(): Promise<void> {
 }
 
 /** Seller: pay $20 for 30 days of Verified (stacks if time is left). */
+export async function startBuyerVerified(): Promise<void> {
+  const buyer = await currentBuyer();
+  if (!buyer) redirect("/login?next=/account");
+  const session = await createBuyerVerifiedCheckout(buyer);
+  if (!session.ok) {
+    redirect(`/account?plan=error&msg=${encodeURIComponent(session.error)}`);
+  }
+  redirect(session.url);
+}
+
 export async function startSellerSubscription(): Promise<void> {
   const seller = await requireSeller();
   const session = await createVerifiedPassCheckout(seller);
@@ -599,6 +686,10 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
   if (clashes.some((c) => c.email === d.email)) {
     return { error: "That email already has a shop. Sign in instead." };
   }
+  const buyerTaken = (await sql`
+    select 1 from buyers where email = ${d.email} limit 1
+  `) as unknown[];
+  if (buyerTaken[0]) return { error: "That email already has an account. Sign in instead." };
 
   const rows = (await sql`
     insert into sellers (handle, shop_name, email, password_hash, tagline, location)
@@ -614,9 +705,63 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
   redirect("/dashboard?welcome=1");
 }
 
+const buyerSignupSchema = z.object({
+  name: z.string().min(2, "Tell us your name."),
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(8, "Use a password of at least 8 characters."),
+});
+
+export async function signUpBuyer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = buyerSignupSchema.safeParse({
+    name: text(formData.get("name")),
+    email: text(formData.get("email")).toLowerCase(),
+    password: text(formData.get("password")),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const d = parsed.data;
+
+  const taken = (await sql`
+    select 1 from buyers where email = ${d.email}
+    union all
+    select 1 from sellers where email = ${d.email}
+    limit 1
+  `) as unknown[];
+  if (taken[0]) return { error: "That email already has an account. Sign in instead." };
+
+  const rows = (await sql`
+    insert into buyers (name, email, password_hash)
+    values (${d.name}, ${d.email}, ${hashPassword(d.password)})
+    returning id
+  `) as { id: number }[];
+
+  await endSellerSession();
+  await startBuyerSession(rows[0].id);
+  redirect("/account");
+}
+
+export async function signUp(prev: FormState, formData: FormData): Promise<FormState> {
+  if (text(formData.get("role")) === "store") return signUpSeller(prev, formData);
+  return signUpBuyer(prev, formData);
+}
+
 export async function signInSeller(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = text(formData.get("email")).toLowerCase();
   const password = text(formData.get("password"));
+  const next = text(formData.get("next"));
+  const dest = next.startsWith("/") && !next.startsWith("//") ? next : "";
+
+  const buyers = (await sql`
+    select id, password_hash, status from buyers where email = ${email}
+  `) as { id: number; password_hash: string; status: string }[];
+  const buyer = buyers[0];
+  if (buyer && verifyPassword(password, buyer.password_hash)) {
+    if (buyer.status !== "active") {
+      return { error: "This account has been suspended. Email us if you think that is a mistake." };
+    }
+    await endSellerSession();
+    await startBuyerSession(buyer.id);
+    redirect(dest || "/account");
+  }
 
   const rows = (await sql`
     select id, password_hash, status from sellers where email = ${email}
@@ -631,12 +776,14 @@ export async function signInSeller(_prev: FormState, formData: FormData): Promis
     return { error: "This shop has been suspended. Email us if you think that is a mistake." };
   }
 
+  await endBuyerSession();
   await startSellerSession(seller.id);
-  redirect("/dashboard");
+  redirect(dest || "/dashboard");
 }
 
 export async function signOutSeller() {
   await endSellerSession();
+  await endBuyerSession();
   redirect("/");
 }
 
@@ -1196,19 +1343,20 @@ export async function drawGiveawayWinner(formData: FormData) {
   if (giveaway.entry_count === 0) return;
 
   const pick = (await sql`
-    select seller_id from giveaway_entries
+    select seller_id, buyer_id from giveaway_entries
     where giveaway_id = ${id}
     order by random()
     limit 1
-  `) as { seller_id: number }[];
+  `) as { seller_id: number | null; buyer_id: number | null }[];
 
-  const winnerId = pick[0]?.seller_id;
-  if (!winnerId) return;
+  const winner = pick[0];
+  if (!winner?.seller_id && !winner?.buyer_id) return;
 
   await sql`
     update weekly_giveaways
     set status = 'drawn',
-        winner_seller_id = ${winnerId},
+        winner_seller_id = ${winner.seller_id},
+        winner_buyer_id = ${winner.buyer_id},
         drawn_at = now()
     where id = ${id} and status <> 'drawn'
   `;

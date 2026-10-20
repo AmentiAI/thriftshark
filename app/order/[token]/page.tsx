@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ClearBag } from "@/components/clear-bag";
 import { PayWithStripeButton } from "@/components/pay-with-stripe-button";
+import { ReviewForm } from "@/components/review-form";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { Stars } from "@/components/stars";
 import { money, shortDate } from "@/lib/format";
-import { getOrderByNumber, getOrderGroup } from "@/lib/queries";
+import { getOrderByNumber, getOrderGroup, reviewsForOrders } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,9 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
     if (single) orders = [single];
   }
   if (orders.length === 0) notFound();
+
+  const existingReviews = await reviewsForOrders(orders.map((o) => o.id));
+  const reviewByOrder = new Map(existingReviews.map((r) => [r.order_id, r]));
 
   const first = orders[0];
   const grandTotal = orders.reduce((sum, o) => sum + o.total_cents, 0);
@@ -195,6 +200,28 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
                     <p className="max-w-56 rounded-2xl bg-kelp/10 px-4 py-3 text-sm text-ink">
                       Paid via Stripe. The shop has your order.
                     </p>
+                  )}
+
+                  {isPaid && order.seller_id && (
+                    <div className="max-w-md pt-2">
+                      {reviewByOrder.get(order.id) ? (
+                        <div className="rounded-2xl bg-paper-dim px-4 py-3">
+                          <p className="text-xs font-bold tracking-wider text-ink-faint uppercase">
+                            Your review
+                          </p>
+                          <p className="mt-1">
+                            <Stars rating={reviewByOrder.get(order.id)!.rating} />
+                          </p>
+                          {reviewByOrder.get(order.id)!.body && (
+                            <p className="mt-1 text-sm text-ink-soft">
+                              {reviewByOrder.get(order.id)!.body}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <ReviewForm orderId={order.id} token={token} />
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

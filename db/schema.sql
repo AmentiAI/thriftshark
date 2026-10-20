@@ -326,3 +326,49 @@ create table if not exists giveaway_entries (
 
 create index if not exists giveaway_entries_giveaway_idx
   on giveaway_entries (giveaway_id, created_at desc);
+
+-- One review per paid order. Buyers leave it from their receipt.
+create table if not exists seller_reviews (
+  id             serial primary key,
+  seller_id      int not null references sellers(id) on delete cascade,
+  order_id       int not null unique references orders(id) on delete cascade,
+  rating         smallint not null check (rating between 1 and 5),
+  body           text,
+  reviewer_name  text not null,
+  created_at     timestamptz not null default now()
+);
+
+create index if not exists seller_reviews_seller_idx
+  on seller_reviews (seller_id, created_at desc);
+
+-- Buyer accounts. Verified is a $10 / 30-day pass (green check).
+create table if not exists buyers (
+  id                  serial primary key,
+  name                text not null,
+  email               text not null unique,
+  password_hash       text not null,
+  stripe_customer_id  text unique,
+  verified_until      timestamptz,
+  status              text not null default 'active'
+                        check (status in ('active','suspended')),
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create table if not exists buyer_verified_payments (
+  id                 serial primary key,
+  buyer_id           int not null references buyers(id) on delete cascade,
+  stripe_session_id  text not null unique,
+  created_at         timestamptz not null default now()
+);
+
+-- Giveaways can include verified buyers as well as shops.
+alter table giveaway_entries alter column seller_id drop not null;
+alter table giveaway_entries
+  add column if not exists buyer_id int references buyers(id) on delete cascade;
+create unique index if not exists giveaway_entries_buyer_idx
+  on giveaway_entries (giveaway_id, buyer_id)
+  where buyer_id is not null;
+
+alter table weekly_giveaways
+  add column if not exists winner_buyer_id int references buyers(id) on delete set null;

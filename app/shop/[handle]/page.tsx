@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ItemCard } from "@/components/item-card";
 import { ShopMasthead } from "@/components/shop-masthead";
+import { Stars } from "@/components/stars";
 import { money, shortDate } from "@/lib/format";
-import { getSellerByHandle, searchItems } from "@/lib/queries";
+import { getSellerByHandle, searchItems, sellerReviews } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,19 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
   const showSold = (Array.isArray(params.sold) ? params.sold[0] : params.sold) === "1";
   const sort = Array.isArray(params.sort) ? params.sort[0] : params.sort;
 
-  const { items } = await searchItems({
-    seller: seller.handle,
-    includeSold: showSold,
-    sort,
-    perPage: 60,
-  });
+  const [{ items }, reviews] = await Promise.all([
+    searchItems({
+      seller: seller.handle,
+      includeSold: showSold,
+      sort,
+      perPage: 60,
+    }),
+    sellerReviews(seller.id),
+  ]);
+  const reviewAvg =
+    reviews.length === 0
+      ? null
+      : reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
   const stockValue = items
     .filter((i) => i.status === "available")
@@ -96,7 +104,12 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
             [`${seller.item_count}`, "for sale"],
             [`${seller.sold_count}`, "sold"],
             [money(stockValue), "on rack"],
-          ].map(([value, label]) => (
+            reviews.length > 0
+              ? [`${reviewAvg!.toFixed(1)}`, `${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}`]
+              : null,
+          ]
+            .filter((row): row is [string, string] => row !== null)
+            .map(([value, label]) => (
             <div
               key={label}
               className="rounded-full border border-line bg-paper-dim px-3.5 py-1.5 text-sm"
@@ -107,6 +120,34 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
           ))}
         </dl>
       </ShopMasthead>
+
+      <section className="pt-10">
+        <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
+          Reviews
+        </h2>
+        {reviews.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-soft">
+            No reviews yet. Buyers can leave one after a paid order.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {reviews.map((review) => (
+              <li key={review.id} className="rounded-2xl bg-paper-dim px-4 py-3 ring-1 ring-line">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold">{review.reviewer_name}</p>
+                  <p className="text-xs text-ink-faint">{shortDate(review.created_at)}</p>
+                </div>
+                <p className="mt-1">
+                  <Stars rating={review.rating} />
+                </p>
+                {review.body && (
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{review.body}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="pt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -2,52 +2,87 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { signUpSeller, type FormState } from "@/lib/actions";
+import { signUp, type FormState } from "@/lib/actions";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
 export function SignupForm() {
-  const [state, action, pending] = useActionState<FormState, FormData>(signUpSeller, null);
+  const [state, action, pending] = useActionState<FormState, FormData>(signUp, null);
+  const [role, setRole] = useState<"buyer" | "store">("buyer");
   const [handle, setHandle] = useState("");
 
   const preview = handle.toLowerCase().replace(/[^a-z0-9-]/g, "") || "your-shop";
+  const store = role === "store";
 
   return (
     <form action={action} className="space-y-6">
-      <div>
-        <label className={label} htmlFor="shop_name">
-          Shop name
-        </label>
-        <input
-          id="shop_name"
-          name="shop_name"
-          required
-          placeholder="Harbour Road Vintage"
-          className="field"
-        />
+      <input type="hidden" name="role" value={role} />
+
+      <div className="grid grid-cols-2 gap-2 rounded-full bg-paper-dim p-1">
+        <button
+          type="button"
+          onClick={() => setRole("buyer")}
+          className={`tap rounded-full px-3 py-2.5 text-sm font-semibold ${
+            !store ? "bg-ink text-paper" : "text-ink-soft"
+          }`}
+        >
+          Buyer
+        </button>
+        <button
+          type="button"
+          onClick={() => setRole("store")}
+          className={`tap rounded-full px-3 py-2.5 text-sm font-semibold ${
+            store ? "bg-ink text-paper" : "text-ink-soft"
+          }`}
+        >
+          Open a store
+        </button>
       </div>
 
-      <div>
-        <label className={label} htmlFor="handle">
-          Shop link
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-sm font-semibold text-ink-faint">/shop/</span>
-          <input
-            id="handle"
-            name="handle"
-            required
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            placeholder="harbour-road"
-            className="field"
-          />
+      {store ? (
+        <>
+          <div>
+            <label className={label} htmlFor="shop_name">
+              Shop name
+            </label>
+            <input
+              id="shop_name"
+              name="shop_name"
+              required
+              placeholder="Harbour Road Vintage"
+              className="field"
+            />
+          </div>
+
+          <div>
+            <label className={label} htmlFor="handle">
+              Shop link
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 text-sm font-semibold text-ink-faint">/shop/</span>
+              <input
+                id="handle"
+                name="handle"
+                required
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                placeholder="harbour-road"
+                className="field"
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-ink-faint">
+              Buyers will find you at <strong className="text-ink">/shop/{preview}</strong>.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className={label} htmlFor="name">
+            Name
+          </label>
+          <input id="name" name="name" required autoComplete="name" className="field" />
         </div>
-        <p className="mt-1.5 text-xs text-ink-faint">
-          Buyers will find you at <strong className="text-ink">/shop/{preview}</strong>. Lowercase
-          letters, numbers and dashes.
-        </p>
-      </div>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
@@ -80,29 +115,32 @@ export function SignupForm() {
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className={label} htmlFor="tagline">
-            Tagline (optional)
-          </label>
-          <input
-            id="tagline"
-            name="tagline"
-            placeholder="Workwear and denim, mostly 70s"
-            className="field"
-          />
+      {store && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label className={label} htmlFor="tagline">
+              Tagline (optional)
+            </label>
+            <input
+              id="tagline"
+              name="tagline"
+              placeholder="Workwear and denim, mostly 70s"
+              className="field"
+            />
+          </div>
+          <div>
+            <label className={label} htmlFor="location">
+              Location (optional)
+            </label>
+            <input id="location" name="location" placeholder="Portland, OR" className="field" />
+          </div>
         </div>
-        <div>
-          <label className={label} htmlFor="location">
-            Location (optional)
-          </label>
-          <input id="location" name="location" placeholder="Portland, OR" className="field" />
-        </div>
-      </div>
+      )}
 
       <p className="rounded-2xl bg-paper-dim px-4 py-3 text-xs leading-relaxed text-ink-soft">
-        After you open, connect Stripe on your storefront so buyers can pay you by
-        card. Money goes to your bank — Thrift Sharks never holds it.
+        {store
+          ? "After you open, connect Stripe so buyers can pay you by card. Money goes to your bank."
+          : "A buyer account is free. Verified is $10 for 30 days: a green check, weekly giveaway entry, and no platform fee."}
       </p>
 
       {state?.error && (
@@ -112,7 +150,7 @@ export function SignupForm() {
       )}
 
       <p className="text-xs leading-relaxed text-ink-faint">
-        By opening a shop you agree to our{" "}
+        By creating an account you agree to our{" "}
         <Link href="/terms" className="font-medium text-ink underline underline-offset-2">
           Terms of Service
         </Link>{" "}
@@ -124,11 +162,11 @@ export function SignupForm() {
       </p>
 
       <button disabled={pending} className="btn btn-ink w-full">
-        {pending ? "Opening your shop…" : "Open my shop"}
+        {pending ? "Creating your account…" : store ? "Open my shop" : "Create my account"}
       </button>
 
       <p className="text-center text-sm text-ink-soft">
-        Already selling?{" "}
+        Already have an account?{" "}
         <Link href="/login" className="font-semibold underline hover:text-ink">
           Sign in
         </Link>

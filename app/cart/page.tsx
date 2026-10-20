@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BagView } from "@/components/bag-view";
+import { currentBuyer, isBuyerVerified } from "@/lib/buyer-account";
 import { currentSeller } from "@/lib/seller-auth";
 import { isSellerVerified } from "@/lib/seller-plan";
 
@@ -11,8 +12,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
-  const seller = await currentSeller();
-  const buyerVerified = Boolean(seller && isSellerVerified(seller));
+  const [shopper, seller] = await Promise.all([currentBuyer(), currentSeller()]);
+  const buyerVerified = Boolean(
+    (shopper && isBuyerVerified(shopper)) || (seller && isSellerVerified(seller)),
+  );
 
   return (
     <div className="wrap py-12">

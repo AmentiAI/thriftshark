@@ -6,11 +6,12 @@ import { signInSeller, type FormState } from "@/lib/actions";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
-export function SellerLoginForm() {
+export function SellerLoginForm({ next = "" }: { next?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signInSeller, null);
 
   return (
     <form action={action} className="space-y-5">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
         <label className={label} htmlFor="email">
           Email
@@ -51,9 +52,9 @@ export function SellerLoginForm() {
       </button>
 
       <p className="text-center text-sm text-ink-soft">
-        No shop yet?{" "}
+        No account yet?{" "}
         <Link href="/signup" className="font-semibold underline hover:text-reef-dark">
-          Open one free
+          Create one
         </Link>
       </p>
     </form>

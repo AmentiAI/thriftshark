@@ -95,15 +95,19 @@ export default async function AdminGiveawayPage() {
           </form>
         )}
 
-        {current.status === "drawn" && current.winner_handle && (
+        {current.status === "drawn" && (current.winner_handle || current.winner_buyer_name) && (
           <p className="mt-6 rounded-2xl bg-reef/10 px-4 py-3 text-sm">
             Winner:{" "}
-            <Link
-              href={`/shop/${current.winner_handle}`}
-              className="font-semibold underline"
-            >
-              {current.winner_shop_name ?? `@${current.winner_handle}`}
-            </Link>
+            {current.winner_handle ? (
+              <Link
+                href={`/shop/${current.winner_handle}`}
+                className="font-semibold underline"
+              >
+                {current.winner_shop_name ?? `@${current.winner_handle}`}
+              </Link>
+            ) : (
+              <span className="font-semibold">{current.winner_buyer_name}</span>
+            )}
             {current.drawn_at && (
               <span className="text-ink-faint">
                 {" "}
@@ -134,7 +138,11 @@ export default async function AdminGiveawayPage() {
                 <p className="font-bold uppercase">{g.status}</p>
                 <p>
                   {g.entry_count} {g.entry_count === 1 ? "entry" : "entries"}
-                  {g.winner_handle ? ` · @${g.winner_handle}` : ""}
+                  {g.winner_handle
+                    ? ` · @${g.winner_handle}`
+                    : g.winner_buyer_name
+                      ? ` · ${g.winner_buyer_name}`
+                      : ""}
                 </p>
               </div>
             </li>

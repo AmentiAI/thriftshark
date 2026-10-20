@@ -94,12 +94,22 @@ export async function settleDueAuctions(auctionId?: number) {
                   where lower(b.email) = lower(w.bidder_email)
                     and b.status = 'active'
                     and (b.official or b.verified_until > now())
+                ) or exists (
+                  select 1 from buyers u
+                  where lower(u.email) = lower(w.bidder_email)
+                    and u.status = 'active'
+                    and u.verified_until > now()
                 ) then 0 else $4::int end,
                 w.amount_cents + $5::int + case when exists (
                   select 1 from sellers b
                   where lower(b.email) = lower(w.bidder_email)
                     and b.status = 'active'
                     and (b.official or b.verified_until > now())
+                ) or exists (
+                  select 1 from buyers u
+                  where lower(u.email) = lower(w.bidder_email)
+                    and u.status = 'active'
+                    and u.verified_until > now()
                 ) then 0 else $4::int end,
                 'ship',
                 'Auction win — seller ships; buyer still needs to confirm address.'

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { BagCount } from "@/components/bag-count";
+import { BuyerCheck } from "@/components/buyer-check";
 import { Wordmark } from "@/components/logo";
 import { ShopAvatar } from "@/components/shop-avatar";
 
@@ -86,12 +87,19 @@ export type NavSeller = {
   logo_image_id: number | null;
 };
 
+export type NavBuyer = {
+  name: string;
+  verified: boolean;
+};
+
 export function SiteNav({
   categories,
   seller,
+  buyer,
 }: {
   categories: { slug: string; name: string }[];
   seller: NavSeller | null;
+  buyer?: NavBuyer | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -182,6 +190,14 @@ export function SiteNav({
                 />
                 <span className="max-w-[7rem] truncate">{seller.shop_name}</span>
               </Link>
+            ) : buyer ? (
+              <Link
+                href="/account"
+                className="tap flex items-center gap-1.5 rounded-full px-2.5 py-2 text-sm font-medium text-white/80 hover:bg-white/10"
+              >
+                {buyer.verified && <BuyerCheck className="h-4 w-4" />}
+                <span className="max-w-[7rem] truncate">{buyer.name}</span>
+              </Link>
             ) : (
               <>
                 <Link
@@ -255,13 +271,13 @@ export function SiteNav({
               ),
             )}
             <Link
-              href={seller ? "/dashboard" : "/signup"}
+              href={seller ? "/dashboard" : buyer ? "/account" : "/signup"}
               onClick={() => setOpen(false)}
               className="btn btn-ink mt-4 w-full"
             >
-              {seller ? "Dashboard" : "Sell now"}
+              {seller ? "Dashboard" : buyer ? "Your account" : "Create account"}
             </Link>
-            {!seller && (
+            {!seller && !buyer && (
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}

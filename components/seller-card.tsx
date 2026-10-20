@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { Stars } from "@/components/stars";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { focalStyle, type SellerCard as SellerCardType } from "@/lib/types";
 
@@ -64,11 +65,17 @@ export function SellerCard({
           <p className="mt-2 line-clamp-2 text-sm text-ink-soft">{seller.tagline}</p>
         )}
 
-        <div className="mt-auto flex gap-3 pt-3 text-xs text-ink-faint">
+        <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-3 text-xs text-ink-faint">
           <span>
             {seller.item_count} {seller.item_count === 1 ? "listing" : "listings"}
           </span>
           {seller.sold_count > 0 && <span>{seller.sold_count} sold</span>}
+          {seller.review_count > 0 && seller.review_avg != null && (
+            <span className="inline-flex items-center gap-1">
+              <Stars rating={Number(seller.review_avg)} />
+              {Number(seller.review_avg).toFixed(1)}
+            </span>
+          )}
         </div>
       </div>
     </Link>

@@ -7,7 +7,9 @@ import {
   VERIFIED_PASS_DAYS,
   type SubscriptionStatus,
 } from "@/lib/seller-plan";
-import type { Seller } from "@/lib/types";
+import { BUYER_VERIFIED_DAYS, BUYER_VERIFIED_PRICE_USD } from "@/lib/buyer-account";
+import { ensureCurrentGiveaway } from "@/lib/giveaways";
+import type { Buyer, Seller } from "@/lib/types";
 
 function mapSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
   switch (status) {
@@ -266,6 +268,95 @@ export async function syncSellerSubscriptionFromCheckout(
   }
 
   await syncSellerSubscription(sub);
+}
+
+/** One-time $10 Checkout for 30 days of buyer Verified. Paying again stacks days. */
+export async function createBuyerVerifiedCheckout(
+  buyer: Buyer,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!stripeConfigured()) {
+    return { ok: false, error: "Stripe is not configured on this server." };
+  }
+
+  try {
+    const stripe = getStripe();
+    let customerId = buyer.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: buyer.email,
+        name: buyer.name,
+        metadata: { buyer_id: String(buyer.id) },
+      });
+      customerId = customer.id;
+      await sql`update buyers set stripe_customer_id = ${customerId} where id = ${buyer.id}`;
+    }
+
+    const origin = await requestOrigin();
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer: customerId,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: BUYER_VERIFIED_PRICE_USD * 100,
+            product_data: {
+              name: `Buyer Verified — ${BUYER_VERIFIED_DAYS} days`,
+              description: "Green check, weekly giveaway entry, and no platform fee.",
+            },
+          },
+        },
+      ],
+      success_url: `${origin}/account?plan=done&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/account?plan=cancel`,
+      metadata: {
+        kind: "buyer_verified",
+        buyer_id: String(buyer.id),
+      },
+    });
+
+    if (!session.url) {
+      return { ok: false, error: "Stripe did not return a checkout URL." };
+    }
+    return { ok: true, url: session.url };
+  } catch (err) {
+    console.error("createBuyerVerifiedCheckout", err);
+    const message = err instanceof Error ? err.message : "Could not start checkout.";
+    return { ok: false, error: message };
+  }
+}
+
+export async function grantBuyerVerified(buyerId: number, sessionId: string) {
+  const inserted = (await sql`
+    insert into buyer_verified_payments (buyer_id, stripe_session_id)
+    values (${buyerId}, ${sessionId})
+    on conflict (stripe_session_id) do nothing
+    returning id
+  `) as { id: number }[];
+  if (!inserted[0]) return false;
+
+  await sql`
+    update buyers set
+      verified_until = greatest(coalesce(verified_until, now()), now())
+        + (${BUYER_VERIFIED_DAYS}::int * interval '1 day'),
+      updated_at = now()
+    where id = ${buyerId}
+  `;
+  await ensureCurrentGiveaway().catch(() => undefined);
+  return true;
+}
+
+export async function confirmBuyerVerifiedCheckout(buyer: Buyer, sessionId: string) {
+  if (!sessionId || !stripeConfigured()) return buyer;
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (session.metadata?.kind !== "buyer_verified") return buyer;
+  if (Number(session.metadata.buyer_id) !== buyer.id) return buyer;
+  if (session.payment_status !== "paid") return buyer;
+  await grantBuyerVerified(buyer.id, session.id);
+  const rows = (await sql`select * from buyers where id = ${buyer.id}`) as Buyer[];
+  return rows[0] ?? buyer;
 }
 
 /** Refresh from Stripe when the seller returns from Checkout. */

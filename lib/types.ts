@@ -70,6 +70,32 @@ export type SellerCard = {
   created_at: string;
   item_count: number;
   sold_count: number;
+  review_count: number;
+  review_avg: number | null;
+};
+
+/** A buyer's review of a shop, left from a paid order. */
+export type SellerReview = {
+  id: number;
+  seller_id: number;
+  order_id: number;
+  rating: number;
+  body: string | null;
+  reviewer_name: string;
+  created_at: string;
+};
+
+/** A shopper account. Separate from a seller shop. */
+export type Buyer = {
+  id: number;
+  name: string;
+  email: string;
+  password_hash: string;
+  stripe_customer_id: string | null;
+  verified_until: string | null;
+  status: "active" | "suspended";
+  created_at: string;
+  updated_at: string;
 };
 
 /** Paid-order leaderboard row for the current calendar week. */
@@ -91,11 +117,13 @@ export type WeeklyGiveaway = {
   prize_text: string;
   status: "open" | "closed" | "drawn";
   winner_seller_id: number | null;
+  winner_buyer_id: number | null;
   drawn_at: string | null;
   created_at: string;
   entry_count: number;
   winner_handle: string | null;
   winner_shop_name: string | null;
+  winner_buyer_name: string | null;
 };
 
 /** Everything the storefront settings form needs — never the password hash. */
@@ -349,13 +377,13 @@ export const AUCTION_DURATIONS: { hours: number; label: string }[] = [
 ];
 
 /** Flat shipping charged to the buyer per shop order — settles to the seller. */
-export const SHIPPING_FLAT_CENTS = 1500;
+export const SHIPPING_FLAT_CENTS = 999;
 
 /** Flat platform fee charged to the buyer per shop ($5). Waived for Verified shops. */
 export const PLATFORM_FEE_CENTS = 500;
 
 /**
- * Shipping for one shop order. $15 when shipping; $0 for local pickup.
+ * Shipping for one shop order. $9.99 when shipping; $0 for local pickup.
  * Goes to the seller with the item price (not the platform fee).
  */
 export function shippingFor(
@@ -365,7 +393,7 @@ export function shippingFor(
   return fulfilment === "pickup" ? 0 : SHIPPING_FLAT_CENTS;
 }
 
-/** Shipping for a multi-shop bag — $15 per shop when shipping. */
+/** Shipping for a multi-shop bag — $9.99 per shop when shipping. */
 export function shippingForShopCount(
   shopCount: number,
   fulfilment: "ship" | "pickup",

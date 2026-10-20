@@ -9,7 +9,7 @@ import { VerifiedBadge } from "@/components/verified-badge";
 import { money } from "@/lib/format";
 import { getItemBySlug, getRelatedItems } from "@/lib/queries";
 import { getAuctionByItemId } from "@/lib/auctions";
-import { conditionLabel, imageSrc } from "@/lib/types";
+import { SHIPPING_FLAT_CENTS, conditionLabel, imageSrc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -86,7 +86,7 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           </div>
 
           <p className="mt-2 text-sm text-ink-faint">
-            + $15 flat shipping to the seller at checkout
+            + {money(SHIPPING_FLAT_CENTS)} flat shipping to the seller at checkout
           </p>
 
           {item.seller_handle && (

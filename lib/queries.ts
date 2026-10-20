@@ -8,6 +8,7 @@ import type {
   Order,
   Seller,
   SellerCard,
+  SellerReview,
   WeeklyTopShop,
 } from "@/lib/types";
 
@@ -42,7 +43,9 @@ const SELLER_CARD_COLUMNS = `
   (select count(*)::int from items it
     where it.seller_id = s.id and it.status = 'available') as item_count,
   (select count(*)::int from items it
-    where it.seller_id = s.id and it.status = 'sold')      as sold_count
+    where it.seller_id = s.id and it.status = 'sold')      as sold_count,
+  (select count(*)::int from seller_reviews r where r.seller_id = s.id) as review_count,
+  (select avg(r.rating)::float from seller_reviews r where r.seller_id = s.id) as review_avg
 `;
 
 const ORDER_COLUMNS = `
@@ -458,6 +461,26 @@ export async function sellerNotices(sellerId: number) {
     order by created_at desc
     limit 20
   `) as { id: number; kind: string; body: string; created_at: string }[];
+}
+
+export async function sellerReviews(sellerId: number, limit = 40): Promise<SellerReview[]> {
+  return (await sql`
+    select id, seller_id, order_id, rating, body, reviewer_name, created_at
+    from seller_reviews
+    where seller_id = ${sellerId}
+    order by created_at desc
+    limit ${limit}
+  `) as SellerReview[];
+}
+
+export async function reviewsForOrders(orderIds: number[]): Promise<SellerReview[]> {
+  if (orderIds.length === 0) return [];
+  return (await sql.query(
+    `select id, seller_id, order_id, rating, body, reviewer_name, created_at
+     from seller_reviews
+     where order_id = any($1::int[])`,
+    [orderIds],
+  )) as SellerReview[];
 }
 
 export async function sellerMessages(sellerId: number): Promise<Message[]> {

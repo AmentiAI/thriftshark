@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { money, shortDate } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
-import { sellerInsights, sellerOrders, sellerStats } from "@/lib/queries";
+import { sellerInsights, sellerOrders, sellerReviews, sellerStats } from "@/lib/queries";
+import { Stars } from "@/components/stars";
 import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +13,11 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
   const welcome = (Array.isArray(params.welcome) ? params.welcome[0] : params.welcome) === "1";
   const verified = isSellerVerified(seller);
 
-  const [stats, orders, insights] = await Promise.all([
+  const [stats, orders, insights, reviews] = await Promise.all([
     sellerStats(seller.id),
     sellerOrders(seller.id),
     verified ? sellerInsights(seller.id) : Promise.resolve(null),
+    sellerReviews(seller.id, 8),
   ]);
 
   const tiles = [
@@ -141,6 +143,35 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
           </ul>
         </section>
       )}
+
+      <section>
+        <h2 className="font-display text-xl font-extrabold tracking-tight">Reviews</h2>
+        {reviews.length === 0 ? (
+          <p className="panel mt-4 px-5 py-10 text-center text-sm text-ink-soft">
+            No reviews yet. Buyers can leave one from their receipt after they pay.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {reviews.map((review) => (
+              <li
+                key={review.id}
+                className="rounded-2xl bg-paper-dim px-5 py-4 ring-1 ring-line"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-semibold">{review.reviewer_name}</p>
+                  <p className="text-xs text-ink-faint">{shortDate(review.created_at)}</p>
+                </div>
+                <p className="mt-1">
+                  <Stars rating={review.rating} />
+                </p>
+                {review.body && (
+                  <p className="mt-1.5 text-sm text-ink-soft">{review.body}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div>

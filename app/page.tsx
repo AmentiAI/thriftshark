@@ -7,6 +7,7 @@ import { TopShopsWidget } from "@/components/top-shops-widget";
 import { WeeklyGiveawayWidget } from "@/components/weekly-giveaway-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
+import { currentBuyer, isBuyerVerified } from "@/lib/buyer-account";
 import {
   ensureCurrentGiveaway,
   sellerEnteredGiveaway,
@@ -36,6 +37,7 @@ export default async function HomePage() {
     auctions,
     giveaway,
     seller,
+    buyer,
   ] = await Promise.all([
     getFeaturedItems(8),
     getLatestItems(12),
@@ -47,11 +49,13 @@ export default async function HomePage() {
     liveAuctions(4),
     ensureCurrentGiveaway(),
     currentSeller(),
+    currentBuyer(),
   ]);
 
   const giveawayEntered = seller
     ? await sellerEnteredGiveaway(giveaway.id, seller.id)
-    : false;
+    : Boolean(buyer && isBuyerVerified(buyer));
+  const giveawayAccount = seller ? "shop" : buyer ? "buyer" : "guest";
 
   const trending = featured.length > 0 ? featured : latest.slice(0, 8);
   const fresh = latest.slice(0, 12);
@@ -224,8 +228,9 @@ export default async function HomePage() {
             <TopShopsWidget shops={weeklyTop.shops} weekStart={weeklyTop.weekStart} />
             <WeeklyGiveawayWidget
               giveaway={giveaway}
-              loggedIn={Boolean(seller)}
               alreadyEntered={giveawayEntered}
+              account={giveawayAccount}
+              buyerVerified={Boolean(buyer && isBuyerVerified(buyer))}
             />
           </div>
         </div>

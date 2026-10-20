@@ -98,7 +98,7 @@ export default function TermsPage() {
       <h2>6. Pricing, fees, and payments</h2>
       <ul>
         <li>Sellers set prices (and auction parameters) and are responsible for arranging shipping or local pickup.</li>
-        <li>Thrift Sharks does not charge listing fees. A flat platform fee (currently $5 per shop order, waived when the buyer’s account is Verified) and a flat shipping fee (currently $15 per shop order when shipping) are charged to the buyer at checkout. Shipping settles to the seller; the platform fee is collected through Stripe.</li>
+        <li>Everyone needs an account to check out, as a buyer or by opening a store. Thrift Sharks does not charge listing fees. A flat platform fee (currently $5 per shop order) is waived for Verified buyers and Verified shops. Buyer Verified is $10 for 30 days and includes a green check plus automatic entry in the weekly giveaway. A flat shipping fee (currently $9.99 per shop order when shipping) is charged to the buyer at checkout. Shipping settles to the seller; the platform fee is collected through Stripe.</li>
         <li>
           <strong>Direct payment:</strong> Payment is made by the buyer through Stripe Connect.
           Item price and shipping settle to the seller’s Stripe account. The platform fee is

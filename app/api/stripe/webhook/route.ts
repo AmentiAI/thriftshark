@@ -7,6 +7,7 @@ import {
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
 import {
+  grantBuyerVerified,
   grantVerifiedPass,
   syncSellerSubscription,
   syncSellerSubscriptionFromCheckout,
@@ -59,6 +60,14 @@ export async function POST(request: Request) {
           const sellerId = Number(session.metadata.seller_id);
           if (Number.isInteger(sellerId) && sellerId > 0 && session.id) {
             await grantVerifiedPass(sellerId, session.id);
+          }
+          break;
+        }
+
+        if (session.metadata?.kind === "buyer_verified") {
+          const buyerId = Number(session.metadata.buyer_id);
+          if (Number.isInteger(buyerId) && buyerId > 0 && session.id) {
+            await grantBuyerVerified(buyerId, session.id);
           }
           break;
         }

@@ -8,6 +8,7 @@ import { money } from "@/lib/format";
 import {
   conditionLabel,
   imageSrc,
+  SHIPPING_FLAT_CENTS,
   platformFeeForCheckout,
   shippingForShopCount,
   type Item,
@@ -166,7 +167,7 @@ export function BagView({ buyerVerified = false }: { buyerVerified?: boolean }) 
           </dl>
 
           <p className="mt-4 text-xs leading-relaxed text-ink-faint">
-            Flat $15 shipping per shop goes to the seller.
+            Flat {money(SHIPPING_FLAT_CENTS)} shipping per shop goes to the seller.
           </p>
 
           {unavailable.length > 0 && (

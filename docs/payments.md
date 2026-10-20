@@ -5,7 +5,7 @@ charges**. Buyers pay by card at checkout; money lands in the seller’s Stripe
 account (then their bank). A flat **$5 platform fee** per shop order is charged
 to the buyer and collected as a Stripe `application_fee_amount` — **waived when
 the buyer’s account is Verified**. Sellers keep
-item price plus a flat **$15 shipping** fee (also paid by the buyer; $0 for
+item price plus a flat **$9.99 shipping** fee (also paid by the buyer; $0 for
 local pickup).
 
 ## How it works in this app

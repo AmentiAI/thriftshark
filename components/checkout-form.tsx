@@ -16,7 +16,15 @@ import {
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase";
 
-export function CheckoutForm({ buyerVerified = false }: { buyerVerified?: boolean }) {
+export function CheckoutForm({
+  buyerVerified = false,
+  accountName = "",
+  accountEmail = "",
+}: {
+  buyerVerified?: boolean;
+  accountName?: string;
+  accountEmail?: string;
+}) {
   const { items, available, unavailable, subtotal, loading } = useBagItems();
   const [fulfilment, setFulfilment] = useState<"ship" | "pickup">("ship");
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, null);
@@ -68,11 +76,11 @@ export function CheckoutForm({ buyerVerified = false }: { buyerVerified?: boolea
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div>
               <label className={label} htmlFor="customer_name">Full name</label>
-              <input id="customer_name" name="customer_name" required autoComplete="name" className="field" />
+              <input id="customer_name" name="customer_name" required autoComplete="name" defaultValue={accountName} className="field" />
             </div>
             <div>
               <label className={label} htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" required autoComplete="email" className="field" />
+              <input id="email" name="email" type="email" required autoComplete="email" defaultValue={accountEmail} readOnly={Boolean(accountEmail)} className="field" />
             </div>
             <div className="sm:col-span-2">
               <label className={label} htmlFor="phone">Phone (optional)</label>
@@ -235,7 +243,7 @@ export function CheckoutForm({ buyerVerified = false }: { buyerVerified?: boolea
             plus shipping ({money(SHIPPING_FLAT_CENTS)} per shop when you ship).
             {buyerVerified
               ? "You’re Verified, so there’s no platform fee."
-              : `A ${money(PLATFORM_FEE_CENTS)} platform fee per shop applies because this checkout isn’t from a Verified account.`}
+              : `A ${money(PLATFORM_FEE_CENTS)} platform fee per shop. Verified buyers skip it — $10 for 30 days.`}
           </p>
         </div>
       </aside>
