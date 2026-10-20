@@ -4,6 +4,12 @@ import Stripe from "stripe";
 
 let client: Stripe | null = null;
 
+/**
+ * Preview API required for Express Dashboard + Stripe Managed Risk
+ * (negative-balance responsibility on Stripe). See Connect platform profile.
+ */
+const STRIPE_API_VERSION = "2026-09-30.preview" as Stripe.LatestApiVersion;
+
 /** Server-only Stripe client. Never import this from a Client Component. */
 export function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -11,7 +17,7 @@ export function getStripe() {
     throw new Error("STRIPE_SECRET_KEY is not set");
   }
   if (!client) {
-    client = new Stripe(key);
+    client = new Stripe(key, { apiVersion: STRIPE_API_VERSION });
   }
   return client;
 }

@@ -33,8 +33,9 @@ export async function createSellerAccountLink(seller: Seller) {
   try {
     if (!accountId) {
       const shopUrl = publicBusinessUrl(`/shop/${seller.handle}`);
-      // Prefer controller-based Express (current Connect platforms). Fall back
-      // to type: 'express' if the account rejects controller params.
+      // Matches Connect platform profile:
+      // Platform + Express Dashboard + application fees + Managed Risk (Stripe
+      // covers connected-account negative balances) + direct charges.
       let account;
       try {
         account = await stripe.accounts.create({
@@ -42,8 +43,10 @@ export async function createSellerAccountLink(seller: Seller) {
           email: seller.email,
           controller: {
             stripe_dashboard: { type: "express" },
-            fees: { payer: "application" },
-            losses: { payments: "application" },
+            // Connected account pays Stripe processing fees; we take app fees.
+            fees: { payer: "account" },
+            // Managed Risk — Stripe responsibility for negative balances.
+            losses: { payments: "stripe" },
           },
           capabilities: {
             card_payments: { requested: true },
@@ -61,6 +64,7 @@ export async function createSellerAccountLink(seller: Seller) {
           },
         });
       } catch {
+        // Older platforms / GA API: classic Express accounts.
         account = await stripe.accounts.create({
           type: "express",
           country: "US",
