@@ -192,7 +192,7 @@ export function SiteNav({
                 </Link>
                 <Link
                   href="/login"
-                  className="hidden rounded-full px-2.5 py-2 text-sm font-medium text-white/60 hover:text-white sm:block"
+                  className="tap rounded-full px-2.5 py-2 text-sm font-medium text-white/70 hover:text-white"
                 >
                   Log in
                 </Link>
