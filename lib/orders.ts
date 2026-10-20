@@ -15,6 +15,8 @@ export type CheckoutDetails = {
   country?: string | null;
   fulfilment: "ship" | "pickup";
   notes?: string | null;
+  /** Signed-in shop is Verified — buyer does not pay the platform fee. */
+  buyerVerified?: boolean;
 };
 
 function orderNumber() {
@@ -94,7 +96,7 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
     orderSellerIds.push(sellerId);
     orderNumbers.push(orderNumber());
     shippingCents.push(shippingFor(subtotal, details.fulfilment));
-    platformFees.push(PLATFORM_FEE_CENTS);
+    platformFees.push(details.buyerVerified ? 0 : PLATFORM_FEE_CENTS);
   }
 
   const rows = (await sql.query(

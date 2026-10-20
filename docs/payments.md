@@ -3,7 +3,8 @@
 Thrift Sharks uses **Stripe Connect** with **Express** accounts and **direct
 charges**. Buyers pay by card at checkout; money lands in the seller’s Stripe
 account (then their bank). A flat **$5 platform fee** per shop order is charged
-to the buyer and collected as a Stripe `application_fee_amount` — sellers keep
+to the buyer and collected as a Stripe `application_fee_amount` — **waived when
+the buyer’s account is Verified**. Sellers keep
 item price plus a flat **$15 shipping** fee (also paid by the buyer; $0 for
 local pickup).
 
@@ -33,25 +34,21 @@ Local webhook forwarding (Connect events need both flags):
 stripe listen --forward-to localhost:3001/api/stripe/webhook --forward-connect-to localhost:3001/api/stripe/webhook
 ```
 
-## Verified seller plan ($20/mo)
+## Verified pass ($20 / 30 days)
 
-Optional subscription billed on the **platform** Stripe account (not Connect).
-Sellers subscribe from **Dashboard → Your storefront**. Active / trialing status
-shows a verified badge and unlocks auctions, 20 listing photos, unlimited live
-listings, homepage spotlights, sale pricing, search priority, and dashboard
-insights.
+Optional one-time charge on the **platform** Stripe account (not Connect).
+Sellers pay from **Dashboard → Verified**. `verified_until` is 30 days out;
+when it passes, the badge and perks drop until they pay again. A dashboard
+message is written in the last 24 hours (no cron — it runs on page loads).
 
-1. In Stripe → Products, create **Verified** at **$20 / month**.
-2. Copy the Price id into `STRIPE_SELLER_PLAN_PRICE_ID`.
-3. Enable Customer Portal (cancel / update card).
-4. Webhook events (same endpoint): `checkout.session.completed` (mode
-   `subscription`), `customer.subscription.created|updated|deleted`.
+Webhook: `checkout.session.completed` with `metadata.kind = verified_pass`.
 
 | Piece | Where |
 | --- | --- |
-| Columns | `sellers.stripe_customer_id`, `subscription_status`, … |
-| Checkout / portal | `lib/stripe-billing.ts` |
-| Panel | `components/seller-subscription-panel.tsx` |
+| Columns | `sellers.verified_until`, `verified_payments`, `seller_notices` |
+| Checkout | `lib/stripe-billing.ts` |
+| Reminder | `lib/verified-pass.ts` |
+| Tab | `app/dashboard/verified/page.tsx` |
 
 ## Dashboard checklist (platform)
 

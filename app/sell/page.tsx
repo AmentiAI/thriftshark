@@ -13,15 +13,15 @@ export const metadata: Metadata = {
 const FAQ = [
   {
     q: "What does it cost?",
-    a: "Opening a shop and listing is free. Buyers pay a $5 platform fee per shop order, plus Stripe’s card fee. Optional Verified is $20/month for a badge, auctions, more photos, and directory boost.",
+    a: "Opening a shop and listing is free. Buyers pay a $5 platform fee per shop order, plus Stripe’s card fee, unless the buyer’s own account is Verified. Optional Verified is $20 for 30 days — badge, auctions, more photos, and directory boost. It drops when the 30 days end.",
   },
   {
     q: "What is Verified?",
-    a: "A $20/month seller subscription: verified badge, auctions, up to 20 photos, unlimited live listings, homepage spotlights, sale pricing, search priority, and dashboard insights.",
+    a: "A $20 pass that lasts 30 days: verified badge, auctions, up to 20 photos, unlimited live listings, homepage spotlights, sale pricing, search priority, and dashboard insights. You’ll get a message a day before it ends so you can pay again.",
   },
   {
     q: "How do I get paid?",
-    a: "Connect Stripe on your storefront. Buyers pay by card at checkout; you receive the item price plus a $15 shipping fee. The $5 platform fee goes to Thrift Sharks.",
+    a: "Connect Stripe on your storefront. Buyers pay by card at checkout; you receive the item price plus a $15 shipping fee. The $5 platform fee goes to Thrift Sharks unless the buyer is Verified.",
   },
   {
     q: "Who handles shipping?",
@@ -50,7 +50,7 @@ export default async function SellPage() {
           </h1>
           <p className="mt-4 text-base text-ink-soft sm:text-lg">
             Your storefront. Stripe payouts. Buyers cover a $5 platform fee per
-            order.
+            order unless their account is Verified.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/signup" className="btn btn-ink">

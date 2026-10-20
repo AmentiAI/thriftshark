@@ -38,7 +38,7 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
       {errorMsg && (
         <p className="mb-6 rounded-2xl bg-coral/10 px-4 py-3 text-sm text-ink">
           {errorMsg}{" "}
-          <Link href="/dashboard/shop" className="font-semibold underline">
+          <Link href="/dashboard/verified" className="font-semibold underline">
             Get Verified
           </Link>
         </p>

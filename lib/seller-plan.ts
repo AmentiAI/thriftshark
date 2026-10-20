@@ -2,6 +2,12 @@
 
 export const SELLER_PLAN_PRICE_USD = 20;
 
+/** How long one Verified payment lasts before the badge drops. */
+export const VERIFIED_PASS_DAYS = 30;
+
+/** Warn this long before verified_until. */
+export const VERIFIED_REMINDER_HOURS = 24;
+
 /** Listing photo caps. Verified shops get more room for detail shots. */
 export const FREE_LISTING_PHOTOS = 8;
 export const VERIFIED_LISTING_PHOTOS = 20;
@@ -25,10 +31,16 @@ export function isSellerVerified(seller: {
   subscription_status?: string | null;
   verified?: boolean | null;
   official?: boolean | null;
+  verified_until?: string | Date | null;
 }): boolean {
-  if (seller.verified === true || seller.official === true) return true;
-  const status = seller.subscription_status ?? "none";
-  return status === "active" || status === "trialing";
+  if (seller.official === true) return true;
+  if (seller.verified_until) {
+    const until = new Date(seller.verified_until).getTime();
+    if (Number.isFinite(until) && until > Date.now()) return true;
+  }
+  // Shop cards set `verified` from SQL (official or verified_until > now()).
+  if (seller.verified === true && !seller.verified_until) return true;
+  return false;
 }
 
 export function listingPhotoLimit(verified: boolean) {
@@ -44,6 +56,7 @@ export function sellerPlanPriceId() {
   return process.env.STRIPE_SELLER_PLAN_PRICE_ID?.trim() || null;
 }
 
+/** One-time $20 Checkout — does not need a Stripe Price id. */
 export function sellerPlanConfigured() {
-  return Boolean(process.env.STRIPE_SECRET_KEY && sellerPlanPriceId());
+  return Boolean(process.env.STRIPE_SECRET_KEY);
 }

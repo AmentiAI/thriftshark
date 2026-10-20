@@ -8,7 +8,7 @@ import { money } from "@/lib/format";
 import {
   conditionLabel,
   imageSrc,
-  platformFeeForShopCount,
+  platformFeeForCheckout,
   shippingForShopCount,
   type Item,
 } from "@/lib/types";
@@ -55,12 +55,12 @@ export function useBagItems() {
   return { items, available, unavailable, subtotal, remove, loading: !ready || items === null };
 }
 
-export function BagView() {
+export function BagView({ buyerVerified = false }: { buyerVerified?: boolean }) {
   const { items, available, unavailable, subtotal, remove, loading } = useBagItems();
   const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
   const shops = shopCount || (available.length > 0 ? 1 : 0);
   const shipping = shippingForShopCount(shops, "ship");
-  const platformFee = platformFeeForShopCount(shops);
+  const platformFee = platformFeeForCheckout(shops, buyerVerified);
 
   if (loading) {
     return <p className="py-20 text-center text-ink-faint">Opening your bag…</p>;
@@ -155,7 +155,9 @@ export function BagView() {
                 Platform fee
                 {shops > 1 ? ` (${shops} shops)` : ""}
               </dt>
-              <dd className="font-medium">{money(platformFee)}</dd>
+              <dd className="font-medium">
+                {platformFee === 0 ? "Waived" : money(platformFee)}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-line pt-3 font-display text-base font-bold">
               <dt>Total</dt>

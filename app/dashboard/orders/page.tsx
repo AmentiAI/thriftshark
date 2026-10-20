@@ -120,8 +120,10 @@ export default async function DashboardOrdersPage() {
                 </div>
               </dl>
               <p className="mt-2 text-xs text-ink-faint">
-                You receive the item price plus shipping. The platform fee goes
-                to Thrift Sharks.
+                You receive the item price plus shipping.
+                {order.platform_fee_cents > 0
+                  ? " The platform fee goes to Thrift Sharks."
+                  : " No platform fee on this order."}
               </p>
 
               {order.fulfilment === "ship" && (

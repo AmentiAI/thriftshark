@@ -267,3 +267,62 @@ create index if not exists sellers_subscription_idx
 create index if not exists sellers_official_idx
   on sellers (official)
   where official;
+
+-- Verified is a 30-day pass. verified_until is when the badge drops.
+alter table sellers
+  add column if not exists verified_until timestamptz,
+  add column if not exists verified_reminded_for timestamptz;
+
+update sellers
+set verified_until = subscription_current_period_end
+where subscription_status in ('active', 'trialing')
+  and subscription_current_period_end is not null
+  and verified_until is null;
+
+create index if not exists sellers_verified_until_idx
+  on sellers (verified_until)
+  where verified_until is not null;
+
+-- One row per Stripe Checkout so a webhook retry cannot add 30 days twice.
+create table if not exists verified_payments (
+  id                 serial primary key,
+  seller_id          int not null references sellers(id) on delete cascade,
+  stripe_session_id  text not null unique,
+  created_at         timestamptz not null default now()
+);
+
+-- In-app notes to a shop (Verified expiry warning, etc.).
+create table if not exists seller_notices (
+  id          serial primary key,
+  seller_id   int not null references sellers(id) on delete cascade,
+  kind        text not null,
+  body        text not null,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists seller_notices_seller_idx
+  on seller_notices (seller_id, created_at desc);
+
+-- Weekly giveaway: shop accounts enter once per Mon–Sun UTC week.
+create table if not exists weekly_giveaways (
+  id              serial primary key,
+  week_start      date not null unique,
+  title           text not null default 'Weekly giveaway',
+  prize_text      text not null default 'A surprise prize from Thrift Sharks',
+  status          text not null default 'open'
+    check (status in ('open', 'closed', 'drawn')),
+  winner_seller_id int references sellers(id) on delete set null,
+  drawn_at        timestamptz,
+  created_at      timestamptz not null default now()
+);
+
+create table if not exists giveaway_entries (
+  id           serial primary key,
+  giveaway_id  int not null references weekly_giveaways(id) on delete cascade,
+  seller_id    int not null references sellers(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  unique (giveaway_id, seller_id)
+);
+
+create index if not exists giveaway_entries_giveaway_idx
+  on giveaway_entries (giveaway_id, created_at desc);

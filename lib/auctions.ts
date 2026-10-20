@@ -10,7 +10,7 @@ const AUCTION_COLUMNS = `
   i.brand as item_brand, i.item_size, i.condition as item_condition,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
   s.logo_image_id as seller_logo_image_id,
-  (s.official or s.subscription_status in ('active', 'trialing')) as seller_verified,
+  (s.official or s.verified_until > now()) as seller_verified,
   (select count(*)::int from bids b where b.auction_id = a.id)            as bid_count,
   (select max(b.amount_cents)::int from bids b where b.auction_id = a.id) as high_cents,
   (select b.bidder_name from bids b where b.auction_id = a.id
@@ -89,8 +89,18 @@ export async function settleDueAuctions(auctionId?: number) {
          select $2, w.seller_id, $3, w.bidder_email, w.bidder_name,
                 w.amount_cents,
                 $5::int,
-                $4::int,
-                w.amount_cents + $4::int + $5::int,
+                case when exists (
+                  select 1 from sellers b
+                  where lower(b.email) = lower(w.bidder_email)
+                    and b.status = 'active'
+                    and (b.official or b.verified_until > now())
+                ) then 0 else $4::int end,
+                w.amount_cents + $5::int + case when exists (
+                  select 1 from sellers b
+                  where lower(b.email) = lower(w.bidder_email)
+                    and b.status = 'active'
+                    and (b.official or b.verified_until > now())
+                ) then 0 else $4::int end,
                 'ship',
                 'Auction win — seller ships; buyer still needs to confirm address.'
          from winner w

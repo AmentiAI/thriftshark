@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { toggleMessageHandled } from "@/lib/actions";
 import { shortDate, shortWhen } from "@/lib/format";
-import { sellerMessages, listSellerThreads } from "@/lib/queries";
+import { sellerMessages, listSellerThreads, sellerNotices } from "@/lib/queries";
 import { requireSeller } from "@/lib/seller-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardMessagesPage() {
   const seller = await requireSeller();
-  const [threads, older] = await Promise.all([
+  const [threads, older, notices] = await Promise.all([
     listSellerThreads(seller.id),
     sellerMessages(seller.id),
+    sellerNotices(seller.id),
   ]);
   const waiting = threads.filter((thread) => thread.last_sender === "buyer").length;
 
@@ -23,6 +24,24 @@ export default async function DashboardMessagesPage() {
           Buyers reach you from Message seller. Reply here.
         </p>
       </header>
+
+      {notices.length > 0 && (
+        <ul className="mb-8 space-y-3">
+          {notices.map((notice) => (
+            <li key={notice.id} className="panel p-5 ring-2 ring-gold/40">
+              <p className="text-[11px] font-bold tracking-wider text-ink-faint uppercase">
+                Thrift Sharks · {shortWhen(notice.created_at)}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-ink">{notice.body}</p>
+              {notice.kind === "verified_expiring" && (
+                <Link href="/dashboard/verified" className="btn btn-ink mt-4">
+                  Pay to keep Verified
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {threads.length === 0 ? (
         <div className="panel px-6 py-20 text-center">

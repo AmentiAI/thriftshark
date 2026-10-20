@@ -18,7 +18,7 @@ const ITEM_COLUMNS = `
   c.name as category_name, c.slug as category_slug,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
   s.logo_image_id as seller_logo_image_id,
-  (s.official or s.subscription_status in ('active', 'trialing')) as seller_verified,
+  (s.official or s.verified_until > now()) as seller_verified,
   coalesce(
     (select json_agg(json_build_object('id', im.id, 'url', im.url, 'image_id', im.image_id, 'alt', im.alt)
             order by im.position, im.id)
@@ -38,7 +38,7 @@ const SELLER_CARD_COLUMNS = `
   s.id, s.handle, s.shop_name, s.tagline, s.bio, s.location,
   s.logo_image_id, s.banner_image_id, s.featured, s.created_at,
   s.banner_x, s.banner_y, s.logo_x, s.logo_y,
-  (s.official or s.subscription_status in ('active', 'trialing')) as verified,
+  (s.official or s.verified_until > now()) as verified,
   (select count(*)::int from items it
     where it.seller_id = s.id and it.status = 'available') as item_count,
   (select count(*)::int from items it
@@ -107,7 +107,7 @@ export async function getFeaturedItems(limit = 8): Promise<Item[]> {
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
      where i.status = 'available' and i.featured
-     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+     order by (s.official or s.verified_until > now()) desc,
               i.created_at desc
      limit $1`,
     [limit],
@@ -119,7 +119,7 @@ export async function getLatestItems(limit = 8): Promise<Item[]> {
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
      where i.status = 'available'
-     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+     order by (s.official or s.verified_until > now()) desc,
               i.featured desc, i.created_at desc
      limit $1`,
     [limit],
@@ -133,7 +133,7 @@ export async function getRelatedItems(item: Item, limit = 4): Promise<Item[]> {
      ${ITEM_FROM}
      where i.status = 'available' and i.id <> $1
        and ($2::int is null or i.category_id = $2::int)
-     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+     order by (s.official or s.verified_until > now()) desc,
               i.featured desc, i.created_at desc
      limit $3`,
     [item.id, item.category_id, limit],
@@ -155,7 +155,7 @@ export type ShopQuery = {
 };
 
 const VERIFIED_RANK =
-  "(s.official or s.subscription_status in ('active', 'trialing')) desc";
+  "(s.official or s.verified_until > now()) desc";
 
 const SORTS: Record<string, string> = {
   newest: `${VERIFIED_RANK}, i.featured desc, i.created_at desc`,
@@ -286,7 +286,7 @@ export async function listSellers(options: { featuredFirst?: boolean; limit?: nu
      from sellers s
      where s.status = 'active'
      order by ${options.featuredFirst ? "s.featured desc," : ""}
-              (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              (s.official or s.verified_until > now()) desc,
               (select count(*) from items it
                 where it.seller_id = s.id and it.status = 'available') desc,
               s.created_at desc
@@ -304,7 +304,7 @@ export async function getStockedSellers(limit = 8) {
        and exists (select 1 from items it
                     where it.seller_id = s.id and it.status = 'available')
      order by s.featured desc,
-              (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              (s.official or s.verified_until > now()) desc,
               s.created_at desc
      limit $1`,
     [limit],
@@ -448,6 +448,16 @@ export async function sellerInsights(sellerId: number) {
     threads_7d: number;
   }[];
   return rows[0];
+}
+
+export async function sellerNotices(sellerId: number) {
+  return (await sql`
+    select id, kind, body, created_at
+    from seller_notices
+    where seller_id = ${sellerId}
+    order by created_at desc
+    limit 20
+  `) as { id: number; kind: string; body: string; created_at: string }[];
 }
 
 export async function sellerMessages(sellerId: number): Promise<Message[]> {

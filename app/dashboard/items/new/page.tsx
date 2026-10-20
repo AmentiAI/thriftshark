@@ -25,7 +25,7 @@ export default async function NewListingPage() {
           price
           {verified
             ? ", spotlight it, or send it to the auction house."
-            : ". Auction house, sale pricing, and spotlights come with Verified ($20/mo)."}
+            : ". Auction house, sale pricing, and spotlights come with Verified ($20 for 30 days)."}
         </p>
       </header>
       <ListingForm

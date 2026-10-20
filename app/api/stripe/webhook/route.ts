@@ -7,6 +7,7 @@ import {
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
 import {
+  grantVerifiedPass,
   syncSellerSubscription,
   syncSellerSubscriptionFromCheckout,
 } from "@/lib/stripe-billing";
@@ -51,6 +52,14 @@ export async function POST(request: Request) {
         }
         if (session.mode !== "payment") break;
         if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+          break;
+        }
+
+        if (session.metadata?.kind === "verified_pass") {
+          const sellerId = Number(session.metadata.seller_id);
+          if (Number.isInteger(sellerId) && sellerId > 0 && session.id) {
+            await grantVerifiedPass(sellerId, session.id);
+          }
           break;
         }
 

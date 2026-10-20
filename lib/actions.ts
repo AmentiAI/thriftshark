@@ -8,12 +8,14 @@ import { sql } from "@/lib/db";
 import { createOrder } from "@/lib/orders";
 import { endSession, isAdmin, passwordMatches, requireAdmin, startSession } from "@/lib/auth";
 import {
+  currentSeller,
   endSellerSession,
   hashPassword,
   requireSeller,
   startSellerSession,
   verifyPassword,
 } from "@/lib/seller-auth";
+import { ensureCurrentGiveaway, getGiveawayById } from "@/lib/giveaways";
 import { ensureBuyerKey, currentBuyerKey } from "@/lib/buyer-auth";
 import { deleteBlobUrls, storeUpload } from "@/lib/images";
 import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
@@ -24,7 +26,7 @@ import {
 } from "@/lib/stripe-connect";
 import {
   createSellerBillingPortal,
-  createSellerSubscriptionCheckout,
+  createVerifiedPassCheckout,
 } from "@/lib/stripe-billing";
 import { stripeConfigured } from "@/lib/stripe";
 import {
@@ -91,7 +93,11 @@ export async function placeOrder(_prev: FormState, formData: FormData): Promise<
     return { error: "We need a street address, city and postcode to ship." };
   }
 
-  const result = await createOrder(ids, details);
+  const buyer = await currentSeller();
+  const result = await createOrder(ids, {
+    ...details,
+    buyerVerified: Boolean(buyer && isSellerVerified(buyer)),
+  });
   if (!result.ok) return { error: result.error };
 
   revalidatePath("/shop");
@@ -171,12 +177,12 @@ export async function refreshStripeStatus(): Promise<void> {
   redirect("/dashboard/shop");
 }
 
-/** Seller: start $20/mo Verified plan Checkout on the platform account. */
+/** Seller: pay $20 for 30 days of Verified (stacks if time is left). */
 export async function startSellerSubscription(): Promise<void> {
   const seller = await requireSeller();
-  const session = await createSellerSubscriptionCheckout(seller);
+  const session = await createVerifiedPassCheckout(seller);
   if (!session.ok) {
-    redirect(`/dashboard/shop?plan=error&msg=${encodeURIComponent(session.error)}`);
+    redirect(`/dashboard/verified?plan=error&msg=${encodeURIComponent(session.error)}`);
   }
   redirect(session.url);
 }
@@ -186,7 +192,7 @@ export async function openSellerBillingPortal(): Promise<void> {
   const seller = await requireSeller();
   const session = await createSellerBillingPortal(seller);
   if (!session.ok) {
-    redirect(`/dashboard/shop?plan=error&msg=${encodeURIComponent(session.error)}`);
+    redirect(`/dashboard/verified?plan=error&msg=${encodeURIComponent(session.error)}`);
   }
   redirect(session.url);
 }
@@ -870,7 +876,7 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     const wantsAuction = text(formData.get("destination")) === "auction";
     if (wantsAuction && !isSellerVerified(seller)) {
       return {
-        error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+        error: "Auctions are a Verified perk — pay $20 for 30 days on the Verified tab.",
       };
     }
     const lot = wantsAuction ? readAuctionFields(formData) : null;
@@ -1131,6 +1137,86 @@ export async function toggleSellerOfficial(formData: FormData) {
   }
 }
 
+/* ---------- weekly giveaway ---------- */
+
+/** Shop accounts enter the current open week once. */
+export async function enterWeeklyGiveaway(
+  _prev: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const seller = await currentSeller();
+  if (!seller) {
+    return { error: "Sign in with your shop account to enter." };
+  }
+
+  const giveaway = await ensureCurrentGiveaway();
+  if (giveaway.status !== "open") {
+    return { error: "This week’s giveaway is closed." };
+  }
+
+  try {
+    await sql`
+      insert into giveaway_entries (giveaway_id, seller_id)
+      values (${giveaway.id}, ${seller.id})
+      on conflict (giveaway_id, seller_id) do nothing
+    `;
+  } catch (err) {
+    console.error("enterWeeklyGiveaway failed", err);
+    return { error: "Could not enter right now. Try again in a moment." };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin/giveaway");
+  return { ok: "You’re in this week’s draw." };
+}
+
+export async function updateGiveawayPrize(formData: FormData) {
+  await requireAdmin();
+  const id = Number(text(formData.get("id")));
+  const title = text(formData.get("title")) || "Weekly giveaway";
+  const prize = text(formData.get("prize_text"));
+  if (!Number.isInteger(id) || id <= 0 || !prize) return;
+
+  await sql`
+    update weekly_giveaways
+    set title = ${title.slice(0, 80)}, prize_text = ${prize.slice(0, 240)}
+    where id = ${id}
+  `;
+  revalidatePath("/");
+  revalidatePath("/admin/giveaway");
+}
+
+export async function drawGiveawayWinner(formData: FormData) {
+  await requireAdmin();
+  const id = Number(text(formData.get("id")));
+  if (!Number.isInteger(id) || id <= 0) return;
+
+  const giveaway = await getGiveawayById(id);
+  if (!giveaway || giveaway.status === "drawn") return;
+  if (giveaway.entry_count === 0) return;
+
+  const pick = (await sql`
+    select seller_id from giveaway_entries
+    where giveaway_id = ${id}
+    order by random()
+    limit 1
+  `) as { seller_id: number }[];
+
+  const winnerId = pick[0]?.seller_id;
+  if (!winnerId) return;
+
+  await sql`
+    update weekly_giveaways
+    set status = 'drawn',
+        winner_seller_id = ${winnerId},
+        drawn_at = now()
+    where id = ${id} and status <> 'drawn'
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/admin/giveaway");
+}
+
 /* ---------- auction house ---------- */
 
 const auctionSchema = z.object({
@@ -1189,7 +1275,7 @@ export async function createAuction(_prev: FormState, formData: FormData): Promi
   const seller = await requireSeller();
   if (!isSellerVerified(seller)) {
     return {
-      error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+      error: "Auctions are a Verified perk — pay $20 for 30 days on the Verified tab.",
     };
   }
 

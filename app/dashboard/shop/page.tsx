@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SellerSubscriptionPanel } from "@/components/seller-subscription-panel";
 import { ShopSettingsForm } from "@/components/shop-settings-form";
 import { StripeConnectPanel } from "@/components/stripe-connect-panel";
 import { requireSeller } from "@/lib/seller-auth";
 import { createSellerAccountLink, syncSellerFromStripeAccount } from "@/lib/stripe-connect";
-import { refreshSellerSubscription } from "@/lib/stripe-billing";
 import { stripeConfigured } from "@/lib/stripe";
-import { toShopSettings, type Seller } from "@/lib/types";
+import { toShopSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +13,10 @@ export default async function ShopSettingsPage(props: PageProps<"/dashboard/shop
   let seller = await requireSeller();
   const params = await props.searchParams;
   const stripeFlag = typeof params.stripe === "string" ? params.stripe : null;
-  const planFlag = typeof params.plan === "string" ? params.plan : null;
   const errorMsg =
     typeof params.msg === "string" && params.msg.trim() ? params.msg.trim() : null;
 
   let notice: string | null = null;
-  let planNotice: string | null = null;
 
   // Stripe sends people here when the Account Link expired or was reused —
   // mint a new link and send them straight back into onboarding.
@@ -45,23 +41,6 @@ export default async function ShopSettingsPage(props: PageProps<"/dashboard/shop
     } catch {
       notice = "Could not refresh Stripe status. Use Refresh status below.";
     }
-  }
-
-  if (planFlag === "done" && stripeConfigured()) {
-    try {
-      seller = (await refreshSellerSubscription(seller)) as Seller;
-      const fresh = await requireSeller();
-      seller = fresh;
-      planNotice = fresh.subscription_status === "active" || fresh.subscription_status === "trialing"
-        ? "You're Verified — badge and perks are live."
-        : "Checkout finished. If the badge is not on yet, wait a moment and refresh.";
-    } catch {
-      planNotice = "Could not refresh plan status. Try Manage billing below.";
-    }
-  } else if (planFlag === "cancel") {
-    planNotice = "Checkout canceled — you can subscribe anytime.";
-  } else if (planFlag === "error" && errorMsg) {
-    planNotice = errorMsg;
   }
 
   const settings = toShopSettings(seller);
@@ -91,7 +70,13 @@ export default async function ShopSettingsPage(props: PageProps<"/dashboard/shop
         </p>
       )}
 
-      <SellerSubscriptionPanel seller={settings} notice={planNotice} />
+      <p className="mb-8 text-sm text-ink-soft">
+        Verified is a 30-day pass.{" "}
+        <Link href="/dashboard/verified" className="font-semibold underline">
+          Pay or renew on the Verified tab
+        </Link>
+        .
+      </p>
 
       <ShopSettingsForm seller={settings} />
     </div>

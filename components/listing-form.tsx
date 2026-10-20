@@ -73,7 +73,7 @@ export function ListingForm({
             {!canAuction && maxPhotos < 20 && (
               <>
                 {" "}
-                <Link href="/dashboard/shop" className="font-semibold underline">
+                <Link href="/dashboard/verified" className="font-semibold underline">
                   Verified
                 </Link>{" "}
                 unlocks more photos.
@@ -89,7 +89,7 @@ export function ListingForm({
                 <>
                   {" "}
                   — or{" "}
-                  <Link href="/dashboard/shop" className="font-semibold underline">
+                  <Link href="/dashboard/verified" className="font-semibold underline">
                     get Verified
                   </Link>{" "}
                   for more room
@@ -185,7 +185,7 @@ export function ListingForm({
                   />
                   <p className="mt-1.5 text-xs text-ink-faint">
                     Sale “was” pricing is a{" "}
-                    <Link href="/dashboard/shop" className="font-semibold underline">
+                    <Link href="/dashboard/verified" className="font-semibold underline">
                       Verified
                     </Link>{" "}
                     perk.
@@ -328,7 +328,7 @@ export function ListingForm({
                       title: "Auction house",
                       body: canAuction
                         ? "Bidders fight the clock."
-                        : "Verified perk — $20/mo on Your storefront.",
+                        : "Verified perk — $20 for 30 days.",
                       enabled: canAuction,
                     },
                   ]
@@ -358,7 +358,7 @@ export function ListingForm({
                       <span className="mt-0.5 block text-xs text-ink-faint">{body}</span>
                       {!enabled && value === "auction" && (
                         <Link
-                          href="/dashboard/shop"
+                          href="/dashboard/verified"
                           className="mt-1.5 inline-block text-xs font-semibold text-reef underline"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -437,7 +437,7 @@ export function ListingForm({
           ) : (
             <p className="mt-4 rounded-2xl bg-paper-dim px-4 py-3 text-xs text-ink-faint">
               Homepage spotlights are a{" "}
-              <Link href="/dashboard/shop" className="font-semibold underline">
+              <Link href="/dashboard/verified" className="font-semibold underline">
                 Verified
               </Link>{" "}
               perk (up to {spotlightCap} pins).

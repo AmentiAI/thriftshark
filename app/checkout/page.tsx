@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import { CheckoutForm } from "@/components/checkout-form";
+import { currentSeller } from "@/lib/seller-auth";
+import { isSellerVerified } from "@/lib/seller-plan";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Checkout",
   description: "Secure checkout on Thrift Sharks.",
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage() {
+  const seller = await currentSeller();
+  const buyerVerified = Boolean(seller && isSellerVerified(seller));
+
   return (
     <div className="wrap py-12">
       <header className="pb-2">
@@ -18,7 +25,7 @@ export default function CheckoutPage() {
         </p>
       </header>
       <div className="pt-10">
-        <CheckoutForm />
+        <CheckoutForm buyerVerified={buyerVerified} />
       </div>
     </div>
   );

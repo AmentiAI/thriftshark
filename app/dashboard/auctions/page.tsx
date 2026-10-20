@@ -111,12 +111,12 @@ export default async function DashboardAuctionsPage() {
         ) : (
           <div className="mt-3 space-y-4">
             <p className="text-sm text-ink-soft">
-              Auctions are a Verified perk — ${SELLER_PLAN_PRICE_USD}/month unlocks
-              the auction house, a verified badge, extra listing photos, and
-              priority in the shops rail.
+              Auctions are a Verified perk — ${SELLER_PLAN_PRICE_USD} for 30 days
+              unlocks the auction house, a verified badge, extra listing photos,
+              and priority in the shops rail.
             </p>
-            <Link href="/dashboard/shop" className="btn btn-ink">
-              Get Verified — ${SELLER_PLAN_PRICE_USD}/mo
+            <Link href="/dashboard/verified" className="btn btn-ink">
+              Get Verified — ${SELLER_PLAN_PRICE_USD}
             </Link>
           </div>
         )}

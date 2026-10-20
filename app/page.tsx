@@ -4,8 +4,13 @@ import { ItemCard } from "@/components/item-card";
 import { AuctionCard } from "@/components/auction-card";
 import { ShopsCarousel } from "@/components/shops-carousel";
 import { TopShopsWidget } from "@/components/top-shops-widget";
+import { WeeklyGiveawayWidget } from "@/components/weekly-giveaway-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
+import {
+  ensureCurrentGiveaway,
+  sellerEnteredGiveaway,
+} from "@/lib/giveaways";
 import {
   getCategories,
   getCategoryCounts,
@@ -15,21 +20,38 @@ import {
   listSellers,
   marketplaceStats,
 } from "@/lib/queries";
+import { currentSeller } from "@/lib/seller-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [featured, latest, categories, counts, shops, weeklyTop, stats, auctions] =
-    await Promise.all([
-      getFeaturedItems(8),
-      getLatestItems(12),
-      getCategories(),
-      getCategoryCounts(),
-      listSellers({ featuredFirst: true, limit: 24 }),
-      getWeeklyTopShops(5),
-      marketplaceStats(),
-      liveAuctions(4),
-    ]);
+  const [
+    featured,
+    latest,
+    categories,
+    counts,
+    shops,
+    weeklyTop,
+    stats,
+    auctions,
+    giveaway,
+    seller,
+  ] = await Promise.all([
+    getFeaturedItems(8),
+    getLatestItems(12),
+    getCategories(),
+    getCategoryCounts(),
+    listSellers({ featuredFirst: true, limit: 24 }),
+    getWeeklyTopShops(5),
+    marketplaceStats(),
+    liveAuctions(4),
+    ensureCurrentGiveaway(),
+    currentSeller(),
+  ]);
+
+  const giveawayEntered = seller
+    ? await sellerEnteredGiveaway(giveaway.id, seller.id)
+    : false;
 
   const trending = featured.length > 0 ? featured : latest.slice(0, 8);
   const fresh = latest.slice(0, 12);
@@ -198,8 +220,13 @@ export default async function HomePage() {
 
       <section className="border-t border-line">
         <div className="wrap py-10 sm:py-12">
-          <div className="mx-auto max-w-md lg:mx-0 lg:max-w-sm">
+          <div className="grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
             <TopShopsWidget shops={weeklyTop.shops} weekStart={weeklyTop.weekStart} />
+            <WeeklyGiveawayWidget
+              giveaway={giveaway}
+              loggedIn={Boolean(seller)}
+              alreadyEntered={giveawayEntered}
+            />
           </div>
         </div>
       </section>

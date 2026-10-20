@@ -10,13 +10,13 @@ import {
   PLATFORM_FEE_CENTS,
   SHIPPING_FLAT_CENTS,
   imageSrc,
-  platformFeeForShopCount,
+  platformFeeForCheckout,
   shippingForShopCount,
 } from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase";
 
-export function CheckoutForm() {
+export function CheckoutForm({ buyerVerified = false }: { buyerVerified?: boolean }) {
   const { items, available, unavailable, subtotal, loading } = useBagItems();
   const [fulfilment, setFulfilment] = useState<"ship" | "pickup">("ship");
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, null);
@@ -24,7 +24,7 @@ export function CheckoutForm() {
   const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
   const shops = shopCount || 1;
   const shipping = shippingForShopCount(shops, fulfilment);
-  const platformFee = platformFeeForShopCount(shops);
+  const platformFee = platformFeeForCheckout(shops, buyerVerified);
   const total = subtotal + shipping + platformFee;
 
   if (loading) {
@@ -207,7 +207,9 @@ export function CheckoutForm() {
                 Platform fee
                 {shops > 1 ? ` (${shops} shops)` : ""}
               </dt>
-              <dd className="font-medium">{money(platformFee)}</dd>
+              <dd className="font-medium">
+                {platformFee === 0 ? "Waived" : money(platformFee)}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-line pt-3 font-display text-base font-bold">
               <dt>Total due</dt>
@@ -231,8 +233,9 @@ export function CheckoutForm() {
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
             Next you’ll pay by card on Stripe. Sellers receive the item price
             plus shipping ({money(SHIPPING_FLAT_CENTS)} per shop when you ship).
-            A {money(PLATFORM_FEE_CENTS)} platform fee per shop keeps Thrift
-            Sharks running.
+            {buyerVerified
+              ? "You’re Verified, so there’s no platform fee."
+              : `A ${money(PLATFORM_FEE_CENTS)} platform fee per shop applies because this checkout isn’t from a Verified account.`}
           </p>
         </div>
       </aside>

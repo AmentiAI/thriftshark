@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ShopMasthead } from "@/components/shop-masthead";
 import { signOutSeller } from "@/lib/actions";
 import { currentSeller } from "@/lib/seller-auth";
+import { isSellerVerified } from "@/lib/seller-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ const TABS = [
   ["/dashboard/auctions", "Auctions"],
   ["/dashboard/orders", "Orders"],
   ["/dashboard/messages", "Messages"],
+  ["/dashboard/verified", "Verified"],
   ["/dashboard/shop", "Storefront"],
 ];
 
@@ -32,11 +34,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
         bannerY={seller.banner_y}
         logoX={seller.logo_x}
         logoY={seller.logo_y}
-        verified={
-          Boolean(seller.official) ||
-          seller.subscription_status === "active" ||
-          seller.subscription_status === "trialing"
-        }
+        verified={isSellerVerified(seller)}
         meta={
           <Link href={`/shop/${seller.handle}`} className="break-anywhere hover:underline">
             thriftsharks.com/shop/{seller.handle}

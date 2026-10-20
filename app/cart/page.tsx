@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import { BagView } from "@/components/bag-view";
+import { currentSeller } from "@/lib/seller-auth";
+import { isSellerVerified } from "@/lib/seller-plan";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Your bag",
   description: "Review the pieces in your bag before checking out.",
 };
 
-export default function CartPage() {
+export default async function CartPage() {
+  const seller = await currentSeller();
+  const buyerVerified = Boolean(seller && isSellerVerified(seller));
+
   return (
     <div className="wrap py-12">
       <header className="pb-2">
@@ -18,7 +25,7 @@ export default function CartPage() {
         </p>
       </header>
       <div className="pt-10">
-        <BagView />
+        <BagView buyerVerified={buyerVerified} />
       </div>
     </div>
   );

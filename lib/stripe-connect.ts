@@ -1,4 +1,5 @@
 import "server-only";
+import type Stripe from "stripe";
 import { sql } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
 import {
@@ -11,7 +12,7 @@ import {
   stripeConfigured,
   thriftSharksIconFileId,
 } from "@/lib/stripe";
-import { PLATFORM_FEE_CENTS, type Order, type Seller } from "@/lib/types";
+import { type Order, type Seller } from "@/lib/types";
 
 function stripeErrorMessage(err: unknown) {
   if (err && typeof err === "object" && "message" in err) {
@@ -167,8 +168,8 @@ export async function createCheckoutSessionForOrder(order: Order) {
     return { ok: false as const, error: "Stripe needs at least $0.50 per charge." };
   }
 
-  const feeCents = order.platform_fee_cents > 0 ? order.platform_fee_cents : PLATFORM_FEE_CENTS;
-  if (feeCents >= order.total_cents) {
+  const feeCents = Math.max(0, order.platform_fee_cents ?? 0);
+  if (feeCents > 0 && feeCents >= order.total_cents) {
     return { ok: false as const, error: "Order total is too small for the platform fee." };
   }
 
@@ -182,36 +183,40 @@ export async function createCheckoutSessionForOrder(order: Order) {
   const iconFileId = await thriftSharksIconFileId();
   const branding = checkoutBrandingSettings(order.seller_shop_name);
 
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    {
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: merchandiseCents,
+        product_data: {
+          name: lineName,
+          description: `${BRAND.name} order ${order.order_number}`,
+        },
+      },
+    },
+  ];
+  if (feeCents > 0) {
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: feeCents,
+        product_data: {
+          name: `${BRAND.name} platform fee`,
+          description: "Keeps the marketplace running",
+        },
+      },
+    });
+  }
+
   const session = await stripe.checkout.sessions.create(
     {
       mode: "payment",
       customer_email: order.email,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: merchandiseCents,
-            product_data: {
-              name: lineName,
-              description: `${BRAND.name} order ${order.order_number}`,
-            },
-          },
-        },
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: feeCents,
-            product_data: {
-              name: `${BRAND.name} platform fee`,
-              description: "Keeps the marketplace running",
-            },
-          },
-        },
-      ],
+      line_items: lineItems,
       payment_intent_data: {
-        application_fee_amount: feeCents,
+        ...(feeCents > 0 ? { application_fee_amount: feeCents } : {}),
         statement_descriptor_suffix: "THRIFTSHARK",
       },
       branding_settings: {

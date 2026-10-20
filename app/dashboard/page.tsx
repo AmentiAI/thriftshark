@@ -115,8 +115,8 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
             Verified shops get rack value, 7-day sales, spotlight count, and chat
             activity on this dashboard.
           </p>
-          <Link href="/dashboard/shop" className="btn btn-ink mt-4">
-            Get Verified — ${SELLER_PLAN_PRICE_USD}/mo
+          <Link href="/dashboard/verified" className="btn btn-ink mt-4">
+            Get Verified — ${SELLER_PLAN_PRICE_USD} / 30 days
           </Link>
         </section>
       )}

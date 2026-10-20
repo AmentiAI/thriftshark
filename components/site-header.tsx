@@ -1,9 +1,16 @@
 import { SiteNav } from "@/components/site-nav";
 import { currentSeller } from "@/lib/seller-auth";
 import { getCategories } from "@/lib/queries";
+import { remindExpiringVerified } from "@/lib/verified-pass";
 
 export async function SiteHeader() {
-  const [categories, seller] = await Promise.all([getCategories(), currentSeller()]);
+  const [categories, seller] = await Promise.all([
+    getCategories(),
+    currentSeller(),
+    remindExpiringVerified().catch((err) => {
+      console.error("verified reminder failed", err);
+    }),
+  ]);
 
   return (
     <SiteNav

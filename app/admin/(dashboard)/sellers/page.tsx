@@ -25,7 +25,7 @@ export default async function AdminSellersPage() {
         <h2 className="font-display text-2xl font-extrabold tracking-tight">Shops</h2>
         <p className="mt-1.5 text-sm text-ink-soft">
           {sellers.length} total · {verifiedCount} verified · {suspended} suspended.
-          Grant Verified to give a shop the $20/mo perks without a subscription.
+          Grant Verified to give a shop the paid perks without a 30-day pass.
           Suspending hides the shop and its listings immediately.
         </p>
       </header>
@@ -39,8 +39,9 @@ export default async function AdminSellersPage() {
           {sellers.map((seller) => {
             const verified = isSellerVerified(seller);
             const paid =
-              seller.subscription_status === "active" ||
-              seller.subscription_status === "trialing";
+              !seller.official &&
+              Boolean(seller.verified_until) &&
+              new Date(seller.verified_until!).getTime() > Date.now();
 
             return (
               <li
@@ -81,7 +82,7 @@ export default async function AdminSellersPage() {
                     )}
                     {paid && !seller.official && (
                       <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-ink-soft uppercase ring-1 ring-line">
-                        Paid plan
+                        Paid pass
                       </span>
                     )}
                   </div>

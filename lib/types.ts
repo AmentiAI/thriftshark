@@ -39,6 +39,9 @@ export type Seller = {
   stripe_subscription_id: string | null;
   subscription_status: string;
   subscription_current_period_end: string | null;
+  /** Paid Verified ends at this time. Null when they have never paid. */
+  verified_until: string | null;
+  verified_reminded_for: string | null;
   /** Platform shop — Verified without a paid plan. */
   official: boolean;
   status: "active" | "suspended";
@@ -80,6 +83,21 @@ export type WeeklyTopShop = {
   sales_count: number;
 };
 
+/** One Mon–Sun UTC giveaway week (shop accounts enter once). */
+export type WeeklyGiveaway = {
+  id: number;
+  week_start: string;
+  title: string;
+  prize_text: string;
+  status: "open" | "closed" | "drawn";
+  winner_seller_id: number | null;
+  drawn_at: string | null;
+  created_at: string;
+  entry_count: number;
+  winner_handle: string | null;
+  winner_shop_name: string | null;
+};
+
 /** Everything the storefront settings form needs — never the password hash. */
 export type ShopSettings = {
   id: number;
@@ -100,6 +118,7 @@ export type ShopSettings = {
   stripe_payouts_enabled: boolean;
   subscription_status: string;
   subscription_current_period_end: string | null;
+  verified_until: string | null;
   official: boolean;
   verified: boolean;
 };
@@ -112,8 +131,8 @@ export function focalStyle(x: number | null | undefined, y: number | null | unde
 export function toShopSettings(seller: Seller): ShopSettings {
   const status = seller.subscription_status ?? "none";
   const official = Boolean(seller.official);
-  const verified =
-    official || status === "active" || status === "trialing";
+  const until = seller.verified_until ? new Date(seller.verified_until).getTime() : 0;
+  const verified = official || (Number.isFinite(until) && until > Date.now());
   return {
     id: seller.id,
     handle: seller.handle,
@@ -133,6 +152,7 @@ export function toShopSettings(seller: Seller): ShopSettings {
     stripe_payouts_enabled: Boolean(seller.stripe_payouts_enabled),
     subscription_status: status,
     subscription_current_period_end: seller.subscription_current_period_end ?? null,
+    verified_until: seller.verified_until ?? null,
     official,
     verified,
   };
@@ -331,7 +351,7 @@ export const AUCTION_DURATIONS: { hours: number; label: string }[] = [
 /** Flat shipping charged to the buyer per shop order — settles to the seller. */
 export const SHIPPING_FLAT_CENTS = 1500;
 
-/** Flat platform fee charged to the buyer on every shop order ($5). */
+/** Flat platform fee charged to the buyer per shop ($5). Waived for Verified shops. */
 export const PLATFORM_FEE_CENTS = 500;
 
 /**
@@ -354,8 +374,11 @@ export function shippingForShopCount(
   return SHIPPING_FLAT_CENTS * shopCount;
 }
 
-/** Platform fee for a checkout bag — $5 per shop (one Stripe charge each). */
-export function platformFeeForShopCount(shopCount: number) {
-  if (shopCount <= 0) return 0;
+/**
+ * $5 per shop in the bag. Waived when the buyer’s own shop is Verified.
+ * Guests and unverified accounts pay.
+ */
+export function platformFeeForCheckout(shopCount: number, buyerVerified: boolean) {
+  if (buyerVerified || shopCount <= 0) return 0;
   return PLATFORM_FEE_CENTS * shopCount;
 }
