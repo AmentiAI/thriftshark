@@ -32,6 +32,11 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
         bannerY={seller.banner_y}
         logoX={seller.logo_x}
         logoY={seller.logo_y}
+        verified={
+          Boolean(seller.official) ||
+          seller.subscription_status === "active" ||
+          seller.subscription_status === "trialing"
+        }
         meta={
           <Link href={`/shop/${seller.handle}`} className="break-anywhere hover:underline">
             thriftsharks.com/shop/{seller.handle}

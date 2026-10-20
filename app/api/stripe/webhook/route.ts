@@ -6,12 +6,17 @@ import {
   markOrderPaidFromCheckout,
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
+import {
+  syncSellerSubscription,
+  syncSellerSubscriptionFromCheckout,
+} from "@/lib/stripe-billing";
 
 export const runtime = "nodejs";
 
 /**
- * Stripe webhook. Source of truth for paid orders and Connect account status.
- * Local: `stripe listen --forward-to localhost:PORT/api/stripe/webhook
+ * Stripe webhook. Source of truth for paid orders, Connect status, and the
+ * Verified seller subscription. Local:
+ * `stripe listen --forward-to localhost:PORT/api/stripe/webhook
  *         --forward-connect-to localhost:PORT/api/stripe/webhook`
  */
 export async function POST(request: Request) {
@@ -40,6 +45,10 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "subscription") {
+          await syncSellerSubscriptionFromCheckout(session);
+          break;
+        }
         if (session.mode !== "payment") break;
         if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
           break;
@@ -66,6 +75,14 @@ export async function POST(request: Request) {
               and payment_status = 'pending'
           `;
         }
+        break;
+      }
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        await syncSellerSubscription(sub);
         break;
       }
 

@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 const FAQ = [
   {
     q: "What does it cost?",
-    a: "No listing fee and no monthly fee. Buyers pay a $5 platform fee per shop order. Stripe’s card processing fee also applies.",
+    a: "Opening a shop and listing is free. Buyers pay a $5 platform fee per shop order, plus Stripe’s card fee. Optional Verified is $20/month for a badge, auctions, more photos, and directory boost.",
+  },
+  {
+    q: "What is Verified?",
+    a: "A $20/month seller subscription: verified badge, auctions, up to 20 photos, unlimited live listings, homepage spotlights, sale pricing, search priority, and dashboard insights.",
   },
   {
     q: "How do I get paid?",
@@ -61,7 +65,7 @@ export default async function SellPage() {
           {[
             ["01", "Sign up", "Shop name and handle."],
             ["02", "Connect Stripe", "Finish payout setup so buyers can pay."],
-            ["03", "List", "Up to 10 photos, price, size, condition."],
+            ["03", "List", "Photos, price, size, condition — auctions with Verified."],
             ["04", "Get paid", "Buyer checks out — you ship."],
           ].map(([n, title, body]) => (
             <li key={title} className="rounded-xl border border-line p-5">

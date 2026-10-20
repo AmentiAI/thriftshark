@@ -236,3 +236,23 @@ alter table orders
 create index if not exists orders_stripe_session_idx
   on orders (stripe_checkout_session_id)
   where stripe_checkout_session_id is not null;
+
+-- Verified seller plan ($20/mo) — billed on the platform Stripe account.
+alter table sellers
+  add column if not exists stripe_customer_id text unique,
+  add column if not exists stripe_subscription_id text unique,
+  add column if not exists subscription_status text not null default 'none'
+    check (subscription_status in (
+      'none','active','trialing','past_due','canceled','unpaid','incomplete'
+    )),
+  add column if not exists subscription_current_period_end timestamptz,
+  -- Platform / staff shops: always show Verified without a paid subscription.
+  add column if not exists official boolean not null default false;
+
+create index if not exists sellers_subscription_idx
+  on sellers (subscription_status)
+  where subscription_status in ('active', 'trialing');
+
+create index if not exists sellers_official_idx
+  on sellers (official)
+  where official;

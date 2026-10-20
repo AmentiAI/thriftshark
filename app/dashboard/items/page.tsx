@@ -13,6 +13,8 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
   const params = await props.searchParams;
   const rawStatus = Array.isArray(params.status) ? params.status[0] : params.status;
   const status = (STATUSES as string[]).includes(rawStatus ?? "") ? rawStatus : undefined;
+  const errorMsg =
+    typeof params.error === "string" && params.error.trim() ? params.error.trim() : null;
 
   const items = await sellerItems(seller.id, status);
 
@@ -32,6 +34,15 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
           Add listing
         </Link>
       </header>
+
+      {errorMsg && (
+        <p className="mb-6 rounded-2xl bg-coral/10 px-4 py-3 text-sm text-ink">
+          {errorMsg}{" "}
+          <Link href="/dashboard/shop" className="font-semibold underline">
+            Get Verified
+          </Link>
+        </p>
+      )}
 
       <nav className="mb-7 flex flex-wrap gap-2">
         <Link

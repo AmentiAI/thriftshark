@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { money, shortDate } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
-import { sellerOrders, sellerStats } from "@/lib/queries";
+import { sellerInsights, sellerOrders, sellerStats } from "@/lib/queries";
+import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,12 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
   const seller = await requireSeller();
   const params = await props.searchParams;
   const welcome = (Array.isArray(params.welcome) ? params.welcome[0] : params.welcome) === "1";
+  const verified = isSellerVerified(seller);
 
-  const [stats, orders] = await Promise.all([
+  const [stats, orders, insights] = await Promise.all([
     sellerStats(seller.id),
     sellerOrders(seller.id),
+    verified ? sellerInsights(seller.id) : Promise.resolve(null),
   ]);
 
   const tiles = [
@@ -72,6 +75,51 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
           </Link>
         ))}
       </section>
+
+      {insights ? (
+        <section className="panel p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-display text-xl font-extrabold tracking-tight">
+              Shop insights
+            </h2>
+            <p className="text-[11px] font-semibold tracking-wide text-ink-faint uppercase">
+              Verified
+            </p>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {[
+              ["Rack value", money(insights.stock_value_cents)],
+              ["Live on rack", String(insights.live_listings)],
+              ["Spotlights", String(insights.spotlights)],
+              ["Paid orders (7d)", String(insights.paid_orders_7d)],
+              ["Earned (7d)", money(insights.earned_cents_7d)],
+              ["Buyer chats (7d)", String(insights.threads_7d)],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl bg-paper-dim px-4 py-3">
+                <dt className="text-xs font-bold tracking-wider text-ink-faint uppercase">
+                  {label}
+                </dt>
+                <dd className="mt-1 font-display text-lg font-extrabold tracking-tight">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : (
+        <section className="panel p-6">
+          <h2 className="font-display text-xl font-extrabold tracking-tight">
+            Shop insights
+          </h2>
+          <p className="mt-2 max-w-lg text-sm text-ink-soft">
+            Verified shops get rack value, 7-day sales, spotlight count, and chat
+            activity on this dashboard.
+          </p>
+          <Link href="/dashboard/shop" className="btn btn-ink mt-4">
+            Get Verified — ${SELLER_PLAN_PRICE_USD}/mo
+          </Link>
+        </section>
+      )}
 
       {setupNeeded.length > 0 && (
         <section className="panel p-6">

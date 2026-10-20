@@ -21,7 +21,18 @@ import {
   createSellerAccountLink,
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
+import {
+  createSellerBillingPortal,
+  createSellerSubscriptionCheckout,
+} from "@/lib/stripe-billing";
 import { stripeConfigured } from "@/lib/stripe";
+import {
+  FREE_MAX_LIVE_LISTINGS,
+  VERIFIED_SPOTLIGHT_CAP,
+  isSellerVerified,
+  listingPhotoLimit,
+  liveListingLimit,
+} from "@/lib/seller-plan";
 import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS } from "@/lib/types";
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -156,6 +167,26 @@ export async function refreshStripeStatus(): Promise<void> {
   revalidatePath("/dashboard/shop");
   revalidatePath("/dashboard");
   redirect("/dashboard/shop");
+}
+
+/** Seller: start $20/mo Verified plan Checkout on the platform account. */
+export async function startSellerSubscription(): Promise<void> {
+  const seller = await requireSeller();
+  const session = await createSellerSubscriptionCheckout(seller);
+  if (!session.ok) {
+    redirect(`/dashboard/shop?plan=error&msg=${encodeURIComponent(session.error)}`);
+  }
+  redirect(session.url);
+}
+
+/** Seller: open Stripe Customer Portal to manage / cancel the plan. */
+export async function openSellerBillingPortal(): Promise<void> {
+  const seller = await requireSeller();
+  const session = await createSellerBillingPortal(seller);
+  if (!session.ok) {
+    redirect(`/dashboard/shop?plan=error&msg=${encodeURIComponent(session.error)}`);
+  }
+  redirect(session.url);
 }
 
 const contactSchema = z.object({
@@ -362,6 +393,75 @@ function readItemForm(formData: FormData) {
     status: text(formData.get("status")) || "available",
     featured: formData.get("featured") === "on",
   });
+}
+
+async function countLiveListings(sellerId: number, exceptItemId?: number) {
+  const rows = (await sql.query(
+    `select count(*)::int as n from items
+     where seller_id = $1
+       and status in ('available', 'auction')
+       and ($2::int is null or id <> $2::int)`,
+    [sellerId, exceptItemId ?? null],
+  )) as { n: number }[];
+  return rows[0]?.n ?? 0;
+}
+
+async function countSpotlights(sellerId: number, exceptItemId?: number) {
+  const rows = (await sql.query(
+    `select count(*)::int as n from items
+     where seller_id = $1
+       and featured
+       and status in ('available', 'draft', 'reserved')
+       and ($2::int is null or id <> $2::int)`,
+    [sellerId, exceptItemId ?? null],
+  )) as { n: number }[];
+  return rows[0]?.n ?? 0;
+}
+
+async function resolveVerifiedListingFlags(
+  seller: { id: number; subscription_status?: string | null },
+  d: { compare_at_cents: number | null; featured: boolean; status: string },
+  opts: { wantsAuction: boolean; exceptItemId?: number; previousStatus?: string },
+): Promise<{ ok: true; compareAt: number | null; featured: boolean } | { ok: false; error: string }> {
+  const verified = isSellerVerified(seller);
+  const compareAt = verified ? d.compare_at_cents : null;
+
+  let featured = false;
+  if (d.featured) {
+    if (!verified) {
+      return {
+        ok: false,
+        error: "Spotlight listings are a Verified perk — subscribe on Your storefront.",
+      };
+    }
+    const used = await countSpotlights(seller.id, opts.exceptItemId);
+    if (used >= VERIFIED_SPOTLIGHT_CAP) {
+      return {
+        ok: false,
+        error: `Verified shops can spotlight up to ${VERIFIED_SPOTLIGHT_CAP} live listings.`,
+      };
+    }
+    featured = true;
+  }
+
+  const goingLive =
+    opts.wantsAuction ||
+    d.status === "available" ||
+    d.status === "auction";
+  const wasLive =
+    opts.previousStatus === "available" || opts.previousStatus === "auction";
+  const limit = liveListingLimit(verified);
+  if (goingLive && limit !== null && !wasLive) {
+    const live = await countLiveListings(seller.id, opts.exceptItemId);
+    if (live >= limit) {
+      return {
+        ok: false,
+        error: `Free shops can have ${FREE_MAX_LIVE_LISTINGS} live listings. Get Verified for unlimited.`,
+      };
+    }
+  }
+
+  return { ok: true, compareAt, featured };
 }
 
 async function uniqueSlug(title: string, ignoreId?: number) {
@@ -604,11 +704,11 @@ export async function updateShop(_prev: FormState, formData: FormData): Promise<
 
 /* ---------- sellers: their own listings ---------- */
 
-async function readPhotos(formData: FormData, sellerId: number) {
+async function readPhotos(formData: FormData, sellerId: number, maxPhotos: number) {
   const files = formData
     .getAll("photos")
     .filter((f): f is File => f instanceof File && f.size > 0)
-    .slice(0, 10);
+    .slice(0, maxPhotos);
 
   const total = files.reduce((sum, f) => sum + f.size, 0);
   if (total > 40 * 1024 * 1024) {
@@ -729,10 +829,23 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     return { error: "Start an auction from the Auctions tab, not from the status field." };
   }
 
-  const lot = text(formData.get("destination")) === "auction" ? readAuctionFields(formData) : null;
+  const wantsAuction = text(formData.get("destination")) === "auction";
+  if (wantsAuction && !isSellerVerified(seller)) {
+    return {
+      error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+    };
+  }
+  const lot = wantsAuction ? readAuctionFields(formData) : null;
   if (lot && "error" in lot) return { error: lot.error };
 
-  const photos = await readPhotos(formData, seller.id);
+  const flags = await resolveVerifiedListingFlags(seller, d, { wantsAuction });
+  if (!flags.ok) return { error: flags.error };
+
+  const photos = await readPhotos(
+    formData,
+    seller.id,
+    listingPhotoLimit(isSellerVerified(seller)),
+  );
   if (!photos.ok) return { error: photos.error };
   if (photos.ids.length === 0) {
     return { error: "Add at least one photo — nothing sells without one." };
@@ -742,9 +855,9 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
   const rows = (await sql`
     insert into items (slug, title, description, price_cents, compare_at_cents, category_id,
                        brand, item_size, condition, color, status, featured, seller_id)
-    values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${d.compare_at_cents},
+    values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${flags.compareAt},
             ${d.category_id}, ${d.brand}, ${d.item_size}, ${d.condition}, ${d.color},
-            ${lot ? "auction" : d.status}, false, ${seller.id})
+            ${lot ? "auction" : d.status}, ${flags.featured}, ${seller.id})
     returning id
   `) as { id: number }[];
 
@@ -791,20 +904,40 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
   const onBlock = owned[0].status === "auction";
   const status = onBlock ? "auction" : d.status === "auction" ? "available" : d.status;
 
+  const flags = await resolveVerifiedListingFlags(
+    seller,
+    { ...d, status },
+    {
+      wantsAuction: false,
+      exceptItemId: id,
+      previousStatus: owned[0].status,
+    },
+  );
+  if (!flags.ok) return { error: flags.error };
+
+  const maxPhotos = listingPhotoLimit(isSellerVerified(seller));
   const order = readPhotoOrder(formData);
   if (order && order.length === 0) {
     return { error: "Keep at least one photo — nothing sells without one." };
   }
-  const photos = await readPhotos(formData, seller.id);
+  if (order && order.length > maxPhotos) {
+    return {
+      error: isSellerVerified(seller)
+        ? `Keep it to ${maxPhotos} photos per listing.`
+        : `Free shops get ${maxPhotos} photos — Verified unlocks more.`,
+    };
+  }
+  const photos = await readPhotos(formData, seller.id, maxPhotos);
   if (!photos.ok) return { error: photos.error };
 
   const slug = await uniqueSlug(d.title, id);
   await sql`
     update items set
       slug = ${slug}, title = ${d.title}, description = ${d.description},
-      price_cents = ${d.price_cents}, compare_at_cents = ${d.compare_at_cents},
+      price_cents = ${d.price_cents}, compare_at_cents = ${flags.compareAt},
       category_id = ${d.category_id}, brand = ${d.brand}, item_size = ${d.item_size},
       condition = ${d.condition}, color = ${d.color}, status = ${status},
+      featured = ${flags.featured},
       updated_at = now()
     where id = ${id} and seller_id = ${seller.id}
   `;
@@ -815,6 +948,7 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
   }
 
   revalidatePath("/shop");
+  revalidatePath("/");
   revalidatePath(`/shop/${seller.handle}`);
   revalidatePath(`/item/${slug}`);
   revalidatePath(`/dashboard/items/${id}`);
@@ -841,11 +975,34 @@ export async function setListingStatus(formData: FormData) {
   const seller = await requireSeller();
   const id = Number(text(formData.get("id")));
   const status = text(formData.get("status"));
-  if (Number.isInteger(id) && id > 0 && (SELLER_SETTABLE_STATUSES as string[]).includes(status)) {
-    // An item in a live auction stays put until the lot closes.
-    await sql`update items set status = ${status}, updated_at = now()
-              where id = ${id} and seller_id = ${seller.id} and status <> 'auction'`;
+  if (!Number.isInteger(id) || id <= 0 || !(SELLER_SETTABLE_STATUSES as string[]).includes(status)) {
+    return;
   }
+
+  const owned = (await sql`
+    select status from items where id = ${id} and seller_id = ${seller.id}
+  `) as { status: string }[];
+  if (owned.length === 0) return;
+
+  if (status === "available") {
+    const limit = liveListingLimit(isSellerVerified(seller));
+    const wasLive = owned[0].status === "available" || owned[0].status === "auction";
+    if (limit !== null && !wasLive) {
+      const live = await countLiveListings(seller.id, id);
+      if (live >= limit) {
+        redirect(
+          `/dashboard/items?error=${encodeURIComponent(
+            `Free shops can have ${FREE_MAX_LIVE_LISTINGS} live listings. Get Verified for unlimited.`,
+          )}`,
+        );
+      }
+    }
+  }
+
+  // An item in a live auction stays put until the lot closes.
+  await sql`update items set status = ${status}, updated_at = now()
+            where id = ${id} and seller_id = ${seller.id} and status <> 'auction'`;
+
   revalidatePath("/dashboard/items");
   revalidatePath("/shop");
   revalidatePath(`/shop/${seller.handle}`);
@@ -949,6 +1106,11 @@ async function insertLiveAuction(sellerId: number, itemId: number, lot: LotTerms
 /** Moves one of the seller's listings onto the block. */
 export async function createAuction(_prev: FormState, formData: FormData): Promise<FormState> {
   const seller = await requireSeller();
+  if (!isSellerVerified(seller)) {
+    return {
+      error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+    };
+  }
 
   const lot = readAuctionFields(formData);
   if ("error" in lot) return { error: lot.error };

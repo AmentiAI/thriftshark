@@ -7,12 +7,14 @@ import { money, shortDate } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
 import { sellerAuctions } from "@/lib/auctions";
 import { sellerItems } from "@/lib/queries";
+import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
 import { imageSrc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardAuctionsPage() {
   const seller = await requireSeller();
+  const verified = isSellerVerified(seller);
   const [auctions, items] = await Promise.all([
     sellerAuctions(seller.id),
     sellerItems(seller.id, "available"),
@@ -99,10 +101,25 @@ export default async function DashboardAuctionsPage() {
         <h3 className="font-display text-xl font-extrabold tracking-tight">
           Put a piece on the block
         </h3>
-        <p className="mt-1.5 mb-5 text-sm text-ink-soft">
-          Pick one of your live listings, set an opening bid and a clock.
-        </p>
-        <CreateAuctionForm items={items} />
+        {verified ? (
+          <>
+            <p className="mt-1.5 mb-5 text-sm text-ink-soft">
+              Pick one of your live listings, set an opening bid and a clock.
+            </p>
+            <CreateAuctionForm items={items} />
+          </>
+        ) : (
+          <div className="mt-3 space-y-4">
+            <p className="text-sm text-ink-soft">
+              Auctions are a Verified perk — ${SELLER_PLAN_PRICE_USD}/month unlocks
+              the auction house, a verified badge, extra listing photos, and
+              priority in the shops rail.
+            </p>
+            <Link href="/dashboard/shop" className="btn btn-ink">
+              Get Verified — ${SELLER_PLAN_PRICE_USD}/mo
+            </Link>
+          </div>
+        )}
       </section>
 
       {past.length > 0 && (

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { VerifiedBadge } from "@/components/verified-badge";
 import { focalStyle, type SellerCard as SellerCardType } from "@/lib/types";
 
 export function SellerCard({
@@ -50,8 +51,9 @@ export function SellerCard({
           />
         </div>
 
-        <h3 className="mt-3 font-display text-lg font-bold tracking-tight group-hover:underline">
-          {seller.shop_name}
+        <h3 className="mt-3 flex items-center gap-1.5 font-display text-lg font-bold tracking-tight group-hover:underline">
+          <span className="min-w-0 truncate">{seller.shop_name}</span>
+          {seller.verified && <VerifiedBadge size="sm" />}
         </h3>
         <p className="mt-0.5 truncate text-xs text-ink-faint">
           @{seller.handle}

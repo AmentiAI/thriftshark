@@ -5,6 +5,7 @@ import { AddToBag } from "@/components/add-to-bag";
 import { ItemCard } from "@/components/item-card";
 import { ItemGallery } from "@/components/item-gallery";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { VerifiedBadge } from "@/components/verified-badge";
 import { money } from "@/lib/format";
 import { getItemBySlug, getRelatedItems } from "@/lib/queries";
 import { getAuctionByItemId } from "@/lib/auctions";
@@ -101,8 +102,9 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
                 size={32}
               />
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">
-                  {item.seller_shop_name}
+                <span className="flex items-center gap-1 truncate text-sm font-semibold">
+                  <span className="min-w-0 truncate">{item.seller_shop_name}</span>
+                  {item.seller_verified && <VerifiedBadge size="sm" />}
                 </span>
                 <span className="block text-xs text-ink-faint">@{item.seller_handle}</span>
               </span>

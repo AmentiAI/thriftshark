@@ -35,6 +35,12 @@ export type Seller = {
   stripe_account_id: string | null;
   stripe_charges_enabled: boolean;
   stripe_payouts_enabled: boolean;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string;
+  subscription_current_period_end: string | null;
+  /** Platform shop — Verified without a paid plan. */
+  official: boolean;
   status: "active" | "suspended";
   featured: boolean;
   created_at: string;
@@ -56,9 +62,22 @@ export type SellerCard = {
   logo_x: number;
   logo_y: number;
   featured: boolean;
+  /** Active $20/mo Verified plan. */
+  verified: boolean;
   created_at: string;
   item_count: number;
   sold_count: number;
+};
+
+/** Paid-order leaderboard row for the current calendar week. */
+export type WeeklyTopShop = {
+  id: number;
+  handle: string;
+  shop_name: string;
+  logo_image_id: number | null;
+  logo_x: number;
+  logo_y: number;
+  sales_count: number;
 };
 
 /** Everything the storefront settings form needs — never the password hash. */
@@ -79,6 +98,10 @@ export type ShopSettings = {
   stripe_account_id: string | null;
   stripe_charges_enabled: boolean;
   stripe_payouts_enabled: boolean;
+  subscription_status: string;
+  subscription_current_period_end: string | null;
+  official: boolean;
+  verified: boolean;
 };
 
 /** CSS object-position for a banner or profile photo. 50, 50 is the centre. */
@@ -87,6 +110,10 @@ export function focalStyle(x: number | null | undefined, y: number | null | unde
 }
 
 export function toShopSettings(seller: Seller): ShopSettings {
+  const status = seller.subscription_status ?? "none";
+  const official = Boolean(seller.official);
+  const verified =
+    official || status === "active" || status === "trialing";
   return {
     id: seller.id,
     handle: seller.handle,
@@ -104,6 +131,10 @@ export function toShopSettings(seller: Seller): ShopSettings {
     stripe_account_id: seller.stripe_account_id ?? null,
     stripe_charges_enabled: Boolean(seller.stripe_charges_enabled),
     stripe_payouts_enabled: Boolean(seller.stripe_payouts_enabled),
+    subscription_status: status,
+    subscription_current_period_end: seller.subscription_current_period_end ?? null,
+    official,
+    verified,
   };
 }
 
@@ -128,6 +159,7 @@ export type Item = {
   seller_handle: string | null;
   seller_shop_name: string | null;
   seller_logo_image_id: number | null;
+  seller_verified: boolean;
   brand: string | null;
   item_size: string | null;
   condition: Condition;
@@ -278,6 +310,7 @@ export type Auction = {
   seller_handle: string;
   seller_shop_name: string;
   seller_logo_image_id: number | null;
+  seller_verified: boolean;
   bid_count: number;
   high_cents: number | null;
   high_bidder: string | null;

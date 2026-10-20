@@ -1,5 +1,15 @@
 import { sql } from "@/lib/db";
-import type { Category, DmMessage, DmThread, Item, Message, Order, Seller, SellerCard } from "@/lib/types";
+import type {
+  Category,
+  DmMessage,
+  DmThread,
+  Item,
+  Message,
+  Order,
+  Seller,
+  SellerCard,
+  WeeklyTopShop,
+} from "@/lib/types";
 
 const ITEM_COLUMNS = `
   i.id, i.slug, i.title, i.description, i.price_cents, i.compare_at_cents,
@@ -8,6 +18,7 @@ const ITEM_COLUMNS = `
   c.name as category_name, c.slug as category_slug,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
   s.logo_image_id as seller_logo_image_id,
+  (s.official or s.subscription_status in ('active', 'trialing')) as seller_verified,
   coalesce(
     (select json_agg(json_build_object('id', im.id, 'url', im.url, 'image_id', im.image_id, 'alt', im.alt)
             order by im.position, im.id)
@@ -27,6 +38,7 @@ const SELLER_CARD_COLUMNS = `
   s.id, s.handle, s.shop_name, s.tagline, s.bio, s.location,
   s.logo_image_id, s.banner_image_id, s.featured, s.created_at,
   s.banner_x, s.banner_y, s.logo_x, s.logo_y,
+  (s.official or s.subscription_status in ('active', 'trialing')) as verified,
   (select count(*)::int from items it
     where it.seller_id = s.id and it.status = 'available') as item_count,
   (select count(*)::int from items it
@@ -95,7 +107,8 @@ export async function getFeaturedItems(limit = 8): Promise<Item[]> {
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
      where i.status = 'available' and i.featured
-     order by i.created_at desc
+     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              i.created_at desc
      limit $1`,
     [limit],
   )) as Item[];
@@ -106,7 +119,8 @@ export async function getLatestItems(limit = 8): Promise<Item[]> {
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
      where i.status = 'available'
-     order by i.created_at desc
+     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              i.featured desc, i.created_at desc
      limit $1`,
     [limit],
   )) as Item[];
@@ -119,7 +133,8 @@ export async function getRelatedItems(item: Item, limit = 4): Promise<Item[]> {
      ${ITEM_FROM}
      where i.status = 'available' and i.id <> $1
        and ($2::int is null or i.category_id = $2::int)
-     order by i.featured desc, i.created_at desc
+     order by (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              i.featured desc, i.created_at desc
      limit $3`,
     [item.id, item.category_id, limit],
   )) as Item[];
@@ -139,10 +154,13 @@ export type ShopQuery = {
   perPage?: number;
 };
 
+const VERIFIED_RANK =
+  "(s.official or s.subscription_status in ('active', 'trialing')) desc";
+
 const SORTS: Record<string, string> = {
-  newest: "i.created_at desc",
-  "price-asc": "i.price_cents asc",
-  "price-desc": "i.price_cents desc",
+  newest: `${VERIFIED_RANK}, i.featured desc, i.created_at desc`,
+  "price-asc": `i.price_cents asc, ${VERIFIED_RANK}`,
+  "price-desc": `i.price_cents desc, ${VERIFIED_RANK}`,
   title: "i.title asc",
 };
 
@@ -268,6 +286,7 @@ export async function listSellers(options: { featuredFirst?: boolean; limit?: nu
      from sellers s
      where s.status = 'active'
      order by ${options.featuredFirst ? "s.featured desc," : ""}
+              (s.official or s.subscription_status in ('active', 'trialing')) desc,
               (select count(*) from items it
                 where it.seller_id = s.id and it.status = 'available') desc,
               s.created_at desc
@@ -284,10 +303,48 @@ export async function getStockedSellers(limit = 8) {
      where s.status = 'active'
        and exists (select 1 from items it
                     where it.seller_id = s.id and it.status = 'available')
-     order by s.featured desc, s.created_at desc
+     order by s.featured desc,
+              (s.official or s.subscription_status in ('active', 'trialing')) desc,
+              s.created_at desc
      limit $1`,
     [limit],
   )) as SellerCard[];
+}
+
+/** Monday 00:00 UTC of the current ISO week. */
+export function utcWeekStart(d = new Date()): Date {
+  const day = d.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1;
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - diff),
+  );
+}
+
+/**
+ * Top shops by paid order count in the current calendar week (Mon–Sun UTC).
+ * Ranking refreshes as paid orders land; the window resets each Monday.
+ */
+export async function getWeeklyTopShops(limit = 5): Promise<{
+  weekStart: string;
+  shops: WeeklyTopShop[];
+}> {
+  const weekStart = utcWeekStart();
+  const shops = (await sql.query(
+    `select
+       s.id, s.handle, s.shop_name, s.logo_image_id, s.logo_x, s.logo_y,
+       count(o.id)::int as sales_count
+     from sellers s
+     join orders o on o.seller_id = s.id
+     where s.status = 'active'
+       and o.payment_status = 'paid'
+       and o.status <> 'cancelled'
+       and o.created_at >= $1::timestamptz
+     group by s.id
+     order by sales_count desc, max(o.created_at) desc
+     limit $2`,
+    [weekStart.toISOString(), limit],
+  )) as WeeklyTopShop[];
+  return { weekStart: weekStart.toISOString(), shops };
 }
 
 export async function marketplaceStats() {
@@ -357,6 +414,38 @@ export async function sellerStats(sellerId: number) {
     unpaid: number;
     earned_cents: number;
     stock_value_cents: number;
+  }[];
+  return rows[0];
+}
+
+/** Extra metrics for Verified sellers on the dashboard. */
+export async function sellerInsights(sellerId: number) {
+  const rows = (await sql`
+    select
+      (select coalesce(sum(price_cents), 0)::int from items
+        where seller_id = ${sellerId} and status = 'available') as stock_value_cents,
+      (select count(*)::int from items
+        where seller_id = ${sellerId} and status in ('available', 'auction')) as live_listings,
+      (select count(*)::int from items
+        where seller_id = ${sellerId} and featured and status = 'available') as spotlights,
+      (select count(*)::int from orders
+        where seller_id = ${sellerId}
+          and payment_status = 'paid'
+          and created_at >= now() - interval '7 days') as paid_orders_7d,
+      (select coalesce(sum(total_cents), 0)::int from orders
+        where seller_id = ${sellerId}
+          and payment_status = 'paid'
+          and created_at >= now() - interval '7 days') as earned_cents_7d,
+      (select count(*)::int from dm_threads
+        where seller_id = ${sellerId}
+          and updated_at >= now() - interval '7 days') as threads_7d
+  `) as {
+    stock_value_cents: number;
+    live_listings: number;
+    spotlights: number;
+    paid_orders_7d: number;
+    earned_cents_7d: number;
+    threads_7d: number;
   }[];
   return rows[0];
 }

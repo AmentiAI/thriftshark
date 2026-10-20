@@ -22,6 +22,7 @@ item price + shipping.
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_SELLER_PLAN_PRICE_ID=price_...   # $20/mo Verified seller plan
 NEXT_PUBLIC_SITE_URL=http://localhost:3001
 ```
 
@@ -30,6 +31,26 @@ Local webhook forwarding (Connect events need both flags):
 ```bash
 stripe listen --forward-to localhost:3001/api/stripe/webhook --forward-connect-to localhost:3001/api/stripe/webhook
 ```
+
+## Verified seller plan ($20/mo)
+
+Optional subscription billed on the **platform** Stripe account (not Connect).
+Sellers subscribe from **Dashboard → Your storefront**. Active / trialing status
+shows a verified badge and unlocks auctions, 20 listing photos, unlimited live
+listings, homepage spotlights, sale pricing, search priority, and dashboard
+insights.
+
+1. In Stripe → Products, create **Verified** at **$20 / month**.
+2. Copy the Price id into `STRIPE_SELLER_PLAN_PRICE_ID`.
+3. Enable Customer Portal (cancel / update card).
+4. Webhook events (same endpoint): `checkout.session.completed` (mode
+   `subscription`), `customer.subscription.created|updated|deleted`.
+
+| Piece | Where |
+| --- | --- |
+| Columns | `sellers.stripe_customer_id`, `subscription_status`, … |
+| Checkout / portal | `lib/stripe-billing.ts` |
+| Panel | `components/seller-subscription-panel.tsx` |
 
 ## Dashboard checklist (platform)
 

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ItemCard } from "@/components/item-card";
-import { SellerCard } from "@/components/seller-card";
 import { AuctionCard } from "@/components/auction-card";
+import { ShopsCarousel } from "@/components/shops-carousel";
+import { TopShopsWidget } from "@/components/top-shops-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
 import {
@@ -10,20 +11,22 @@ import {
   getCategoryCounts,
   getFeaturedItems,
   getLatestItems,
-  getStockedSellers,
+  getWeeklyTopShops,
+  listSellers,
   marketplaceStats,
 } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [featured, latest, categories, counts, gridSellers, stats, auctions] =
+  const [featured, latest, categories, counts, shops, weeklyTop, stats, auctions] =
     await Promise.all([
       getFeaturedItems(8),
       getLatestItems(12),
       getCategories(),
       getCategoryCounts(),
-      getStockedSellers(6),
+      listSellers({ featuredFirst: true, limit: 24 }),
+      getWeeklyTopShops(5),
       marketplaceStats(),
       liveAuctions(4),
     ]);
@@ -33,44 +36,52 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero — brand crest is the visual anchor */}
-      <section className="border-b border-line bg-void text-white">
-        <div className="wrap grid items-center gap-8 py-12 sm:py-14 lg:grid-cols-[1fr_1.05fr] lg:gap-6 lg:py-16">
-          <div className="min-w-0 lg:max-w-lg">
-            <p className="text-xs font-semibold tracking-[0.16em] text-white/50 uppercase">
-              Thrift Sharks · {stats.shops} shops
+      {/* Hero — centered middle bar, not full-bleed */}
+      <section className="border-b border-line bg-paper">
+        <h1 className="sr-only">
+          Thrift Sharks — buy and sell one-of-one secondhand
+        </h1>
+        <div className="wrap py-5 sm:py-6">
+          <Image
+            src="/hero-banner.jpg"
+            alt="Thrift Sharks — streetwear, sneakers, and luxury finds"
+            width={1024}
+            height={244}
+            priority
+            sizes="(min-width: 72rem) 72rem, 100vw"
+            className="mx-auto h-auto w-full max-w-5xl rounded-xl sm:max-w-6xl"
+          />
+          <div className="mx-auto mt-3 flex max-w-5xl flex-col gap-3 sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-ink-soft sm:text-sm">
+              Independent shops. One-of-one pieces.
+              {stats.shops > 0 ? ` ${stats.shops} shops live.` : ""} Paid securely
+              through Stripe.
             </p>
-            <h1 className="mt-3 font-display text-4xl leading-[0.95] font-extrabold tracking-[-0.035em] sm:text-5xl lg:text-[3.5rem]">
-              Buy one-of-one.
-              <span className="mt-1 block text-foam">Sell for free.</span>
-            </h1>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-white/70">
-              Independent shops. Honest condition. Paid securely through Stripe.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/shop" className="btn bg-white text-ink hover:bg-paper-dim">
+            <div className="flex flex-wrap gap-2.5">
+              <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">
                 Shop now
               </Link>
-              <Link href="/signup" className="btn btn-ghost-light">
+              <Link href="/signup" className="btn btn-ghost !px-4 !py-2 text-sm">
                 Open a shop
               </Link>
             </div>
           </div>
-
-          <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <div className="relative mx-auto aspect-square w-full max-w-[22rem] sm:max-w-[26rem] lg:max-w-[32rem]">
-              <Image
-                src="/crest.png"
-                alt="Thrift Sharks"
-                fill
-                priority
-                sizes="(min-width: 1024px) 32rem, 90vw"
-                className="object-contain object-center drop-shadow-[0_20px_50px_rgb(0_0_0/0.45)]"
-              />
-            </div>
-          </div>
         </div>
       </section>
+
+      {shops.length > 0 && (
+        <section className="border-b border-line bg-paper-dim/40 py-5 sm:py-6">
+          <div className="wrap mb-3 flex items-end justify-between gap-4">
+            <h2 className="font-display text-lg font-bold tracking-tight sm:text-xl">
+              Shops
+            </h2>
+            <Link href="/sellers" className="text-sm font-semibold text-ink-faint hover:text-ink">
+              All {stats.shops} shops
+            </Link>
+          </div>
+          <ShopsCarousel sellers={shops} />
+        </section>
+      )}
 
       {/* Fresh drops — merch first */}
       <section className="wrap py-10 sm:py-12">
@@ -186,25 +197,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      {gridSellers.length > 0 && (
-        <section className="border-t border-line bg-paper-dim/40">
-          <div className="wrap py-10 sm:py-12">
-            <div className="flex items-end justify-between gap-4">
-              <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-                Shops
-              </h2>
-              <Link href="/sellers" className="text-sm font-semibold text-ink-faint hover:text-ink">
-                All {stats.shops} shops
-              </Link>
-            </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {gridSellers.map((seller) => (
-                <SellerCard key={seller.id} seller={seller} />
-              ))}
-            </div>
+      <section className="border-t border-line">
+        <div className="wrap py-10 sm:py-12">
+          <div className="mx-auto max-w-md lg:mx-0 lg:max-w-sm">
+            <TopShopsWidget shops={weeklyTop.shops} weekStart={weeklyTop.weekStart} />
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       <section className="border-t border-line">
         <div className="wrap flex flex-col items-start justify-between gap-6 py-12 sm:flex-row sm:items-center sm:py-14">

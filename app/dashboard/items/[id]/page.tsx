@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { ListingForm } from "@/components/listing-form";
 import { requireSeller } from "@/lib/seller-auth";
 import { getCategories, getItemById } from "@/lib/queries";
+import {
+  VERIFIED_SPOTLIGHT_CAP,
+  isSellerVerified,
+  listingPhotoLimit,
+} from "@/lib/seller-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +20,8 @@ export default async function EditListingPage(props: PageProps<"/dashboard/items
   // A seller can only ever open their own listing.
   if (!item || item.seller_id !== seller.id) notFound();
 
+  const verified = isSellerVerified(seller);
+
   return (
     <div>
       <header className="mb-8">
@@ -23,7 +30,15 @@ export default async function EditListingPage(props: PageProps<"/dashboard/items
         </h2>
         <p className="mt-2 font-mono text-xs text-ink-faint">/item/{item.slug}</p>
       </header>
-      <ListingForm categories={categories} item={item} />
+      <ListingForm
+        categories={categories}
+        item={item}
+        canAuction={verified}
+        maxPhotos={listingPhotoLimit(verified)}
+        canSalePrice={verified}
+        canSpotlight={verified}
+        spotlightCap={VERIFIED_SPOTLIGHT_CAP}
+      />
     </div>
   );
 }

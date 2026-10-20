@@ -25,14 +25,30 @@ const SELLER_STATUSES = [
 const AUCTION_NOTE =
   "This piece is in a live auction, so its status is managed by the lot.";
 
-export function ListingForm({ categories, item }: { categories: Category[]; item?: Item }) {
+export function ListingForm({
+  categories,
+  item,
+  canAuction = false,
+  maxPhotos = 8,
+  canSalePrice = false,
+  canSpotlight = false,
+  spotlightCap = 3,
+}: {
+  categories: Category[];
+  item?: Item;
+  canAuction?: boolean;
+  maxPhotos?: number;
+  canSalePrice?: boolean;
+  canSpotlight?: boolean;
+  spotlightCap?: number;
+}) {
   const editing = Boolean(item);
   const [destination, setDestination] = useState<"rack" | "auction">("rack");
   const [state, action, pending] = useActionState<FormState, FormData>(
     editing ? updateListing : createListing,
     null,
   );
-  const auctioning = !editing && destination === "auction";
+  const auctioning = !editing && canAuction && destination === "auction";
 
   const dollars = (cents: number | null | undefined) =>
     cents === null || cents === undefined ? "" : (cents / 100).toFixed(2);
@@ -50,8 +66,18 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
         <div className="panel p-6">
           <h2 className="font-display text-lg font-extrabold tracking-tight">Photos</h2>
           <p className="mt-1.5 text-sm text-ink-soft">
-            Up to 10. The first one is the cover. Front, back, label, and a
-            close-up of any flaw — in daylight on a plain background — sells best.
+            Up to {maxPhotos}. The first one is the cover. Front, back, label,
+            and a close-up of any flaw — in daylight on a plain background —
+            sells best.
+            {!canAuction && maxPhotos < 20 && (
+              <>
+                {" "}
+                <Link href="/dashboard/shop" className="font-semibold underline">
+                  Verified
+                </Link>{" "}
+                unlocks more photos.
+              </>
+            )}
           </p>
 
           <div className="mt-5">
@@ -59,7 +85,7 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
               key={existing.map((e) => e.id).join(",")}
               name="photos"
               existing={existing}
-              max={10}
+              max={maxPhotos}
               maxEdge={1800}
             />
           </div>
@@ -120,14 +146,32 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
               <label className={label} htmlFor="compare_at">
                 Was (optional)
               </label>
-              <input
-                id="compare_at"
-                name="compare_at"
-                inputMode="decimal"
-                defaultValue={dollars(item?.compare_at_cents)}
-                placeholder="95.00"
-                className="field"
-              />
+              {canSalePrice ? (
+                <input
+                  id="compare_at"
+                  name="compare_at"
+                  inputMode="decimal"
+                  defaultValue={dollars(item?.compare_at_cents)}
+                  placeholder="95.00"
+                  className="field"
+                />
+              ) : (
+                <>
+                  <input
+                    id="compare_at"
+                    disabled
+                    placeholder="Verified perk"
+                    className="field opacity-60"
+                  />
+                  <p className="mt-1.5 text-xs text-ink-faint">
+                    Sale “was” pricing is a{" "}
+                    <Link href="/dashboard/shop" className="font-semibold underline">
+                      Verified
+                    </Link>{" "}
+                    perk.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 
@@ -253,15 +297,29 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
               <div className="grid gap-2">
                 {(
                   [
-                    ["rack", "On the rack", "Buyers pay your price today."],
-                    ["auction", "Auction house", "Bidders fight the clock."],
-                  ] as const
-                ).map(([value, title, body]) => {
+                    {
+                      value: "rack" as const,
+                      title: "On the rack",
+                      body: "Buyers pay your price today.",
+                      enabled: true,
+                    },
+                    {
+                      value: "auction" as const,
+                      title: "Auction house",
+                      body: canAuction
+                        ? "Bidders fight the clock."
+                        : "Verified perk — $20/mo on Your storefront.",
+                      enabled: canAuction,
+                    },
+                  ]
+                ).map(({ value, title, body, enabled }) => {
                   const active = destination === value;
                   return (
                     <label
                       key={value}
-                      className={`tap cursor-pointer rounded-2xl px-4 py-3 ring-2 transition ${
+                      className={`tap rounded-2xl px-4 py-3 ring-2 transition ${
+                        enabled ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                      } ${
                         active
                           ? "bg-reef/10 ring-reef"
                           : "bg-paper-dim ring-transparent hover:ring-line"
@@ -272,11 +330,21 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
                         name="destination"
                         value={value}
                         checked={active}
+                        disabled={!enabled}
                         onChange={() => setDestination(value)}
                         className="sr-only"
                       />
                       <span className="block text-sm font-bold text-ink">{title}</span>
                       <span className="mt-0.5 block text-xs text-ink-faint">{body}</span>
+                      {!enabled && value === "auction" && (
+                        <Link
+                          href="/dashboard/shop"
+                          className="mt-1.5 inline-block text-xs font-semibold text-reef underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Get Verified
+                        </Link>
+                      )}
                     </label>
                   );
                 })}
@@ -327,6 +395,34 @@ export function ListingForm({ categories, item }: { categories: Category[]; item
               ))}
             </select>
           </div>
+
+          {canSpotlight ? (
+            <label className="tap mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-paper-dim px-4 py-3">
+              <input
+                type="checkbox"
+                name="featured"
+                value="on"
+                defaultChecked={Boolean(item?.featured)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block text-sm font-bold text-ink">
+                  Spotlight on homepage
+                </span>
+                <span className="mt-0.5 block text-xs text-ink-faint">
+                  Pin up to {spotlightCap} live pieces in “Worth a look”.
+                </span>
+              </span>
+            </label>
+          ) : (
+            <p className="mt-4 rounded-2xl bg-paper-dim px-4 py-3 text-xs text-ink-faint">
+              Homepage spotlights are a{" "}
+              <Link href="/dashboard/shop" className="font-semibold underline">
+                Verified
+              </Link>{" "}
+              perk (up to {spotlightCap} pins).
+            </p>
+          )}
 
           {state?.error && (
             <p className="mt-5 rounded-2xl border-l-4 border-coral bg-coral/10 px-3 py-2.5 text-sm">

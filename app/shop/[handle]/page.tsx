@@ -59,6 +59,7 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
         bannerY={seller.banner_y}
         logoX={seller.logo_x}
         logoY={seller.logo_y}
+        verified={seller.verified}
         meta={
           <>
             <p className="break-anywhere">
