@@ -14,7 +14,7 @@ export const BRAND = {
   supportEmail: "support@thriftsharks.com",
   supportUrlPath: "/contact",
   productDescription:
-    "Online marketplace for one-of-one secondhand clothing. Independent sellers ship to buyers.",
+    "Online marketplace for one-of-one secondhand clothing. Independent sellers ship to buyers and cover shipping.",
 } as const;
 
 export function checkoutDisplayName(shopName: string | null | undefined) {

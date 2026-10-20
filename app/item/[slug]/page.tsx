@@ -9,7 +9,7 @@ import { VerifiedBadge } from "@/components/verified-badge";
 import { money } from "@/lib/format";
 import { getItemBySlug, getRelatedItems } from "@/lib/queries";
 import { getAuctionByItemId } from "@/lib/auctions";
-import { conditionLabel, FREE_SHIPPING_THRESHOLD_CENTS, imageSrc } from "@/lib/types";
+import { conditionLabel, imageSrc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -86,9 +86,7 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           </div>
 
           <p className="mt-2 text-sm text-ink-faint">
-            {item.price_cents >= FREE_SHIPPING_THRESHOLD_CENTS
-              ? "Free shipping"
-              : `Shipping $8 · free over ${money(FREE_SHIPPING_THRESHOLD_CENTS)}`}
+            Shipping arranged by the seller
           </p>
 
           {item.seller_handle && (

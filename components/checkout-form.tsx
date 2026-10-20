@@ -7,7 +7,6 @@ import { useBagItems } from "@/components/bag-view";
 import { money } from "@/lib/format";
 import { placeOrder, type FormState } from "@/lib/actions";
 import {
-  FREE_SHIPPING_THRESHOLD_CENTS,
   PLATFORM_FEE_CENTS,
   imageSrc,
   platformFeeForShopCount,
@@ -84,8 +83,8 @@ export function CheckoutForm() {
           <legend className="font-display text-xl font-bold">How do you want it?</legend>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {[
-              ["ship", "Ship it", subtotal >= FREE_SHIPPING_THRESHOLD_CENTS ? "Free — 2 day dispatch" : "$8 flat — 2 day dispatch"],
-              ["pickup", "Collect in store", "218 Harbour Road, Wed–Sun"],
+              ["ship", "Ship it", "Seller arranges and covers shipping"],
+              ["pickup", "Local pickup", "Coordinate with the seller after checkout"],
             ].map(([value, title, note]) => (
               <label
                 key={value}
@@ -193,7 +192,9 @@ export function CheckoutForm() {
               <dt className="text-ink-soft">
                 {fulfilment === "pickup" ? "Pickup" : "Shipping"}
               </dt>
-              <dd className="font-medium">{shipping === 0 ? "Free" : money(shipping)}</dd>
+              <dd className="font-medium text-ink-soft">
+                {fulfilment === "pickup" ? "With seller" : "Seller handles"}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">
@@ -223,8 +224,8 @@ export function CheckoutForm() {
 
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
             Next you’ll pay by card on Stripe. A {money(PLATFORM_FEE_CENTS)}{" "}
-            platform fee per shop keeps Thrift Sharks running — sellers still
-            receive their item and shipping totals.
+            platform fee per shop keeps Thrift Sharks running. Sellers receive
+            the item price and are responsible for shipping.
           </p>
         </div>
       </aside>

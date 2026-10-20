@@ -7,7 +7,6 @@ import { useCart } from "@/components/cart";
 import { money } from "@/lib/format";
 import {
   conditionLabel,
-  FREE_SHIPPING_THRESHOLD_CENTS,
   imageSrc,
   platformFeeForShopCount,
   shippingFor,
@@ -61,7 +60,6 @@ export function BagView() {
   const shipping = shippingFor(subtotal, "ship");
   const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
   const platformFee = platformFeeForShopCount(shopCount || (available.length > 0 ? 1 : 0));
-  const toFreeShipping = FREE_SHIPPING_THRESHOLD_CENTS - subtotal;
 
   if (loading) {
     return <p className="py-20 text-center text-ink-faint">Opening your bag…</p>;
@@ -146,7 +144,7 @@ export function BagView() {
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">Shipping</dt>
-              <dd className="font-medium">{shipping === 0 ? "Free" : money(shipping)}</dd>
+              <dd className="font-medium text-ink-soft">Seller handles</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">
@@ -161,11 +159,9 @@ export function BagView() {
             </div>
           </dl>
 
-          {toFreeShipping > 0 && available.length > 0 && (
-            <p className="mt-4 rounded-2xl bg-reef px-3 py-2.5 text-xs font-medium text-white">
-              {money(toFreeShipping)} more and shipping is on us.
-            </p>
-          )}
+          <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+            Sellers arrange and pay for shipping after you check out.
+          </p>
 
           {unavailable.length > 0 && (
             <p className="mt-4 rounded-2xl bg-coral/10 px-3 py-2.5 text-xs text-ink-soft">

@@ -139,7 +139,11 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
                       <dt className="text-ink-soft">
                         {order.fulfilment === "pickup" ? "Pickup" : "Shipping"}
                       </dt>
-                      <dd>{order.shipping_cents === 0 ? "Free" : money(order.shipping_cents)}</dd>
+                      <dd>
+                        {order.shipping_cents === 0
+                          ? "Seller handles"
+                          : money(order.shipping_cents)}
+                      </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-ink-soft">Platform fee</dt>

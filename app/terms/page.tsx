@@ -34,8 +34,8 @@ export default function TermsPage() {
       <p>
         We do not hold buyer funds. Buyers pay sellers through Stripe Connect (direct charges
         on the seller’s connected account). A flat platform fee may be added at checkout and
-        collected via Stripe; sellers receive their item price and shipping. Stripe is a third
-        party with its own terms.
+        collected via Stripe; sellers receive their item price and arrange shipping themselves.
+        Stripe is a third party with its own terms.
       </p>
 
       <h2>2. Eligibility</h2>
@@ -97,11 +97,11 @@ export default function TermsPage() {
 
       <h2>6. Pricing, fees, and payments</h2>
       <ul>
-        <li>Sellers set prices (and auction parameters). Buyers are responsible for understanding totals, including any shipping shown.</li>
+        <li>Sellers set prices (and auction parameters) and are responsible for arranging and paying for shipping (or local pickup).</li>
         <li>Thrift Sharks does not charge listing fees. A flat platform fee (currently $5 per shop order) is charged to the buyer at checkout and collected through Stripe.</li>
         <li>
           <strong>Direct payment:</strong> Payment is made by the buyer through Stripe Connect.
-          Item price and shipping settle to the seller’s Stripe account; the platform fee is
+          Item price settles to the seller’s Stripe account; sellers handle shipping. The platform fee is
           collected as an application fee. Thrift Sharks is not a bank, money transmitter, or
           escrow.
         </li>

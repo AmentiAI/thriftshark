@@ -21,7 +21,11 @@ const FAQ = [
   },
   {
     q: "How do I get paid?",
-    a: "Connect Stripe on your storefront. Buyers pay by card at checkout; you receive the item price and shipping. The $5 platform fee goes to Thrift Sharks.",
+    a: "Connect Stripe on your storefront. Buyers pay by card at checkout; you receive the item price. The $5 platform fee goes to Thrift Sharks. You arrange and pay for shipping.",
+  },
+  {
+    q: "Who handles shipping?",
+    a: "You do. After a paid order, ship to the buyer’s address (or arrange local pickup). Shipping cost is on the seller, not charged at checkout.",
   },
   {
     q: "When do I know an order is real?",

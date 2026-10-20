@@ -154,7 +154,7 @@ export async function syncSellerFromStripeAccount(accountId: string) {
 /**
  * Direct-charge Checkout Session on the seller's Express account.
  * Buyer pays the full total; platform_fee_cents is taken as an application fee
- * so the seller receives subtotal + shipping.
+ * so the seller receives the item subtotal (shipping is arranged by the seller).
  */
 export async function createCheckoutSessionForOrder(order: Order) {
   if (!order.seller_stripe_account_id || !order.seller_stripe_charges_enabled) {
