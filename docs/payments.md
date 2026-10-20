@@ -33,12 +33,23 @@ stripe listen --forward-to localhost:3001/api/stripe/webhook --forward-connect-t
 
 ## Dashboard checklist (platform)
 
-1. Test mode on.
+1. Test mode on (or Live when ready).
 2. Connect enabled; platform profile complete.
-3. Branding + Express onboarding.
+3. **Branding** (do this in both Live and Test if you use both):
+   - [Settings → Branding](https://dashboard.stripe.com/settings/branding) —
+     upload the crest (`public/crest.png`), brand color `#0066ff`, accent
+     near-black `#0a0a0a`, business name **Thrift Sharks**.
+   - [Connect → Settings → Branding](https://dashboard.stripe.com/settings/connect) —
+     same icon, color, and support URL `https://thriftsharks.com/contact`.
+   - Custom domain `checkout.thriftsharks.com` (wait for Stripe’s DNS email).
 4. Cards enabled under Payment methods.
-5. Copy test API keys into `.env`.
-6. After CLI `listen`, copy `whsec_...` into `.env`.
+5. Copy API keys into host env / `.env`.
+6. Webhook to `https://thriftsharks.com/api/stripe/webhook` (plus Connected
+   accounts destination if offered).
+
+The app also applies Thrift Sharks colors, crest, and “Shop · Thrift Sharks”
+naming on Checkout Sessions and new connected accounts (`lib/brand.ts`,
+`lib/stripe.ts`).
 
 Go live only after a full test purchase: seller onboarding → checkout →
 `4242 4242 4242 4242` → order shows paid.

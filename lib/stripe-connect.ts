@@ -1,11 +1,15 @@
 import "server-only";
 import { sql } from "@/lib/db";
+import { BRAND } from "@/lib/brand";
 import {
+  applyThriftSharksAccountBranding,
+  checkoutBrandingSettings,
   getStripe,
   publicBusinessUrl,
   requestOrigin,
   siteUrl,
   stripeConfigured,
+  thriftSharksIconFileId,
 } from "@/lib/stripe";
 import { PLATFORM_FEE_CENTS, type Order, type Seller } from "@/lib/types";
 
@@ -54,13 +58,13 @@ export async function createSellerAccountLink(seller: Seller) {
           },
           business_profile: {
             name: seller.shop_name,
-            product_description:
-              "Secondhand clothing and accessories sold on Thrift Sharks.",
+            product_description: BRAND.productDescription,
             ...(shopUrl ? { url: shopUrl } : {}),
           },
           metadata: {
             seller_id: String(seller.id),
             handle: seller.handle,
+            platform: BRAND.name,
           },
         });
       } catch {
@@ -75,13 +79,13 @@ export async function createSellerAccountLink(seller: Seller) {
           },
           business_profile: {
             name: seller.shop_name,
-            product_description:
-              "Secondhand clothing and accessories sold on Thrift Sharks.",
+            product_description: BRAND.productDescription,
             ...(shopUrl ? { url: shopUrl } : {}),
           },
           metadata: {
             seller_id: String(seller.id),
             handle: seller.handle,
+            platform: BRAND.name,
           },
         });
       }
@@ -97,6 +101,12 @@ export async function createSellerAccountLink(seller: Seller) {
         select stripe_account_id from sellers where id = ${seller.id}
       `) as { stripe_account_id: string | null }[];
       accountId = rows[0]?.stripe_account_id ?? accountId;
+
+      try {
+        await applyThriftSharksAccountBranding(accountId!);
+      } catch (err) {
+        console.error("account branding failed", err);
+      }
     } else {
       const account = await stripe.accounts.retrieve(accountId);
       await syncSellerFromStripeAccount(accountId);
@@ -169,6 +179,8 @@ export async function createCheckoutSessionForOrder(order: Order) {
       ? order.lines[0].title
       : `${order.seller_shop_name ?? "Shop"} · ${order.order_number}`;
   const merchandiseCents = order.total_cents - feeCents;
+  const iconFileId = await thriftSharksIconFileId();
+  const branding = checkoutBrandingSettings(order.seller_shop_name);
 
   const session = await stripe.checkout.sessions.create(
     {
@@ -182,7 +194,7 @@ export async function createCheckoutSessionForOrder(order: Order) {
             unit_amount: merchandiseCents,
             product_data: {
               name: lineName,
-              description: `Order ${order.order_number}`,
+              description: `${BRAND.name} order ${order.order_number}`,
             },
           },
         },
@@ -192,14 +204,26 @@ export async function createCheckoutSessionForOrder(order: Order) {
             currency: "usd",
             unit_amount: feeCents,
             product_data: {
-              name: "Platform fee",
-              description: "Keeps Thrift Sharks running",
+              name: `${BRAND.name} platform fee`,
+              description: "Keeps the marketplace running",
             },
           },
         },
       ],
       payment_intent_data: {
         application_fee_amount: feeCents,
+        statement_descriptor_suffix: "THRIFTSHARK",
+      },
+      branding_settings: {
+        ...branding,
+        ...(iconFileId
+          ? { icon: { type: "file" as const, file: iconFileId } }
+          : {}),
+      },
+      custom_text: {
+        submit: {
+          message: `Paying ${order.seller_shop_name ?? "the seller"} on ${BRAND.name}.`,
+        },
       },
       success_url: `${base}/order/${order.group_token ?? order.order_number}?paid=1`,
       cancel_url: `${base}/order/${order.group_token ?? order.order_number}?cancelled=1`,
@@ -208,6 +232,7 @@ export async function createCheckoutSessionForOrder(order: Order) {
         order_number: order.order_number,
         group_token: order.group_token ?? "",
         platform_fee_cents: String(feeCents),
+        platform: BRAND.name,
       },
     },
     { stripeAccount: order.seller_stripe_account_id },
