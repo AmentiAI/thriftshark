@@ -141,8 +141,10 @@ export function toShopSettings(seller: Seller): ShopSettings {
 /** Resolves an item photo to a src, whether it was uploaded or linked. */
 export function imageSrc(image: { url: string | null; image_id: number | null } | null | undefined) {
   if (!image) return null;
+  // Prefer an absolute Blob (or other CDN) URL when present.
+  if (image.url && /^https?:\/\//i.test(image.url)) return image.url;
   if (image.image_id) return `/api/images/${image.image_id}`;
-  return image.url ?? null;
+  return image.url || null;
 }
 
 export type Item = {

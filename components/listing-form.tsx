@@ -86,7 +86,8 @@ export function ListingForm({
               name="photos"
               existing={existing}
               max={maxPhotos}
-              maxEdge={1800}
+              maxEdge={1200}
+              quality={0.72}
             />
           </div>
         </div>

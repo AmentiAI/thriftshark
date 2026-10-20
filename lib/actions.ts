@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { sql } from "@/lib/db";
@@ -14,7 +15,7 @@ import {
   verifyPassword,
 } from "@/lib/seller-auth";
 import { ensureBuyerKey, currentBuyerKey } from "@/lib/buyer-auth";
-import { storeUpload } from "@/lib/images";
+import { deleteBlobUrls, storeUpload } from "@/lib/images";
 import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
 import {
   createCheckoutSessionForOrder,
@@ -704,6 +705,9 @@ export async function updateShop(_prev: FormState, formData: FormData): Promise<
 
 /* ---------- sellers: their own listings ---------- */
 
+/** Stay under typical serverless request body limits (~4.5MB on Vercel). */
+const MAX_PHOTO_BATCH_BYTES = 3.5 * 1024 * 1024;
+
 async function readPhotos(formData: FormData, sellerId: number, maxPhotos: number) {
   const files = formData
     .getAll("photos")
@@ -711,21 +715,30 @@ async function readPhotos(formData: FormData, sellerId: number, maxPhotos: numbe
     .slice(0, maxPhotos);
 
   const total = files.reduce((sum, f) => sum + f.size, 0);
-  if (total > 40 * 1024 * 1024) {
+  if (total > MAX_PHOTO_BATCH_BYTES) {
     return {
       ok: false as const,
-      error: `Those photos add up to ${(total / 1024 / 1024).toFixed(0)}MB. Add them in two goes, or let the page shrink them first.`,
+      error: `Those photos add up to ${(total / 1024 / 1024).toFixed(1)}MB. Add fewer at once (or wait for the page to finish shrinking them), then save again.`,
     };
   }
 
   const ids: number[] = [];
-  for (const file of files) {
-    const stored = await storeUpload(file, sellerId, "item");
-    if (!stored.ok) {
-      await deleteOrphanImages(sellerId, ids);
-      return { ok: false as const, error: stored.error };
+  try {
+    for (const file of files) {
+      const stored = await storeUpload(file, sellerId, "item");
+      if (!stored.ok) {
+        await deleteOrphanImages(sellerId, ids);
+        return { ok: false as const, error: stored.error };
+      }
+      ids.push(stored.id);
     }
-    ids.push(stored.id);
+  } catch (err) {
+    console.error("readPhotos failed", err);
+    await deleteOrphanImages(sellerId, ids);
+    return {
+      ok: false as const,
+      error: "Could not save those photos. Try fewer images, or a stronger connection.",
+    };
   }
   return { ok: true as const, ids };
 }
@@ -795,8 +808,13 @@ async function savePhotoSet(
       await sql`update item_images set position = ${position++}, alt = ${alt}
                 where id = ${p.row} and item_id = ${itemId}`;
     } else {
-      await sql`insert into item_images (item_id, image_id, alt, position)
-                values (${itemId}, ${p.image}, ${alt}, ${position++})`;
+      const urlRows = (await sql`
+        select coalesce(blob_url, '/api/images/' || id::text) as url
+        from images where id = ${p.image}
+      `) as { url: string }[];
+      const url = urlRows[0]?.url ?? `/api/images/${p.image}`;
+      await sql`insert into item_images (item_id, image_id, url, alt, position)
+                values (${itemId}, ${p.image}, ${url}, ${alt}, ${position++})`;
     }
   }
 
@@ -808,81 +826,99 @@ async function savePhotoSet(
   return plan.length;
 }
 
-/** Frees stored photo bytes nothing points at any more. */
+/** Frees Blob objects + image rows nothing points at any more. */
 async function deleteOrphanImages(sellerId: number, imageIds: number[]) {
   if (imageIds.length === 0) return;
-  await sql`
-    delete from images im
-    where im.id = any(${imageIds}::int[]) and im.seller_id = ${sellerId}
-      and im.purpose = 'item'
-      and not exists (select 1 from item_images ii where ii.image_id = im.id)
-  `;
+  const orphans = (await sql.query(
+    `select im.id, im.blob_url
+     from images im
+     where im.id = any($1::int[]) and im.seller_id = $2
+       and im.purpose = 'item'
+       and not exists (select 1 from item_images ii where ii.image_id = im.id)`,
+    [imageIds, sellerId],
+  )) as { id: number; blob_url: string | null }[];
+
+  if (orphans.length === 0) return;
+  await deleteBlobUrls(orphans.map((o) => o.blob_url));
+  await sql.query(
+    `delete from images where id = any($1::int[]) and seller_id = $2`,
+    [orphans.map((o) => o.id), sellerId],
+  );
 }
 
 export async function createListing(_prev: FormState, formData: FormData): Promise<FormState> {
-  const seller = await requireSeller();
+  try {
+    const seller = await requireSeller();
 
-  const parsed = readItemForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const d = parsed.data;
-  if (d.status === "auction") {
-    return { error: "Start an auction from the Auctions tab, not from the status field." };
-  }
+    const parsed = readItemForm(formData);
+    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    const d = parsed.data;
+    if (d.status === "auction") {
+      return { error: "Start an auction from the Auctions tab, not from the status field." };
+    }
 
-  const wantsAuction = text(formData.get("destination")) === "auction";
-  if (wantsAuction && !isSellerVerified(seller)) {
+    const wantsAuction = text(formData.get("destination")) === "auction";
+    if (wantsAuction && !isSellerVerified(seller)) {
+      return {
+        error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+      };
+    }
+    const lot = wantsAuction ? readAuctionFields(formData) : null;
+    if (lot && "error" in lot) return { error: lot.error };
+
+    const flags = await resolveVerifiedListingFlags(seller, d, { wantsAuction });
+    if (!flags.ok) return { error: flags.error };
+
+    const photos = await readPhotos(
+      formData,
+      seller.id,
+      listingPhotoLimit(isSellerVerified(seller)),
+    );
+    if (!photos.ok) return { error: photos.error };
+    if (photos.ids.length === 0) {
+      return { error: "Add at least one photo — nothing sells without one." };
+    }
+
+    const slug = await uniqueSlug(d.title);
+    const rows = (await sql`
+      insert into items (slug, title, description, price_cents, compare_at_cents, category_id,
+                         brand, item_size, condition, color, status, featured, seller_id)
+      values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${flags.compareAt},
+              ${d.category_id}, ${d.brand}, ${d.item_size}, ${d.condition}, ${d.color},
+              ${lot ? "auction" : d.status}, ${flags.featured}, ${seller.id})
+      returning id
+    `) as { id: number }[];
+
+    const id = rows[0].id;
+    await savePhotoSet(id, seller.id, d.title, photos.ids, readPhotoOrder(formData));
+
+    let auctionId: number | null = null;
+    if (lot) {
+      try {
+        auctionId = await insertLiveAuction(seller.id, id, lot);
+      } catch {
+        await sql`update items set status = 'available', updated_at = now()
+                  where id = ${id} and seller_id = ${seller.id}`;
+        return { error: "Could not open the lot. The piece is on the rack instead — try Auctions." };
+      }
+    }
+
+    revalidatePath("/shop");
+    revalidatePath("/");
+    revalidatePath(`/shop/${seller.handle}`);
+    if (auctionId) {
+      revalidatePath("/auctions");
+      redirect(`/auctions/${auctionId}`);
+    }
+    redirect(`/dashboard/items/${id}?saved=1`);
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    console.error("createListing failed", err);
     return {
-      error: "Auctions are a Verified perk — subscribe for $20/mo on Your storefront.",
+      error:
+        "Could not publish that listing. Try fewer photos, wait for them to finish shrinking, then save again.",
     };
   }
-  const lot = wantsAuction ? readAuctionFields(formData) : null;
-  if (lot && "error" in lot) return { error: lot.error };
-
-  const flags = await resolveVerifiedListingFlags(seller, d, { wantsAuction });
-  if (!flags.ok) return { error: flags.error };
-
-  const photos = await readPhotos(
-    formData,
-    seller.id,
-    listingPhotoLimit(isSellerVerified(seller)),
-  );
-  if (!photos.ok) return { error: photos.error };
-  if (photos.ids.length === 0) {
-    return { error: "Add at least one photo — nothing sells without one." };
-  }
-
-  const slug = await uniqueSlug(d.title);
-  const rows = (await sql`
-    insert into items (slug, title, description, price_cents, compare_at_cents, category_id,
-                       brand, item_size, condition, color, status, featured, seller_id)
-    values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${flags.compareAt},
-            ${d.category_id}, ${d.brand}, ${d.item_size}, ${d.condition}, ${d.color},
-            ${lot ? "auction" : d.status}, ${flags.featured}, ${seller.id})
-    returning id
-  `) as { id: number }[];
-
-  const id = rows[0].id;
-  await savePhotoSet(id, seller.id, d.title, photos.ids, readPhotoOrder(formData));
-
-  let auctionId: number | null = null;
-  if (lot) {
-    try {
-      auctionId = await insertLiveAuction(seller.id, id, lot);
-    } catch {
-      await sql`update items set status = 'available', updated_at = now()
-                where id = ${id} and seller_id = ${seller.id}`;
-      return { error: "Could not open the lot. The piece is on the rack instead — try Auctions." };
-    }
-  }
-
-  revalidatePath("/shop");
-  revalidatePath("/");
-  revalidatePath(`/shop/${seller.handle}`);
-  if (auctionId) {
-    revalidatePath("/auctions");
-    redirect(`/auctions/${auctionId}`);
-  }
-  redirect(`/dashboard/items/${id}?saved=1`);
 }
 
 export async function updateListing(_prev: FormState, formData: FormData): Promise<FormState> {

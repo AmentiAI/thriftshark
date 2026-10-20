@@ -1,3 +1,6 @@
+import "server-only";
+import { del, put } from "@vercel/blob";
+import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
 
 /**
@@ -42,13 +45,26 @@ function guessTypeFromName(name: string) {
 export type ImagePurpose = "item" | "logo" | "banner" | "cashapp-qr";
 
 export type UploadResult =
-  | { ok: true; id: number }
+  | { ok: true; id: number; url: string }
   | { ok: false; error: string };
 
+export type StoredImage = {
+  mime: string;
+  byte_size: number;
+  /** Public Vercel Blob URL when stored in Blob. */
+  blob_url: string | null;
+  /** Legacy Postgres bytea — kept for rows uploaded before Blob. */
+  bytes: Buffer | null;
+};
+
+function blobConfigured() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+
 /**
- * Images live in Postgres and are served by /api/images/[id]. That keeps the
- * whole marketplace to one dependency — the database — with no bucket to
- * configure. Swap this module for object storage if volume ever demands it.
+ * Images are stored in Vercel Blob (public). The `images` row keeps metadata
+ * and the blob URL; `/api/images/[id]` redirects to the blob (or serves legacy
+ * Postgres bytes for older rows).
  */
 export async function storeUpload(
   file: File,
@@ -77,19 +93,69 @@ export async function storeUpload(
     };
   }
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const rows = (await sql.query(
-    `insert into images (seller_id, mime, bytes, byte_size, purpose)
-     values ($1, $2, $3, $4, $5) returning id`,
-    [sellerId, type, bytes, bytes.byteLength, purpose],
-  )) as { id: number }[];
+  if (!blobConfigured()) {
+    return {
+      ok: false,
+      error: "Image storage is not configured. Add BLOB_READ_WRITE_TOKEN to the host env.",
+    };
+  }
 
-  return { ok: true, id: rows[0].id };
+  const ext = ALLOWED.get(type) ?? "bin";
+  const pathname = `sellers/${sellerId}/${purpose}/${Date.now()}-${randomBytes(6).toString("hex")}.${ext}`;
+
+  try {
+    const blob = await put(pathname, file, {
+      access: "public",
+      contentType: type,
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
+    const rows = (await sql.query(
+      `insert into images (seller_id, mime, bytes, byte_size, purpose, blob_url)
+       values ($1, $2, NULL, $3, $4, $5) returning id`,
+      [sellerId, type, file.size, purpose, blob.url],
+    )) as { id: number }[];
+
+    return { ok: true, id: rows[0].id, url: blob.url };
+  } catch (err) {
+    console.error("storeUpload blob failed", err);
+    return {
+      ok: false,
+      error: "Could not upload that image. Try again in a moment.",
+    };
+  }
 }
 
-export async function getImage(id: number) {
+export async function getImage(id: number): Promise<StoredImage | null> {
   const rows = (await sql`
-    select mime, bytes, byte_size from images where id = ${id}
-  `) as { mime: string; bytes: Buffer; byte_size: number }[];
+    select mime, bytes, byte_size, blob_url from images where id = ${id}
+  `) as {
+    mime: string;
+    bytes: Buffer | null;
+    byte_size: number;
+    blob_url: string | null;
+  }[];
   return rows[0] ?? null;
+}
+
+/** Public URL for an image id — blob when present, else the local API route. */
+export async function getImagePublicUrl(id: number): Promise<string | null> {
+  const rows = (await sql`
+    select blob_url from images where id = ${id}
+  `) as { blob_url: string | null }[];
+  const row = rows[0];
+  if (!row) return null;
+  return row.blob_url ?? `/api/images/${id}`;
+}
+
+/** Delete Blob objects for image rows that are about to be removed. */
+export async function deleteBlobUrls(urls: (string | null | undefined)[]) {
+  const list = urls.filter((u): u is string => Boolean(u && u.startsWith("http")));
+  if (list.length === 0 || !blobConfigured()) return;
+  try {
+    await del(list, { token: process.env.BLOB_READ_WRITE_TOKEN });
+  } catch (err) {
+    console.error("deleteBlobUrls failed", err);
+  }
 }

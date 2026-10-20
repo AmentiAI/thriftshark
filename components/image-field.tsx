@@ -26,8 +26,12 @@ async function shrink(file: File, maxEdge: number, quality: number): Promise<Fil
     const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
 
     // Already small and already a web format: leave it alone.
-    if (scale === 1 && file.size < 900_000 && file.type.startsWith("image/")
-        && !/heic|heif/.test(file.type)) {
+    if (
+      scale === 1 &&
+      file.size < 400_000 &&
+      file.type.startsWith("image/") &&
+      !/heic|heif/.test(file.type)
+    ) {
       bitmap.close();
       return file;
     }
@@ -46,9 +50,18 @@ async function shrink(file: File, maxEdge: number, quality: number): Promise<Fil
     ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", quality),
-    );
+    // Hosting platforms often reject large Server Action bodies (~4.5MB). Keep
+    // each photo lean so a full set still fits.
+    let q = quality;
+    let blob: Blob | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", q),
+      );
+      if (!blob) break;
+      if (blob.size <= 550_000 || q <= 0.5) break;
+      q = Math.max(0.5, q - 0.12);
+    }
     if (!blob) return file;
 
     const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";

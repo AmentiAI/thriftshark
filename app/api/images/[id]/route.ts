@@ -1,4 +1,5 @@
 import { getImage } from "@/lib/images";
+import { NextResponse } from "next/server";
 
 export async function GET(
   _request: Request,
@@ -13,8 +14,19 @@ export async function GET(
   const image = await getImage(imageId);
   if (!image) return new Response("Not found", { status: 404 });
 
-  // Image rows are never rewritten — a new upload gets a new id — so these can
-  // be cached hard.
+  // Prefer Vercel Blob — permanent CDN URL.
+  if (image.blob_url) {
+    return NextResponse.redirect(image.blob_url, {
+      status: 308,
+      headers: {
+        "cache-control": "public, max-age=31536000, immutable",
+      },
+    });
+  }
+
+  if (!image.bytes) return new Response("Not found", { status: 404 });
+
+  // Legacy Postgres bytea rows.
   return new Response(new Uint8Array(image.bytes), {
     headers: {
       "content-type": image.mime,

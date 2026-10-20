@@ -102,10 +102,12 @@ create table if not exists images (
   id          serial primary key,
   seller_id   int,
   mime        text not null,
-  bytes       bytea not null,
+  -- Legacy in-DB storage. New uploads use blob_url (Vercel Blob) and leave bytes null.
+  bytes       bytea,
   byte_size   int  not null,
   purpose     text not null default 'item'
                 check (purpose in ('item','logo','banner','cashapp-qr')),
+  blob_url    text,
   created_at  timestamptz not null default now()
 );
 
@@ -135,6 +137,15 @@ alter table images add column if not exists seller_id int references sellers(id)
 
 alter table items       add column if not exists seller_id int references sellers(id) on delete cascade;
 alter table item_images add column if not exists image_id  int references images(id)  on delete set null;
+
+-- New uploads store the public Blob URL here; legacy rows may use /api/images/:id.
+alter table images
+  add column if not exists blob_url text,
+  alter column bytes drop not null;
+
+alter table item_images
+  alter column url drop not null,
+  alter column url set default '';
 alter table orders      add column if not exists seller_id int references sellers(id) on delete set null;
 alter table orders      add column if not exists group_token text;
 
