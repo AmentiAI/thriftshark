@@ -75,7 +75,7 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
     };
   }
 
-  // One order per shop, each with its own shipping threshold.
+  // One order per shop, each with its own flat shipping charge.
   const bySeller = new Map<number, typeof items>();
   for (const item of items) {
     const list = bySeller.get(item.seller_id!) ?? [];

@@ -4,7 +4,8 @@ Thrift Sharks uses **Stripe Connect** with **Express** accounts and **direct
 charges**. Buyers pay by card at checkout; money lands in the seller’s Stripe
 account (then their bank). A flat **$5 platform fee** per shop order is charged
 to the buyer and collected as a Stripe `application_fee_amount` — sellers keep
-item price. Sellers arrange and pay for shipping themselves.
+item price plus a flat **$15 shipping** fee (also paid by the buyer; $0 for
+local pickup).
 
 ## How it works in this app
 

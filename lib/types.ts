@@ -328,23 +328,30 @@ export const AUCTION_DURATIONS: { hours: number; label: string }[] = [
   { hours: 168, label: "7 days" },
 ];
 
-/** @deprecated Platform no longer charges shipping — sellers handle it. */
-export const SHIPPING_FLAT_CENTS = 0;
-/** @deprecated Kept for older copy/imports; not used for checkout. */
-export const FREE_SHIPPING_THRESHOLD_CENTS = 0;
+/** Flat shipping charged to the buyer per shop order — settles to the seller. */
+export const SHIPPING_FLAT_CENTS = 1500;
 
 /** Flat platform fee charged to the buyer on every shop order ($5). */
 export const PLATFORM_FEE_CENTS = 500;
 
 /**
- * Checkout shipping charge. Always $0 — sellers arrange and pay for shipping
- * themselves (outside the platform cart).
+ * Shipping for one shop order. $15 when shipping; $0 for local pickup.
+ * Goes to the seller with the item price (not the platform fee).
  */
 export function shippingFor(
   _subtotalCents: number,
-  _fulfilment: "ship" | "pickup",
+  fulfilment: "ship" | "pickup",
 ) {
-  return 0;
+  return fulfilment === "pickup" ? 0 : SHIPPING_FLAT_CENTS;
+}
+
+/** Shipping for a multi-shop bag — $15 per shop when shipping. */
+export function shippingForShopCount(
+  shopCount: number,
+  fulfilment: "ship" | "pickup",
+) {
+  if (shopCount <= 0 || fulfilment === "pickup") return 0;
+  return SHIPPING_FLAT_CENTS * shopCount;
 }
 
 /** Platform fee for a checkout bag — $5 per shop (one Stripe charge each). */

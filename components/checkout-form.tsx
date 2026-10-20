@@ -8,9 +8,10 @@ import { money } from "@/lib/format";
 import { placeOrder, type FormState } from "@/lib/actions";
 import {
   PLATFORM_FEE_CENTS,
+  SHIPPING_FLAT_CENTS,
   imageSrc,
   platformFeeForShopCount,
-  shippingFor,
+  shippingForShopCount,
 } from "@/lib/types";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-faint uppercase";
@@ -20,9 +21,10 @@ export function CheckoutForm() {
   const [fulfilment, setFulfilment] = useState<"ship" | "pickup">("ship");
   const [state, action, pending] = useActionState<FormState, FormData>(placeOrder, null);
 
-  const shipping = shippingFor(subtotal, fulfilment);
   const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
-  const platformFee = platformFeeForShopCount(shopCount || 1);
+  const shops = shopCount || 1;
+  const shipping = shippingForShopCount(shops, fulfilment);
+  const platformFee = platformFeeForShopCount(shops);
   const total = subtotal + shipping + platformFee;
 
   if (loading) {
@@ -83,8 +85,8 @@ export function CheckoutForm() {
           <legend className="font-display text-xl font-bold">How do you want it?</legend>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {[
-              ["ship", "Ship it", "Seller arranges and covers shipping"],
-              ["pickup", "Local pickup", "Coordinate with the seller after checkout"],
+              ["ship", "Ship it", `Flat ${money(SHIPPING_FLAT_CENTS)} per shop — goes to the seller`],
+              ["pickup", "Local pickup", "No shipping charge — coordinate after checkout"],
             ].map(([value, title, note]) => (
               <label
                 key={value}
@@ -190,16 +192,20 @@ export function CheckoutForm() {
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">
-                {fulfilment === "pickup" ? "Pickup" : "Shipping"}
+                {fulfilment === "pickup"
+                  ? "Pickup"
+                  : shops > 1
+                    ? `Shipping (${shops} shops)`
+                    : "Shipping"}
               </dt>
-              <dd className="font-medium text-ink-soft">
-                {fulfilment === "pickup" ? "With seller" : "Seller handles"}
+              <dd className="font-medium">
+                {fulfilment === "pickup" ? "Free" : money(shipping)}
               </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">
                 Platform fee
-                {shopCount > 1 ? ` (${shopCount} shops)` : ""}
+                {shops > 1 ? ` (${shops} shops)` : ""}
               </dt>
               <dd className="font-medium">{money(platformFee)}</dd>
             </div>
@@ -223,9 +229,10 @@ export function CheckoutForm() {
           </button>
 
           <p className="mt-4 text-xs leading-relaxed text-ink-soft">
-            Next you’ll pay by card on Stripe. A {money(PLATFORM_FEE_CENTS)}{" "}
-            platform fee per shop keeps Thrift Sharks running. Sellers receive
-            the item price and are responsible for shipping.
+            Next you’ll pay by card on Stripe. Sellers receive the item price
+            plus shipping ({money(SHIPPING_FLAT_CENTS)} per shop when you ship).
+            A {money(PLATFORM_FEE_CENTS)} platform fee per shop keeps Thrift
+            Sharks running.
           </p>
         </div>
       </aside>

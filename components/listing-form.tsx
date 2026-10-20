@@ -57,6 +57,7 @@ export function ListingForm({
     const src = imageSrc(image);
     return image.id && src ? [{ id: image.id, src }] : [];
   });
+  const overPhotoLimit = existing.length > maxPhotos;
 
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
@@ -80,12 +81,30 @@ export function ListingForm({
             )}
           </p>
 
+          {overPhotoLimit && (
+            <p className="mt-4 rounded-2xl border-l-4 border-coral bg-coral/10 px-3 py-2.5 text-sm">
+              This listing has {existing.length} photos; your plan allows{" "}
+              {maxPhotos}. Remove {existing.length - maxPhotos} to save changes
+              {!canAuction && (
+                <>
+                  {" "}
+                  — or{" "}
+                  <Link href="/dashboard/shop" className="font-semibold underline">
+                    get Verified
+                  </Link>{" "}
+                  for more room
+                </>
+              )}
+              .
+            </p>
+          )}
+
           <div className="mt-5">
             <PhotoSetField
               key={existing.map((e) => e.id).join(",")}
               name="photos"
               existing={existing}
-              max={maxPhotos}
+              max={Math.max(maxPhotos, existing.length)}
               maxEdge={1200}
               quality={0.72}
             />
@@ -437,7 +456,13 @@ export function ListingForm({
           )}
 
           <button disabled={pending} className="btn btn-lime sheen mt-5 w-full">
-            {pending ? "Saving…" : editing ? "Save changes" : auctioning ? "Open the lot" : "Put it on the rack"}
+            {pending
+              ? "Saving…"
+              : editing
+                ? "Save changes"
+                : auctioning
+                  ? "Open the lot"
+                  : "Put it on the rack"}
           </button>
 
           {item && item.status === "available" && (

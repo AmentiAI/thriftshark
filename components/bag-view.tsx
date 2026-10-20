@@ -9,7 +9,7 @@ import {
   conditionLabel,
   imageSrc,
   platformFeeForShopCount,
-  shippingFor,
+  shippingForShopCount,
   type Item,
 } from "@/lib/types";
 
@@ -57,9 +57,10 @@ export function useBagItems() {
 
 export function BagView() {
   const { items, available, unavailable, subtotal, remove, loading } = useBagItems();
-  const shipping = shippingFor(subtotal, "ship");
   const shopCount = new Set(available.map((i) => i.seller_id).filter(Boolean)).size;
-  const platformFee = platformFeeForShopCount(shopCount || (available.length > 0 ? 1 : 0));
+  const shops = shopCount || (available.length > 0 ? 1 : 0);
+  const shipping = shippingForShopCount(shops, "ship");
+  const platformFee = platformFeeForShopCount(shops);
 
   if (loading) {
     return <p className="py-20 text-center text-ink-faint">Opening your bag…</p>;
@@ -143,13 +144,16 @@ export function BagView() {
               <dd className="font-medium">{money(subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-ink-soft">Shipping</dt>
-              <dd className="font-medium text-ink-soft">Seller handles</dd>
+              <dt className="text-ink-soft">
+                Shipping
+                {shops > 1 ? ` (${shops} shops)` : ""}
+              </dt>
+              <dd className="font-medium">{money(shipping)}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-ink-soft">
                 Platform fee
-                {shopCount > 1 ? ` (${shopCount} shops)` : ""}
+                {shops > 1 ? ` (${shops} shops)` : ""}
               </dt>
               <dd className="font-medium">{money(platformFee)}</dd>
             </div>
@@ -160,7 +164,7 @@ export function BagView() {
           </dl>
 
           <p className="mt-4 text-xs leading-relaxed text-ink-faint">
-            Sellers arrange and pay for shipping after you check out.
+            Flat $15 shipping per shop goes to the seller.
           </p>
 
           {unavailable.length > 0 && (

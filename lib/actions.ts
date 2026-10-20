@@ -29,6 +29,7 @@ import {
 import { stripeConfigured } from "@/lib/stripe";
 import {
   FREE_MAX_LIVE_LISTINGS,
+  VERIFIED_LISTING_PHOTOS,
   VERIFIED_SPOTLIGHT_CAP,
   isSellerVerified,
   listingPhotoLimit,
@@ -420,9 +421,15 @@ async function countSpotlights(sellerId: number, exceptItemId?: number) {
 }
 
 async function resolveVerifiedListingFlags(
-  seller: { id: number; subscription_status?: string | null },
+  seller: { id: number; subscription_status?: string | null; official?: boolean | null },
   d: { compare_at_cents: number | null; featured: boolean; status: string },
-  opts: { wantsAuction: boolean; exceptItemId?: number; previousStatus?: string },
+  opts: {
+    wantsAuction: boolean;
+    exceptItemId?: number;
+    previousStatus?: string;
+    /** Already pinned — keep it without counting against the cap again. */
+    previousFeatured?: boolean;
+  },
 ): Promise<{ ok: true; compareAt: number | null; featured: boolean } | { ok: false; error: string }> {
   const verified = isSellerVerified(seller);
   const compareAt = verified ? d.compare_at_cents : null;
@@ -435,12 +442,15 @@ async function resolveVerifiedListingFlags(
         error: "Spotlight listings are a Verified perk — subscribe on Your storefront.",
       };
     }
-    const used = await countSpotlights(seller.id, opts.exceptItemId);
-    if (used >= VERIFIED_SPOTLIGHT_CAP) {
-      return {
-        ok: false,
-        error: `Verified shops can spotlight up to ${VERIFIED_SPOTLIGHT_CAP} live listings.`,
-      };
+    const keepingPin = Boolean(opts.previousFeatured);
+    if (!keepingPin) {
+      const used = await countSpotlights(seller.id, opts.exceptItemId);
+      if (used >= VERIFIED_SPOTLIGHT_CAP) {
+        return {
+          ok: false,
+          error: `Verified shops can spotlight up to ${VERIFIED_SPOTLIGHT_CAP} live listings.`,
+        };
+      }
     }
     featured = true;
   }
@@ -756,7 +766,7 @@ function readPhotoOrder(formData: FormData) {
     const m = /^([en]):(\d{1,9})$/.exec(part.trim());
     if (m) tokens.push({ kind: m[1] as "e" | "n", n: Number(m[2]) });
   }
-  return tokens.slice(0, 10);
+  return tokens.slice(0, VERIFIED_LISTING_PHOTOS);
 }
 
 /**
@@ -922,73 +932,85 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
 }
 
 export async function updateListing(_prev: FormState, formData: FormData): Promise<FormState> {
-  const seller = await requireSeller();
-  const id = Number(text(formData.get("id")));
-  if (!Number.isInteger(id) || id <= 0) return { error: "Unknown listing." };
+  try {
+    const seller = await requireSeller();
+    const id = Number(text(formData.get("id")));
+    if (!Number.isInteger(id) || id <= 0) return { error: "Unknown listing." };
 
-  // Ownership is checked in the statement itself, not just in the page.
-  const owned = (await sql`
-    select status from items where id = ${id} and seller_id = ${seller.id}
-  `) as { status: string }[];
-  if (owned.length === 0) return { error: "That listing is not yours." };
+    // Ownership is checked in the statement itself, not just in the page.
+    const owned = (await sql`
+      select status, featured from items where id = ${id} and seller_id = ${seller.id}
+    `) as { status: string; featured: boolean }[];
+    if (owned.length === 0) return { error: "That listing is not yours." };
 
-  const parsed = readItemForm(formData);
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const d = parsed.data;
+    const parsed = readItemForm(formData);
+    if (!parsed.success) return { error: parsed.error.issues[0].message };
+    const d = parsed.data;
 
-  // Mid-auction, the lot owns the status: keep whatever it already is.
-  const onBlock = owned[0].status === "auction";
-  const status = onBlock ? "auction" : d.status === "auction" ? "available" : d.status;
+    // Mid-auction, the lot owns the status: keep whatever it already is.
+    const onBlock = owned[0].status === "auction";
+    const status = onBlock ? "auction" : d.status === "auction" ? "available" : d.status;
 
-  const flags = await resolveVerifiedListingFlags(
-    seller,
-    { ...d, status },
-    {
-      wantsAuction: false,
-      exceptItemId: id,
-      previousStatus: owned[0].status,
-    },
-  );
-  if (!flags.ok) return { error: flags.error };
+    const flags = await resolveVerifiedListingFlags(
+      seller,
+      { ...d, status },
+      {
+        wantsAuction: false,
+        exceptItemId: id,
+        previousStatus: owned[0].status,
+        previousFeatured: Boolean(owned[0].featured),
+      },
+    );
+    if (!flags.ok) return { error: flags.error };
 
-  const maxPhotos = listingPhotoLimit(isSellerVerified(seller));
-  const order = readPhotoOrder(formData);
-  if (order && order.length === 0) {
-    return { error: "Keep at least one photo — nothing sells without one." };
-  }
-  if (order && order.length > maxPhotos) {
+    const maxPhotos = listingPhotoLimit(isSellerVerified(seller));
+    const order = readPhotoOrder(formData);
+    if (order && order.length === 0) {
+      return { error: "Keep at least one photo — nothing sells without one." };
+    }
+    if (order && order.length > maxPhotos) {
+      const excess = order.length - maxPhotos;
+      return {
+        error: isSellerVerified(seller)
+          ? `Keep it to ${maxPhotos} photos per listing.`
+          : `Remove ${excess} photo${excess === 1 ? "" : "s"} to save — free shops get ${maxPhotos} (Verified unlocks more).`,
+      };
+    }
+    const photos = await readPhotos(formData, seller.id, maxPhotos);
+    if (!photos.ok) return { error: photos.error };
+
+    // Photos first so a failed set does not leave metadata half-saved.
+    const kept = await savePhotoSet(id, seller.id, d.title, photos.ids, order);
+    if (kept === 0) {
+      return { error: "Keep at least one photo — nothing sells without one." };
+    }
+
+    const slug = await uniqueSlug(d.title, id);
+    await sql`
+      update items set
+        slug = ${slug}, title = ${d.title}, description = ${d.description},
+        price_cents = ${d.price_cents}, compare_at_cents = ${flags.compareAt},
+        category_id = ${d.category_id}, brand = ${d.brand}, item_size = ${d.item_size},
+        condition = ${d.condition}, color = ${d.color}, status = ${status},
+        featured = ${flags.featured},
+        updated_at = now()
+      where id = ${id} and seller_id = ${seller.id}
+    `;
+
+    revalidatePath("/shop");
+    revalidatePath("/");
+    revalidatePath(`/shop/${seller.handle}`);
+    revalidatePath(`/item/${slug}`);
+    revalidatePath(`/dashboard/items/${id}`);
+    return { ok: "Listing saved." };
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
+    console.error("updateListing failed", err);
     return {
-      error: isSellerVerified(seller)
-        ? `Keep it to ${maxPhotos} photos per listing.`
-        : `Free shops get ${maxPhotos} photos — Verified unlocks more.`,
+      error:
+        "Could not save that listing. Try fewer photos, wait for them to finish shrinking, then save again.",
     };
   }
-  const photos = await readPhotos(formData, seller.id, maxPhotos);
-  if (!photos.ok) return { error: photos.error };
-
-  const slug = await uniqueSlug(d.title, id);
-  await sql`
-    update items set
-      slug = ${slug}, title = ${d.title}, description = ${d.description},
-      price_cents = ${d.price_cents}, compare_at_cents = ${flags.compareAt},
-      category_id = ${d.category_id}, brand = ${d.brand}, item_size = ${d.item_size},
-      condition = ${d.condition}, color = ${d.color}, status = ${status},
-      featured = ${flags.featured},
-      updated_at = now()
-    where id = ${id} and seller_id = ${seller.id}
-  `;
-
-  const kept = await savePhotoSet(id, seller.id, d.title, photos.ids, order);
-  if (kept === 0) {
-    return { error: "Keep at least one photo — nothing sells without one." };
-  }
-
-  revalidatePath("/shop");
-  revalidatePath("/");
-  revalidatePath(`/shop/${seller.handle}`);
-  revalidatePath(`/item/${slug}`);
-  revalidatePath(`/dashboard/items/${id}`);
-  return { ok: "Listing saved." };
 }
 
 export async function deleteListing(formData: FormData) {

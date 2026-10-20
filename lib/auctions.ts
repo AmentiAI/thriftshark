@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
-import { PLATFORM_FEE_CENTS } from "@/lib/types";
+import { PLATFORM_FEE_CENTS, SHIPPING_FLAT_CENTS } from "@/lib/types";
 import type { Auction } from "@/lib/types";
 
 const AUCTION_COLUMNS = `
@@ -88,9 +88,9 @@ export async function settleDueAuctions(auctionId?: number) {
            subtotal_cents, shipping_cents, platform_fee_cents, total_cents, fulfilment, notes)
          select $2, w.seller_id, $3, w.bidder_email, w.bidder_name,
                 w.amount_cents,
-                0,
+                $5::int,
                 $4::int,
-                w.amount_cents + $4::int,
+                w.amount_cents + $4::int + $5::int,
                 'ship',
                 'Auction win — seller ships; buyer still needs to confirm address.'
          from winner w
@@ -118,7 +118,13 @@ export async function settleDueAuctions(auctionId?: number) {
          order_id = (select id from new_order),
          settled_at = now()
        where id = (select id from due)`,
-      [id, orderNumber(), randomBytes(9).toString("base64url"), PLATFORM_FEE_CENTS],
+      [
+        id,
+        orderNumber(),
+        randomBytes(9).toString("base64url"),
+        PLATFORM_FEE_CENTS,
+        SHIPPING_FLAT_CENTS,
+      ],
     );
   }
 

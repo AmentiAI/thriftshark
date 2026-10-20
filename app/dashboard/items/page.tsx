@@ -114,6 +114,13 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
                   {money(item.price_cents)}
                 </p>
 
+                <Link
+                  href={`/dashboard/items/${item.id}`}
+                  className="btn btn-ghost !px-3.5 !py-2 text-xs"
+                >
+                  Edit
+                </Link>
+
                 {item.status === "auction" ? (
                   <Link
                     href="/dashboard/auctions"

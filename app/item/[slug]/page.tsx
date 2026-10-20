@@ -86,7 +86,7 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           </div>
 
           <p className="mt-2 text-sm text-ink-faint">
-            Shipping arranged by the seller
+            + $15 flat shipping to the seller at checkout
           </p>
 
           {item.seller_handle && (

@@ -100,7 +100,9 @@ export default async function DashboardOrdersPage() {
                   <dt className="font-bold tracking-wide text-ink-faint uppercase">Shipping</dt>
                   <dd className="mt-0.5">
                     {order.shipping_cents === 0
-                      ? "Seller handles"
+                      ? order.fulfilment === "pickup"
+                        ? "Pickup"
+                        : "—"
                       : money(order.shipping_cents)}
                   </dd>
                 </div>
@@ -118,8 +120,8 @@ export default async function DashboardOrdersPage() {
                 </div>
               </dl>
               <p className="mt-2 text-xs text-ink-faint">
-                You receive the item price; you handle shipping. The platform fee
-                goes to Thrift Sharks.
+                You receive the item price plus shipping. The platform fee goes
+                to Thrift Sharks.
               </p>
 
               {order.fulfilment === "ship" && (

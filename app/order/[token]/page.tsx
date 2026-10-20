@@ -141,7 +141,9 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
                       </dt>
                       <dd>
                         {order.shipping_cents === 0
-                          ? "Seller handles"
+                          ? order.fulfilment === "pickup"
+                            ? "Pickup"
+                            : "—"
                           : money(order.shipping_cents)}
                       </dd>
                     </div>
