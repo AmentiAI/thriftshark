@@ -4,14 +4,8 @@ import { ItemCard } from "@/components/item-card";
 import { AuctionCard } from "@/components/auction-card";
 import { ShopsCarousel } from "@/components/shops-carousel";
 import { TopShopsWidget } from "@/components/top-shops-widget";
-import { WeeklyGiveawayWidget } from "@/components/weekly-giveaway-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
-import { currentBuyer, isBuyerVerified } from "@/lib/buyer-account";
-import {
-  ensureCurrentGiveaway,
-  sellerEnteredGiveaway,
-} from "@/lib/giveaways";
 import {
   getCategories,
   getCategoryCounts,
@@ -21,8 +15,6 @@ import {
   listSellers,
   marketplaceStats,
 } from "@/lib/queries";
-import { currentSeller } from "@/lib/seller-auth";
-
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
@@ -35,9 +27,6 @@ export default async function HomePage() {
     weeklyTop,
     stats,
     auctions,
-    giveaway,
-    seller,
-    buyer,
   ] = await Promise.all([
     getFeaturedItems(8),
     getLatestItems(12),
@@ -47,15 +36,7 @@ export default async function HomePage() {
     getWeeklyTopShops(5),
     marketplaceStats(),
     liveAuctions(4),
-    ensureCurrentGiveaway(),
-    currentSeller(),
-    currentBuyer(),
   ]);
-
-  const giveawayEntered = seller
-    ? await sellerEnteredGiveaway(giveaway.id, seller.id)
-    : Boolean(buyer && isBuyerVerified(buyer));
-  const giveawayAccount = seller ? "shop" : buyer ? "buyer" : "guest";
 
   const trending = featured.length > 0 ? featured : latest.slice(0, 8);
   const fresh = latest.slice(0, 12);
@@ -224,14 +205,8 @@ export default async function HomePage() {
 
       <section className="border-t border-line">
         <div className="wrap py-10 sm:py-12">
-          <div className="grid gap-6 sm:grid-cols-2 lg:max-w-3xl">
+          <div className="max-w-md">
             <TopShopsWidget shops={weeklyTop.shops} weekStart={weeklyTop.weekStart} />
-            <WeeklyGiveawayWidget
-              giveaway={giveaway}
-              alreadyEntered={giveawayEntered}
-              account={giveawayAccount}
-              buyerVerified={Boolean(buyer && isBuyerVerified(buyer))}
-            />
           </div>
         </div>
       </section>

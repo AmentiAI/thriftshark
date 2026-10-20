@@ -1,18 +1,24 @@
 import { SiteNav } from "@/components/site-nav";
 import { currentBuyer, isBuyerVerified } from "@/lib/buyer-account";
+import { ensureCurrentGiveaway, sellerEnteredGiveaway } from "@/lib/giveaways";
 import { currentSeller } from "@/lib/seller-auth";
 import { getCategories } from "@/lib/queries";
 import { remindExpiringVerified } from "@/lib/verified-pass";
 
 export async function SiteHeader() {
-  const [categories, seller, buyer] = await Promise.all([
+  const [categories, seller, buyer, giveaway] = await Promise.all([
     getCategories(),
     currentSeller(),
     currentBuyer(),
+    ensureCurrentGiveaway(),
     remindExpiringVerified().catch((err) => {
       console.error("verified reminder failed", err);
     }),
   ]);
+
+  const alreadyEntered = seller
+    ? await sellerEnteredGiveaway(giveaway.id, seller.id)
+    : Boolean(buyer && isBuyerVerified(buyer));
 
   return (
     <SiteNav
@@ -31,6 +37,12 @@ export async function SiteHeader() {
           ? null
           : { name: buyer.name, verified: isBuyerVerified(buyer) }
       }
+      giveaway={{
+        giveaway,
+        alreadyEntered,
+        account: seller ? "shop" : buyer ? "buyer" : "guest",
+        buyerVerified: Boolean(buyer && isBuyerVerified(buyer)),
+      }}
     />
   );
 }

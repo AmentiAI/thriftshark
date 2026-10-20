@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 const PERKS = [
   ["Buyer or store", "Shop with an account, or open your own storefront."],
-  ["Verified is $10", "30 days: green check, giveaways, no platform fee."],
-  ["Stores are free", "No listing fee. Connect Stripe and get paid."],
-  ["Checkout needs an account", "Sign in before you pay."],
+  ["Buyer Verified is $10", "30 days: green check, giveaways, no platform fee."],
+  ["Seller Verified is $20", "30 days: shop badge, giveaways, no platform fee when you buy."],
+  ["Stores are free to open", "Seller Verified is optional. Connect Stripe and get paid."],
 ];
 
 export default async function SignupPage() {
@@ -30,8 +30,8 @@ export default async function SignupPage() {
           Buyer or store
         </h1>
         <p className="mt-3 max-w-md text-ink-soft">
-          Everyone checks out with an account. Buyers can go Verified for $10 a
-          month. Stores are free to open.
+          Everyone checks out with an account. Buyer Verified is $10 for 30 days
+          (green check). Seller Verified is $20 for 30 days. Stores are free to open.
         </p>
         <dl className="mt-8 space-y-4">
           {PERKS.map(([title, body], i) => (

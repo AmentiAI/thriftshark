@@ -6,8 +6,10 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { BagCount } from "@/components/bag-count";
 import { BuyerCheck } from "@/components/buyer-check";
+import { GiveawayNav } from "@/components/giveaway-nav";
 import { Wordmark } from "@/components/logo";
 import { ShopAvatar } from "@/components/shop-avatar";
+import type { WeeklyGiveaway } from "@/lib/types";
 
 const NAV = [
   { href: "/shop", label: "Shop" },
@@ -92,17 +94,27 @@ export type NavBuyer = {
   verified: boolean;
 };
 
+export type NavGiveaway = {
+  giveaway: WeeklyGiveaway;
+  alreadyEntered: boolean;
+  account: "guest" | "shop" | "buyer";
+  buyerVerified: boolean;
+};
+
 export function SiteNav({
   categories,
   seller,
   buyer,
+  giveaway,
 }: {
   categories: { slug: string; name: string }[];
   seller: NavSeller | null;
   buyer?: NavBuyer | null;
+  giveaway?: NavGiveaway | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [giveawayOpen, setGiveawayOpen] = useState(false);
   const loop = [...TICKER, ...TICKER];
 
   return (
@@ -121,7 +133,7 @@ export function SiteNav({
       </div>
 
       <div className="border-b border-white/10 bg-black text-white">
-        <div className="wrap flex h-14 items-center gap-3 sm:h-[4.25rem] sm:gap-5">
+        <div className="wrap relative flex h-14 items-center gap-3 sm:h-[4.25rem] sm:gap-5">
           <Link href="/" className="shrink-0" aria-label="Thrift Sharks home" onClick={() => setOpen(false)}>
             <Wordmark className="h-9 w-auto sm:h-11" />
           </Link>
@@ -149,6 +161,19 @@ export function SiteNav({
           </Form>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            {giveaway && (
+              <GiveawayNav
+                giveaway={giveaway.giveaway}
+                alreadyEntered={giveaway.alreadyEntered}
+                account={giveaway.account}
+                buyerVerified={giveaway.buyerVerified}
+                open={giveawayOpen}
+                onToggle={() => {
+                  setOpen(false);
+                  setGiveawayOpen((v) => !v);
+                }}
+              />
+            )}
             <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
               {NAV.map((link) => {
                 const isActive =
@@ -204,7 +229,7 @@ export function SiteNav({
                   href="/signup"
                   className="btn !hidden !bg-white !px-3.5 !py-2 text-sm !text-black hover:!bg-white/90 sm:!inline-flex"
                 >
-                  Sell now
+                  Create account
                 </Link>
                 <Link
                   href="/login"
@@ -224,7 +249,10 @@ export function SiteNav({
             </Link>
 
             <button
-              onClick={() => setOpen((v) => !v)}
+              onClick={() => {
+                setGiveawayOpen(false);
+                setOpen((v) => !v);
+              }}
               aria-expanded={open}
               aria-label="Toggle menu"
               className="grid h-10 w-10 place-items-center rounded-full text-white lg:hidden"
