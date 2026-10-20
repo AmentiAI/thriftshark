@@ -63,6 +63,9 @@ export function AuctionCard({ auction, priority = false }: { auction: Auction; p
             </span>
           </p>
         </div>
+        {auction.item_size && (
+          <p className="mt-1 truncate text-xs text-ink-faint">Size {auction.item_size}</p>
+        )}
         {live && (
           <p className="mt-1 text-[11px] text-ink-faint">Next {money(minimumBid(auction))}</p>
         )}

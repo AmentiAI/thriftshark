@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { isFresh, money } from "@/lib/format";
-import { conditionLabel, imageSrc, type Item } from "@/lib/types";
+import { imageSrc, type Item } from "@/lib/types";
 
 export function ItemCard({ item, priority = false }: { item: Item; priority?: boolean }) {
   const image = item.images?.[0];
@@ -62,11 +62,12 @@ export function ItemCard({ item, priority = false }: { item: Item; priority?: bo
           {item.title}
         </h3>
         <p className="mt-1 truncate text-xs text-ink-faint">
-          {item.seller_handle
-            ? `@${item.seller_handle}`
-            : [item.brand, item.item_size && `Sz ${item.item_size}`, conditionLabel(item.condition)]
-                .filter(Boolean)
-                .join(" · ") || "—"}
+          {[
+            item.item_size && `Size ${item.item_size}`,
+            item.seller_handle ? `@${item.seller_handle}` : item.brand,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "—"}
         </p>
       </div>
     </Link>
