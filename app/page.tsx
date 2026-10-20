@@ -41,23 +41,20 @@ export default async function HomePage() {
         <h1 className="sr-only">
           Thrift Sharks — buy and sell one-of-one secondhand
         </h1>
-        <div className="wrap py-5 sm:py-6">
+        <div className="py-3 sm:wrap sm:py-6">
           <Image
             src="/hero-banner.jpg"
             alt="Thrift Sharks — streetwear, sneakers, and luxury finds"
             width={1024}
             height={244}
             priority
-            sizes="(min-width: 72rem) 72rem, 100vw"
-            className="mx-auto h-auto w-full max-w-5xl rounded-xl sm:max-w-6xl"
+            sizes="100vw"
+            className="mx-auto h-auto w-full sm:max-w-6xl sm:rounded-xl"
           />
-          <div className="mx-auto mt-3 flex max-w-5xl flex-col gap-3 sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between">
+          <div className="wrap mt-3 flex flex-col gap-3 sm:mx-auto sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between sm:px-0">
             <p className="text-xs text-ink-soft sm:text-sm">
-              One-of-one pieces from independent sellers
-              {stats.shops > 0
-                ? ` — ${stats.shops} ${stats.shops === 1 ? "shop" : "shops"} on the platform`
-                : ""}
-              . Secure checkout with Stripe.
+              A marketplace for unique secondhand — buy from independent shops,
+              check out securely with Stripe.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">
