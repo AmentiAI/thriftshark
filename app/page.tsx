@@ -53,9 +53,11 @@ export default async function HomePage() {
           />
           <div className="mx-auto mt-3 flex max-w-5xl flex-col gap-3 sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-ink-soft sm:text-sm">
-              Independent shops. One-of-one pieces.
-              {stats.shops > 0 ? ` ${stats.shops} shops live.` : ""} Paid securely
-              through Stripe.
+              One-of-one pieces from independent sellers
+              {stats.shops > 0
+                ? ` — ${stats.shops} ${stats.shops === 1 ? "shop" : "shops"} on the platform`
+                : ""}
+              . Secure checkout with Stripe.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">

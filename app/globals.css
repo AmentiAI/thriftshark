@@ -315,13 +315,14 @@
   display: flex;
   width: max-content;
   animation: marquee-left var(--marquee-duration, 42s) linear infinite;
+  will-change: transform;
 }
 
 .marquee-track-reverse {
   animation-name: marquee-right;
 }
 
-.marquee:hover .marquee-track {
+.marquee-pause-hover:hover .marquee-track {
   animation-play-state: paused;
 }
 

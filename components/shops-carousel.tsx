@@ -5,12 +5,20 @@ import { Marquee } from "@/components/motion/marquee";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { focalStyle, type SellerCard } from "@/lib/types";
 
-/** Seamless shop rail — loops without a hard reset. */
+/** Seamless shop rail — continuous loop, never pauses or jumps. */
 export function ShopsCarousel({ sellers }: { sellers: SellerCard[] }) {
   if (sellers.length === 0) return null;
 
+  // Enough tiles that one half of the track is wider than a typical viewport.
+  const minItems = Math.max(16, sellers.length * 4);
+
   return (
-    <Marquee speed={48} gap="gap-3 sm:gap-4" minItems={Math.max(8, sellers.length)}>
+    <Marquee
+      speed={55}
+      gap="gap-3 sm:gap-4"
+      minItems={minItems}
+      pauseOnHover={false}
+    >
       {sellers.map((seller) => (
         <Link
           key={seller.id}

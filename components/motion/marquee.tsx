@@ -3,9 +3,9 @@
 import { Children, cloneElement, isValidElement } from "react";
 
 /**
- * Seamless infinite scroller. Children are padded so a short set still fills
- * the track, then rendered twice; the track slides exactly 50% so the loop
- * has no visible seam. Pauses on hover.
+ * Seamless infinite scroller. Children are padded, then laid out twice in one
+ * flex row with uniform gaps. The track slides exactly 50%, so the loop has
+ * no visible seam and never hard-resets.
  */
 export function Marquee({
   children,
@@ -14,6 +14,7 @@ export function Marquee({
   className = "",
   gap = "gap-5",
   minItems = 8,
+  pauseOnHover = true,
 }: {
   children: React.ReactNode;
   speed?: number;
@@ -22,25 +23,36 @@ export function Marquee({
   gap?: string;
   /** Pad short lists so the loop stays wide enough to look continuous. */
   minItems?: number;
+  /** Shops rail sets false so motion never stops. */
+  pauseOnHover?: boolean;
 }) {
   const items = Children.toArray(children);
   const sequence = padSequence(items, minItems);
 
   return (
-    <div className={`marquee ${className}`}>
+    <div
+      className={`marquee ${pauseOnHover ? "marquee-pause-hover" : ""} ${className}`}
+    >
       <div
-        className={`marquee-track ${reverse ? "marquee-track-reverse" : ""} ${gap}`}
+        className={`marquee-track ${gap} ${reverse ? "marquee-track-reverse" : ""}`}
         style={{ "--marquee-duration": `${speed}s` } as React.CSSProperties}
       >
-        {[0, 1].map((copy) => (
-          <div key={copy} className={`flex shrink-0 ${gap}`} aria-hidden={copy === 1}>
-            {sequence.map((node, i) =>
-              isValidElement(node)
-                ? cloneElement(node, { key: `${copy}-${i}` })
-                : node,
-            )}
-          </div>
-        ))}
+        {[0, 1].flatMap((copy) =>
+          sequence.map((node, i) => {
+            const key = `${copy}-${i}`;
+            if (isValidElement(node)) {
+              return cloneElement(node, {
+                key,
+                "aria-hidden": copy === 1 ? true : undefined,
+              } as Record<string, unknown>);
+            }
+            return (
+              <span key={key} aria-hidden={copy === 1 || undefined}>
+                {node}
+              </span>
+            );
+          }),
+        )}
       </div>
     </div>
   );
