@@ -1108,6 +1108,29 @@ export async function toggleSellerFeatured(formData: FormData) {
   revalidatePath("/");
 }
 
+/** Admin-granted Verified (sellers.official) — same perks as the $20/mo plan. */
+export async function toggleSellerOfficial(formData: FormData) {
+  await requireAdmin();
+  const id = Number(text(formData.get("id")));
+  if (!Number.isInteger(id) || id <= 0) return;
+
+  const rows = (await sql`
+    update sellers set official = not official, updated_at = now()
+    where id = ${id}
+    returning handle, official
+  `) as { handle: string; official: boolean }[];
+
+  const updated = rows[0];
+  revalidatePath("/admin/sellers");
+  revalidatePath("/sellers");
+  revalidatePath("/");
+  if (updated?.handle) {
+    revalidatePath(`/shop/${updated.handle}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/shop");
+  }
+}
+
 /* ---------- auction house ---------- */
 
 const auctionSchema = z.object({
