@@ -139,7 +139,7 @@ export function SignupForm() {
 
       <p className="rounded-2xl bg-paper-dim px-4 py-3 text-xs leading-relaxed text-ink-soft">
         {store
-          ? "Stores are free to open. Seller Verified is $20 for 30 days: the shop badge, weekly giveaway entry, and no platform fee when you buy. Connect Stripe so buyers can pay you."
+          ? "Stores are free to open. Stripe checks your photo ID before the shop can sell. Seller Verified is $20 for 30 days. Connect Stripe so buyers can pay you."
           : "A buyer account is free. Buyer Verified is $10 for 30 days: a green check, weekly giveaway entry, and no platform fee. Seller Verified is $20 if you open a store."}
       </p>
 

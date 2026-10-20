@@ -44,6 +44,10 @@ export type Seller = {
   verified_reminded_for: string | null;
   /** Platform shop — Verified without a paid plan. */
   official: boolean;
+  /** Stripe Identity: required until the document check passes. */
+  identity_status: "required" | "pending" | "verified" | "failed";
+  identity_session_id: string | null;
+  identity_verified_at: string | null;
   status: "active" | "suspended";
   featured: boolean;
   created_at: string;

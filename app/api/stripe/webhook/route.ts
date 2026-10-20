@@ -12,6 +12,7 @@ import {
   syncSellerSubscription,
   syncSellerSubscriptionFromCheckout,
 } from "@/lib/stripe-billing";
+import { syncSellerIdentitySession } from "@/lib/stripe-identity";
 
 export const runtime = "nodejs";
 
@@ -112,8 +113,14 @@ export async function POST(request: Request) {
         break;
       }
 
-      default:
+      default: {
+        if (event.type.startsWith("identity.verification_session.")) {
+          await syncSellerIdentitySession(
+            event.data.object as Stripe.Identity.VerificationSession,
+          );
+        }
         break;
+      }
     }
   } catch (err) {
     console.error("stripe webhook handler failed", event.type, err);

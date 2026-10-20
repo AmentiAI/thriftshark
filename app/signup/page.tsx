@@ -15,7 +15,7 @@ const PERKS = [
   ["Buyer or store", "Shop with an account, or open your own storefront."],
   ["Buyer Verified is $10", "30 days: green check, giveaways, no platform fee."],
   ["Seller Verified is $20", "30 days: shop badge, giveaways, no platform fee when you buy."],
-  ["Stores are free to open", "Seller Verified is optional. Connect Stripe and get paid."],
+  ["Stores need an ID check", "Stripe checks a photo ID before a new shop can sell."],
 ];
 
 export default async function SignupPage() {

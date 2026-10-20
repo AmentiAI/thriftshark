@@ -34,6 +34,16 @@ Local webhook forwarding (Connect events need both flags):
 stripe listen --forward-to localhost:3001/api/stripe/webhook --forward-connect-to localhost:3001/api/stripe/webhook
 ```
 
+## Seller ID check
+
+New shops start with `identity_status = required`. Signup sends them to a
+Stripe Identity document check (photo ID and a matching selfie). Listings stay
+drafts until the webhook, or the return from Stripe, sets `verified`. Shops
+that already existed stay verified. Connect onboarding is still required
+before payouts.
+
+Webhook events: `identity.verification_session.*`.
+
 ## Verified pass ($20 / 30 days)
 
 Optional one-time charge on the **platform** Stripe account (not Connect).

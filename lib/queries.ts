@@ -680,3 +680,82 @@ export async function adminStats() {
   }[];
   return rows[0];
 }
+
+export type AdminOrderPayment = {
+  id: number;
+  order_number: string;
+  created_at: string;
+  payment_status: string;
+  email: string;
+  customer_name: string;
+  subtotal_cents: number;
+  shipping_cents: number;
+  platform_fee_cents: number;
+  total_cents: number;
+  shop_name: string | null;
+  handle: string | null;
+};
+
+export type AdminPassPayment = {
+  id: number;
+  created_at: string;
+  stripe_session_id: string;
+  who: string;
+  email: string;
+  kind: "seller" | "buyer";
+};
+
+export async function adminPaymentSummary() {
+  const rows = (await sql`
+    select
+      coalesce(sum(total_cents) filter (where payment_status = 'paid'), 0)::int as paid_gmv_cents,
+      coalesce(sum(platform_fee_cents) filter (where payment_status = 'paid'), 0)::int as platform_fee_cents,
+      coalesce(sum(shipping_cents) filter (where payment_status = 'paid'), 0)::int as shipping_cents,
+      count(*) filter (where payment_status = 'paid')::int as paid_orders,
+      count(*) filter (where payment_status = 'pending')::int as pending_orders,
+      (select count(*)::int from verified_payments) as seller_passes,
+      (select count(*)::int from buyer_verified_payments) as buyer_passes
+    from orders
+  `) as {
+    paid_gmv_cents: number;
+    platform_fee_cents: number;
+    shipping_cents: number;
+    paid_orders: number;
+    pending_orders: number;
+    seller_passes: number;
+    buyer_passes: number;
+  }[];
+  return rows[0];
+}
+
+export async function adminOrderPayments(): Promise<AdminOrderPayment[]> {
+  return (await sql`
+    select o.id, o.order_number, o.created_at, o.payment_status, o.email, o.customer_name,
+      o.subtotal_cents, o.shipping_cents, o.platform_fee_cents, o.total_cents,
+      s.shop_name, s.handle
+    from orders o
+    left join sellers s on s.id = o.seller_id
+    order by o.created_at desc
+    limit 150
+  `) as AdminOrderPayment[];
+}
+
+export async function adminPassPayments(): Promise<AdminPassPayment[]> {
+  const sellers = (await sql`
+    select p.id, p.created_at, p.stripe_session_id,
+      s.shop_name as who, s.email, 'seller' as kind
+    from verified_payments p
+    join sellers s on s.id = p.seller_id
+    order by p.created_at desc
+    limit 100
+  `) as AdminPassPayment[];
+  const buyers = (await sql`
+    select p.id, p.created_at, p.stripe_session_id,
+      b.name as who, b.email, 'buyer' as kind
+    from buyer_verified_payments p
+    join buyers b on b.id = p.buyer_id
+    order by p.created_at desc
+    limit 100
+  `) as AdminPassPayment[];
+  return [...sellers, ...buyers].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}

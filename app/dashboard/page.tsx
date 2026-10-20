@@ -1,17 +1,30 @@
 import Link from "next/link";
+import { startSellerIdentity } from "@/lib/actions";
 import { money, shortDate } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
 import { sellerInsights, sellerOrders, sellerReviews, sellerStats } from "@/lib/queries";
 import { Stars } from "@/components/stars";
 import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
+import { confirmSellerIdentity, sellerIdVerified } from "@/lib/stripe-identity";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardHome(props: PageProps<"/dashboard">) {
-  const seller = await requireSeller();
+  let seller = await requireSeller();
   const params = await props.searchParams;
   const welcome = (Array.isArray(params.welcome) ? params.welcome[0] : params.welcome) === "1";
+  const identityFlag = typeof params.identity === "string" ? params.identity : null;
+  const identityError =
+    typeof params.msg === "string" && params.msg.trim() ? params.msg.trim() : null;
+  if (identityFlag === "return") {
+    try {
+      seller = await confirmSellerIdentity(seller);
+    } catch {
+      // The webhook may still land. The banner stays until the row flips.
+    }
+  }
   const verified = isSellerVerified(seller);
+  const idVerified = sellerIdVerified(seller);
 
   const [stats, orders, insights, reviews] = await Promise.all([
     sellerStats(seller.id),
@@ -40,7 +53,21 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
 
   return (
     <div className="space-y-12">
-      {welcome && (
+      {!idVerified && (
+        <section className="rounded-2xl border border-gold/40 bg-gold/10 p-5 sm:p-6">
+          <h2 className="font-display text-xl font-bold">Verify your ID</h2>
+          <p className="mt-2 max-w-xl text-sm text-ink-soft">
+            Stripe checks a photo ID and a selfie before this shop can sell.
+            {seller.identity_status === "pending" && " Stripe still has your check in progress."}
+            {seller.identity_status === "failed" && " The last check needs another try."}
+          </p>
+          {identityError && <p className="mt-3 text-sm text-coral">{identityError}</p>}
+          <form action={startSellerIdentity} className="mt-4">
+            <button className="btn btn-ink">Continue with Stripe</button>
+          </form>
+        </section>
+      )}
+      {welcome && idVerified && (
         <section className="rounded-[2rem] bg-void p-8 text-white sm:p-10">
           <p className="eyebrow-pill">You&apos;re open</p>
           <h2 className="mt-5 font-display text-4xl leading-none font-extrabold tracking-[-0.04em]">

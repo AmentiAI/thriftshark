@@ -80,6 +80,11 @@ export default async function AdminSellersPage() {
                         Admin verified
                       </span>
                     )}
+                    {seller.identity_status !== "verified" && (
+                      <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-ink uppercase">
+                        ID {seller.identity_status}
+                      </span>
+                    )}
                     {paid && !seller.official && (
                       <span className="rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-ink-soft uppercase ring-1 ring-line">
                         Paid pass

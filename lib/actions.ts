@@ -36,6 +36,7 @@ import {
   createVerifiedPassCheckout,
 } from "@/lib/stripe-billing";
 import { stripeConfigured } from "@/lib/stripe";
+import { createSellerIdentitySession, sellerIdVerified } from "@/lib/stripe-identity";
 import {
   FREE_MAX_LIVE_LISTINGS,
   VERIFIED_LISTING_PHOTOS,
@@ -44,7 +45,7 @@ import {
   listingPhotoLimit,
   liveListingLimit,
 } from "@/lib/seller-plan";
-import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS } from "@/lib/types";
+import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS, type Seller } from "@/lib/types";
 
 export type FormState = { error?: string; ok?: string } | null;
 
@@ -692,17 +693,28 @@ export async function signUpSeller(_prev: FormState, formData: FormData): Promis
   if (buyerTaken[0]) return { error: "That email already has an account. Sign in instead." };
 
   const rows = (await sql`
-    insert into sellers (handle, shop_name, email, password_hash, tagline, location)
+    insert into sellers (handle, shop_name, email, password_hash, tagline, location, identity_status)
     values (${d.handle}, ${d.shop_name}, ${d.email}, ${hashPassword(d.password)},
-            ${d.tagline}, ${d.location})
-    returning id
-  `) as { id: number }[];
+            ${d.tagline}, ${d.location}, 'required')
+    returning *
+  `) as Seller[];
 
-  const sellerId = rows[0].id;
-
-  await startSellerSession(sellerId);
+  const created = rows[0];
+  await startSellerSession(created.id);
   revalidatePath("/sellers");
-  redirect("/dashboard?welcome=1");
+
+  const identity = await createSellerIdentitySession(created);
+  if (identity.ok) redirect(identity.url);
+  redirect(`/dashboard?identity=error&msg=${encodeURIComponent(identity.error)}`);
+}
+
+export async function startSellerIdentity(): Promise<void> {
+  const seller = await requireSeller();
+  const identity = await createSellerIdentitySession(seller);
+  if (!identity.ok) {
+    redirect(`/dashboard?identity=error&msg=${encodeURIComponent(identity.error)}`);
+  }
+  redirect(identity.url);
 }
 
 const buyerSignupSchema = z.object({
@@ -1012,7 +1024,6 @@ async function deleteOrphanImages(sellerId: number, imageIds: number[]) {
 export async function createListing(_prev: FormState, formData: FormData): Promise<FormState> {
   try {
     const seller = await requireSeller();
-
     const parsed = readItemForm(formData);
     if (!parsed.success) return { error: parsed.error.issues[0].message };
     const d = parsed.data;
@@ -1021,6 +1032,9 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     }
 
     const wantsAuction = text(formData.get("destination")) === "auction";
+    if (!sellerIdVerified(seller) && (d.status !== "draft" || wantsAuction)) {
+      return { error: "Verify your ID with Stripe before this shop can sell." };
+    }
     if (wantsAuction && !isSellerVerified(seller)) {
       return {
         error: "Auctions are a Verified perk — pay $20 for 30 days on the Verified tab.",
@@ -1103,6 +1117,9 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
     // Mid-auction, the lot owns the status: keep whatever it already is.
     const onBlock = owned[0].status === "auction";
     const status = onBlock ? "auction" : d.status === "auction" ? "available" : d.status;
+    if (!sellerIdVerified(seller) && status === "available" && owned[0].status !== "available") {
+      return { error: "Verify your ID with Stripe before this shop can sell." };
+    }
 
     const flags = await resolveVerifiedListingFlags(
       seller,
@@ -1421,6 +1438,9 @@ async function insertLiveAuction(sellerId: number, itemId: number, lot: LotTerms
 /** Moves one of the seller's listings onto the block. */
 export async function createAuction(_prev: FormState, formData: FormData): Promise<FormState> {
   const seller = await requireSeller();
+  if (!sellerIdVerified(seller)) {
+    return { error: "Verify your ID with Stripe before this shop can sell." };
+  }
   if (!isSellerVerified(seller)) {
     return {
       error: "Auctions are a Verified perk — pay $20 for 30 days on the Verified tab.",

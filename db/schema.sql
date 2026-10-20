@@ -372,3 +372,12 @@ create unique index if not exists giveaway_entries_buyer_idx
 
 alter table weekly_giveaways
   add column if not exists winner_buyer_id int references buyers(id) on delete set null;
+
+-- Stripe Identity for new seller accounts. Existing shops stay verified.
+alter table sellers
+  add column if not exists identity_status text not null default 'verified'
+    check (identity_status in ('required','pending','verified','failed'));
+alter table sellers
+  add column if not exists identity_session_id text;
+alter table sellers
+  add column if not exists identity_verified_at timestamptz;
