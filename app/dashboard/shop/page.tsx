@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopSettingsForm } from "@/components/shop-settings-form";
 import { StripeConnectPanel } from "@/components/stripe-connect-panel";
-import { createSellerAccountLink } from "@/lib/actions";
 import { requireSeller } from "@/lib/seller-auth";
-import { syncSellerFromStripeAccount } from "@/lib/stripe-connect";
+import { createSellerAccountLink, syncSellerFromStripeAccount } from "@/lib/stripe-connect";
 import { stripeConfigured } from "@/lib/stripe";
 import { toShopSettings } from "@/lib/types";
 
@@ -14,14 +13,21 @@ export default async function ShopSettingsPage(props: PageProps<"/dashboard/shop
   const seller = await requireSeller();
   const params = await props.searchParams;
   const stripeFlag = typeof params.stripe === "string" ? params.stripe : null;
+  const errorMsg =
+    typeof params.msg === "string" && params.msg.trim() ? params.msg.trim() : null;
 
   let notice: string | null = null;
 
   // Stripe sends people here when the Account Link expired or was reused —
   // mint a new link and send them straight back into onboarding.
   if (stripeConfigured() && seller.stripe_account_id && stripeFlag === "refresh") {
-    const link = await createSellerAccountLink(seller.id);
-    redirect(link.url);
+    const link = await createSellerAccountLink(seller);
+    if (link.ok) redirect(link.url);
+    notice = link.error;
+  }
+
+  if (stripeFlag === "error" && errorMsg) {
+    notice = errorMsg;
   }
 
   if (stripeConfigured() && seller.stripe_account_id && stripeFlag === "done") {
@@ -52,8 +58,14 @@ export default async function ShopSettingsPage(props: PageProps<"/dashboard/shop
         </p>
       </header>
 
-      {stripeConfigured() && (
+      {stripeConfigured() ? (
         <StripeConnectPanel seller={toShopSettings(seller)} notice={notice} />
+      ) : (
+        <p className="panel mb-8 px-5 py-4 text-sm text-coral">
+          Stripe keys are missing on this server. Add{" "}
+          <code className="font-mono">STRIPE_SECRET_KEY</code> to the host env and
+          redeploy.
+        </p>
       )}
 
       <ShopSettingsForm seller={toShopSettings(seller)} />

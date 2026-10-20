@@ -1,7 +1,127 @@
 import "server-only";
 import { sql } from "@/lib/db";
-import { getStripe, siteUrl } from "@/lib/stripe";
-import { PLATFORM_FEE_CENTS, type Order } from "@/lib/types";
+import {
+  getStripe,
+  publicBusinessUrl,
+  requestOrigin,
+  siteUrl,
+  stripeConfigured,
+} from "@/lib/stripe";
+import { PLATFORM_FEE_CENTS, type Order, type Seller } from "@/lib/types";
+
+function stripeErrorMessage(err: unknown) {
+  if (err && typeof err === "object" && "message" in err) {
+    const message = String((err as { message: unknown }).message);
+    if (message) return message;
+  }
+  return "Stripe could not start onboarding. Try again in a moment.";
+}
+
+/**
+ * Create (or resume) Express onboarding for a seller.
+ * Lives outside `"use server"` so pages can call it without crashing the RSC.
+ */
+export async function createSellerAccountLink(seller: Seller) {
+  if (!stripeConfigured()) {
+    return { ok: false as const, error: "Stripe is not configured on this server." };
+  }
+
+  const stripe = getStripe();
+  const base = await requestOrigin();
+  let accountId = seller.stripe_account_id;
+
+  try {
+    if (!accountId) {
+      const shopUrl = publicBusinessUrl(`/shop/${seller.handle}`);
+      // Prefer controller-based Express (current Connect platforms). Fall back
+      // to type: 'express' if the account rejects controller params.
+      let account;
+      try {
+        account = await stripe.accounts.create({
+          country: "US",
+          email: seller.email,
+          controller: {
+            stripe_dashboard: { type: "express" },
+            fees: { payer: "application" },
+            losses: { payments: "application" },
+          },
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+          business_profile: {
+            name: seller.shop_name,
+            product_description:
+              "Secondhand clothing and accessories sold on Thrift Sharks.",
+            ...(shopUrl ? { url: shopUrl } : {}),
+          },
+          metadata: {
+            seller_id: String(seller.id),
+            handle: seller.handle,
+          },
+        });
+      } catch {
+        account = await stripe.accounts.create({
+          type: "express",
+          country: "US",
+          email: seller.email,
+          capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+          },
+          business_profile: {
+            name: seller.shop_name,
+            product_description:
+              "Secondhand clothing and accessories sold on Thrift Sharks.",
+            ...(shopUrl ? { url: shopUrl } : {}),
+          },
+          metadata: {
+            seller_id: String(seller.id),
+            handle: seller.handle,
+          },
+        });
+      }
+
+      accountId = account.id;
+      await sql`
+        update sellers
+        set stripe_account_id = ${accountId}, updated_at = now()
+        where id = ${seller.id} and stripe_account_id is null
+      `;
+      // Another request may have won the race — re-read the stored id.
+      const rows = (await sql`
+        select stripe_account_id from sellers where id = ${seller.id}
+      `) as { stripe_account_id: string | null }[];
+      accountId = rows[0]?.stripe_account_id ?? accountId;
+    } else {
+      const account = await stripe.accounts.retrieve(accountId);
+      await syncSellerFromStripeAccount(accountId);
+      if (account.details_submitted && account.charges_enabled) {
+        return {
+          ok: true as const,
+          done: true as const,
+          url: `${base}/dashboard/shop?stripe=done`,
+        };
+      }
+    }
+
+    const link = await stripe.accountLinks.create({
+      account: accountId!,
+      refresh_url: `${base}/dashboard/shop?stripe=refresh`,
+      return_url: `${base}/dashboard/shop?stripe=done`,
+      type: "account_onboarding",
+    });
+
+    if (!link.url) {
+      return { ok: false as const, error: "Stripe did not return an onboarding URL." };
+    }
+
+    return { ok: true as const, done: false as const, url: link.url };
+  } catch (err) {
+    console.error("createSellerAccountLink failed", err);
+    return { ok: false as const, error: stripeErrorMessage(err) };
+  }
+}
 
 /** Pull charges/payouts flags from Stripe onto the seller row. */
 export async function syncSellerFromStripeAccount(accountId: string) {

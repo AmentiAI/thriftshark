@@ -39,7 +39,19 @@ export function StripeConnectPanel({
       </div>
 
       {notice && (
-        <p className="rounded-2xl bg-reef/10 px-4 py-3 text-sm text-ink">{notice}</p>
+        <p
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            notice.toLowerCase().includes("could not") ||
+            notice.toLowerCase().includes("not configured") ||
+            notice.toLowerCase().includes("missing") ||
+            notice.toLowerCase().includes("invalid") ||
+            notice.toLowerCase().includes("error")
+              ? "bg-coral/10 text-ink"
+              : "bg-reef/10 text-ink"
+          }`}
+        >
+          {notice}
+        </p>
       )}
 
       <dl className="grid gap-2 text-sm sm:grid-cols-2">

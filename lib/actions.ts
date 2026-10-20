@@ -18,14 +18,10 @@ import { storeUpload } from "@/lib/images";
 import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
 import {
   createCheckoutSessionForOrder,
+  createSellerAccountLink,
   syncSellerFromStripeAccount,
 } from "@/lib/stripe-connect";
-import {
-  getStripe,
-  publicBusinessUrl,
-  requestOrigin,
-  stripeConfigured,
-} from "@/lib/stripe";
+import { stripeConfigured } from "@/lib/stripe";
 import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS } from "@/lib/types";
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -136,69 +132,13 @@ export async function payOrderWithStripe(
   redirect(session.url);
 }
 
-/** Build a fresh Express Account Link for this seller (or create the account first). */
-export async function createSellerAccountLink(sellerId: number) {
-  const seller = await requireSeller();
-  if (seller.id !== sellerId) throw new Error("Not signed in");
-  if (!stripeConfigured()) throw new Error("STRIPE_SECRET_KEY is not set");
-
-  const stripe = getStripe();
-  // Must match the tab the seller is on — NEXT_PUBLIC_SITE_URL is often wrong
-  // when next dev picks 3001/3002 because 3000 is taken.
-  const base = await requestOrigin();
-  let accountId = seller.stripe_account_id;
-
-  if (!accountId) {
-    // Stripe rejects localhost for business_profile.url ("Not a valid URL").
-    const shopUrl = publicBusinessUrl(`/shop/${seller.handle}`);
-    const account = await stripe.accounts.create({
-      type: "express",
-      country: "US",
-      email: seller.email,
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-      business_profile: {
-        name: seller.shop_name,
-        product_description: "Secondhand clothing and accessories sold on Thrift Sharks.",
-        mcc: "5931",
-        ...(shopUrl ? { url: shopUrl } : {}),
-      },
-      metadata: {
-        seller_id: String(seller.id),
-        handle: seller.handle,
-      },
-    });
-    accountId = account.id;
-    await sql`
-      update sellers
-      set stripe_account_id = ${accountId}, updated_at = now()
-      where id = ${seller.id} and stripe_account_id is null
-    `;
-  } else {
-    // Already finished? Skip Stripe and land on the dashboard.
-    const account = await stripe.accounts.retrieve(accountId);
-    await syncSellerFromStripeAccount(accountId);
-    if (account.details_submitted && account.charges_enabled) {
-      return { done: true as const, url: `${base}/dashboard/shop?stripe=done` };
-    }
-  }
-
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${base}/dashboard/shop?stripe=refresh`,
-    return_url: `${base}/dashboard/shop?stripe=done`,
-    type: "account_onboarding",
-  });
-
-  return { done: false as const, url: link.url };
-}
-
 /** Seller: create Express account (if needed) and open Stripe-hosted onboarding. */
 export async function startStripeOnboarding(): Promise<void> {
   const seller = await requireSeller();
-  const link = await createSellerAccountLink(seller.id);
+  const link = await createSellerAccountLink(seller);
+  if (!link.ok) {
+    redirect(`/dashboard/shop?stripe=error&msg=${encodeURIComponent(link.error)}`);
+  }
   redirect(link.url);
 }
 
