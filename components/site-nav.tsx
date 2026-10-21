@@ -133,7 +133,8 @@ export function SiteNav({
       </div>
 
       <div className="border-b border-white/10 bg-black text-white">
-        <div className="wrap relative flex h-14 items-center gap-2 !px-3 sm:h-[4.25rem] sm:gap-5 sm:!px-5">
+        <div className="wrap relative !px-3 sm:!px-5">
+        <div className="flex h-14 items-center gap-2 sm:h-[4.25rem] sm:gap-5">
           <Link href="/" className="shrink-0" aria-label="Thrift Sharks home" onClick={() => setOpen(false)}>
             <Wordmark className="h-8 w-auto sm:h-11" />
           </Link>
@@ -233,7 +234,7 @@ export function SiteNav({
                 </Link>
                 <Link
                   href="/login"
-                  className="tap shrink-0 rounded-full px-2 py-2 text-sm font-medium whitespace-nowrap text-white/80 hover:text-white"
+                  className="tap hidden shrink-0 rounded-full px-2 py-2 text-sm font-medium whitespace-nowrap text-white/80 hover:text-white sm:inline"
                 >
                   Log in
                 </Link>
@@ -292,6 +293,23 @@ export function SiteNav({
             </button>
           </div>
         </div>
+        {!seller && !buyer && (
+          <div className="flex gap-2 pb-3 sm:hidden">
+            <Link
+              href="/login"
+              className="btn btn-ghost-light min-w-0 flex-1 !px-3 !py-2 text-sm whitespace-nowrap"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              className="btn min-w-0 flex-1 !bg-white !px-3 !py-2 text-sm whitespace-nowrap !text-black hover:!bg-white/90"
+            >
+              Create account
+            </Link>
+          </div>
+        )}
+        </div>
       </div>
 
       <div className="border-b border-line bg-paper">
@@ -321,21 +339,23 @@ export function SiteNav({
                 </Link>
               ),
             )}
-            <Link
-              href={seller ? "/dashboard" : buyer ? "/account" : "/signup"}
-              onClick={() => setOpen(false)}
-              className="btn btn-ink mt-4 w-full"
-            >
-              {seller ? "Dashboard" : buyer ? "Your account" : "Create account"}
-            </Link>
-            {!seller && !buyer && (
+            {seller || buyer ? (
               <Link
-                href="/login"
+                href={seller ? "/dashboard" : "/account"}
                 onClick={() => setOpen(false)}
-                className="mt-2 py-3 text-center text-sm font-medium text-ink-faint"
+                className="btn btn-ink mt-4 w-full"
               >
-                Log in
+                {seller ? "Dashboard" : "Your account"}
               </Link>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setOpen(false)} className="btn btn-ghost">
+                  Log in
+                </Link>
+                <Link href="/signup" onClick={() => setOpen(false)} className="btn btn-ink">
+                  Create account
+                </Link>
+              </div>
             )}
           </div>
         </nav>
