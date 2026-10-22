@@ -14,6 +14,8 @@ import type { WeeklyGiveaway } from "@/lib/types";
 const NAV = [
   { href: "/shop", label: "Shop" },
   { href: "/auctions", label: "Auctions" },
+  { href: "/live", label: "Live" },
+  { href: "/hunts", label: "Hunts" },
   { href: "/sellers", label: "Shops" },
   { href: "/sell", label: "Sell" },
 ];
@@ -327,7 +329,7 @@ export function SiteNav({
             <input name="q" placeholder="Search finds…" className="field !bg-paper-dim" />
           </Form>
           <div className="flex flex-col">
-            {[...NAV, { href: "/about", label: "About" }, { href: "/contact", label: "Contact" }, { href: "/inbox", label: "Inbox" }].map(
+            {[...NAV, { href: "/contact", label: "Contact" }, { href: "/inbox", label: "Inbox" }].map(
               (link) => (
                 <Link
                   key={link.label}

@@ -49,7 +49,7 @@ export function SignupForm() {
               id="shop_name"
               name="shop_name"
               required
-              placeholder="Harbour Road Vintage"
+              placeholder="Night Market"
               className="field"
             />
           </div>

@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { releaseDueDrops } from "@/lib/hunt-match";
 import type {
   Category,
   DmMessage,
@@ -15,11 +16,13 @@ import type {
 const ITEM_COLUMNS = `
   i.id, i.slug, i.title, i.description, i.price_cents, i.compare_at_cents,
   i.category_id, i.brand, i.item_size, i.condition, i.color, i.status,
+  i.chest_in, i.waist_in, i.inseam_in, i.shoe_size, i.drops_at,
   i.featured, i.created_at, i.seller_id,
   c.name as category_name, c.slug as category_slug,
   s.handle as seller_handle, s.shop_name as seller_shop_name,
   s.logo_image_id as seller_logo_image_id,
   (s.official or s.verified_until > now()) as seller_verified,
+  (coalesce(s.identity_status, 'verified') = 'verified') as seller_identity_checked,
   coalesce(
     (select json_agg(json_build_object('id', im.id, 'url', im.url, 'image_id', im.image_id, 'alt', im.alt)
             order by im.position, im.id)
@@ -40,8 +43,36 @@ const SELLER_CARD_COLUMNS = `
   s.logo_image_id, s.banner_image_id, s.featured, s.created_at,
   s.banner_x, s.banner_y, s.logo_x, s.logo_y,
   (s.official or s.verified_until > now()) as verified,
+  (coalesce(s.identity_status, 'verified') = 'verified') as identity_checked,
+  (
+    select case when count(*) >= 2
+      then round(avg(extract(epoch from (o.shipped_at - o.created_at)) / 3600.0))::int
+    end
+    from orders o
+    where o.seller_id = s.id
+      and o.payment_status = 'paid'
+      and o.shipped_at is not null
+      and o.shipped_at >= o.created_at
+  ) as ship_hours,
+  (
+    select case when count(*) >= 2
+      then round(avg(secs) / 3600.0)::int
+    end
+    from (
+      select extract(epoch from (
+        min(m.created_at) filter (where m.sender = 'seller')
+        - min(m.created_at) filter (where m.sender = 'buyer')
+      )) as secs
+      from dm_threads t
+      join dm_messages m on m.thread_id = t.id
+      where t.seller_id = s.id
+      group by t.id
+    ) samples
+    where secs is not null and secs >= 0 and secs < 60 * 60 * 24 * 14
+  ) as reply_hours,
   (select count(*)::int from items it
-    where it.seller_id = s.id and it.status = 'available') as item_count,
+    where it.seller_id = s.id and it.status = 'available'
+      and (it.drops_at is null or it.drops_at <= now())) as item_count,
   (select count(*)::int from items it
     where it.seller_id = s.id and it.status = 'sold')      as sold_count,
   (select count(*)::int from seller_reviews r where r.seller_id = s.id) as review_count,
@@ -76,6 +107,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
     select c.slug, count(i.id)::int as n
     from categories c
     left join items i on i.category_id = c.id and i.status = 'available'
+      and (i.drops_at is null or i.drops_at <= now())
     left join sellers s on s.id = i.seller_id
     where i.id is null or s.status = 'active'
     group by c.slug
@@ -84,6 +116,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
 }
 
 export async function getItemBySlug(slug: string): Promise<Item | null> {
+  await releaseDueDrops();
   const rows = (await sql.query(
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
@@ -109,7 +142,7 @@ export async function getFeaturedItems(limit = 8): Promise<Item[]> {
   return (await sql.query(
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
-     where i.status = 'available' and i.featured
+     where i.status = 'available' and (i.drops_at is null or i.drops_at <= now()) and i.featured
      order by (s.official or s.verified_until > now()) desc,
               i.created_at desc
      limit $1`,
@@ -118,12 +151,41 @@ export async function getFeaturedItems(limit = 8): Promise<Item[]> {
 }
 
 export async function getLatestItems(limit = 8): Promise<Item[]> {
+  await releaseDueDrops();
+  return (await sql.query(
+    `select ${ITEM_COLUMNS}
+     ${ITEM_FROM}
+     where i.status = 'available' and (i.drops_at is null or i.drops_at <= now())
+     order by (s.official or s.verified_until > now()) desc,
+              i.featured desc, i.created_at desc
+     limit $1`,
+    [limit],
+  )) as Item[];
+}
+
+/** Pieces a shop scheduled. Hidden from the rack until drops_at. */
+export async function upcomingDrops(limit = 8, sellerId?: number): Promise<Item[]> {
+  return (await sql.query(
+    `select ${ITEM_COLUMNS}
+     ${ITEM_FROM}
+     where i.status = 'available' and i.drops_at > now()
+       and ($2::int is null or i.seller_id = $2::int)
+     order by i.drops_at asc
+     limit $1`,
+    [limit, sellerId ?? null],
+  )) as Item[];
+}
+
+/** Recent live pieces that published at least one measurement. */
+export async function measuredRack(limit = 40): Promise<Item[]> {
   return (await sql.query(
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
      where i.status = 'available'
-     order by (s.official or s.verified_until > now()) desc,
-              i.featured desc, i.created_at desc
+       and (i.drops_at is null or i.drops_at <= now())
+       and (i.chest_in is not null or i.waist_in is not null
+            or i.inseam_in is not null or i.shoe_size is not null)
+     order by i.created_at desc
      limit $1`,
     [limit],
   )) as Item[];
@@ -134,7 +196,7 @@ export async function getRelatedItems(item: Item, limit = 4): Promise<Item[]> {
   return (await sql.query(
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
-     where i.status = 'available' and i.id <> $1
+     where i.status = 'available' and (i.drops_at is null or i.drops_at <= now()) and i.id <> $1
        and ($2::int is null or i.category_id = $2::int)
      order by (s.official or s.verified_until > now()) desc,
               i.featured desc, i.created_at desc
@@ -168,6 +230,7 @@ const SORTS: Record<string, string> = {
 };
 
 export async function searchItems(query: ShopQuery) {
+  await releaseDueDrops();
   const perPage = query.perPage ?? 12;
   const page = Math.max(1, query.page ?? 1);
   const orderBy = SORTS[query.sort ?? "newest"] ?? SORTS.newest;
@@ -192,6 +255,7 @@ export async function searchItems(query: ShopQuery) {
       and ($6::int is null or i.price_cents <= $6::int)
       and ($7::text is null or s.handle = $7::text)
       and i.status in ${query.includeSold ? "('available','reserved','sold')" : "('available')"}
+      and (i.status <> 'available' or i.drops_at is null or i.drops_at <= now())
   `;
 
   const items = (await sql.query(
@@ -219,15 +283,15 @@ export async function getFilterFacets() {
   const [sizes, brands, price] = await Promise.all([
     sql`select distinct i.item_size from items i
         join sellers s on s.id = i.seller_id and s.status = 'active'
-        where i.status = 'available' and i.item_size is not null
+        where i.status = 'available' and (i.drops_at is null or i.drops_at <= now()) and i.item_size is not null
         order by i.item_size`,
     sql`select distinct i.brand from items i
         join sellers s on s.id = i.seller_id and s.status = 'active'
-        where i.status = 'available' and i.brand is not null
+        where i.status = 'available' and (i.drops_at is null or i.drops_at <= now()) and i.brand is not null
         order by i.brand`,
     sql`select coalesce(max(i.price_cents), 0)::int as max from items i
         join sellers s on s.id = i.seller_id and s.status = 'active'
-        where i.status = 'available'`,
+        where i.status = 'available' and (i.drops_at is null or i.drops_at <= now())`,
   ]);
   return {
     sizes: (sizes as { item_size: string }[]).map((r) => r.item_size),
@@ -242,7 +306,8 @@ export async function getItemsByIds(ids: number[]): Promise<Item[]> {
   return (await sql.query(
     `select ${ITEM_COLUMNS}
      ${ITEM_FROM}
-     where i.id = any($1::int[])`,
+     where i.id = any($1::int[])
+       and (i.status <> 'available' or i.drops_at is null or i.drops_at <= now())`,
     [ids],
   )) as Item[];
 }
@@ -291,7 +356,8 @@ export async function listSellers(options: { featuredFirst?: boolean; limit?: nu
      order by ${options.featuredFirst ? "s.featured desc," : ""}
               (s.official or s.verified_until > now()) desc,
               (select count(*) from items it
-                where it.seller_id = s.id and it.status = 'available') desc,
+                where it.seller_id = s.id and it.status = 'available'
+                  and (it.drops_at is null or it.drops_at <= now())) desc,
               s.created_at desc
      limit $1`,
     [limit],
@@ -305,7 +371,8 @@ export async function getStockedSellers(limit = 8) {
      from sellers s
      where s.status = 'active'
        and exists (select 1 from items it
-                    where it.seller_id = s.id and it.status = 'available')
+                    where it.seller_id = s.id and it.status = 'available'
+                      and (it.drops_at is null or it.drops_at <= now()))
      order by s.featured desc,
               (s.official or s.verified_until > now()) desc,
               s.created_at desc
@@ -356,7 +423,8 @@ export async function marketplaceStats() {
       (select count(*)::int from sellers where status = 'active')  as shops,
       (select count(*)::int from items i
         join sellers s on s.id = i.seller_id and s.status = 'active'
-        where i.status = 'available')                              as listings,
+        where i.status = 'available'
+          and (i.drops_at is null or i.drops_at <= now()))            as listings,
       (select count(*)::int from items i
         join sellers s on s.id = i.seller_id and s.status = 'active'
         where i.status = 'sold')                                   as sold
@@ -758,4 +826,127 @@ export async function adminPassPayments(): Promise<AdminPassPayment[]> {
     limit 100
   `) as AdminPassPayment[];
   return [...sellers, ...buyers].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+}
+
+export type HuntReply = {
+  id: number;
+  hunt_id: number;
+  note: string;
+  created_at: string;
+  shop_name: string;
+  handle: string;
+  item_title: string | null;
+  item_slug: string | null;
+  price_cents: number | null;
+};
+
+export type Hunt = {
+  id: number;
+  title: string;
+  details: string;
+  size_label: string | null;
+  budget_cents: number | null;
+  created_at: string;
+  who: string;
+  shop_handle: string | null;
+  buyer_id: number | null;
+  seller_id: number | null;
+  replies: HuntReply[];
+};
+
+export async function openHunts(): Promise<Hunt[]> {
+  const hunts = (await sql`
+    select h.id, h.title, h.details, h.size_label, h.budget_cents, h.created_at,
+      h.buyer_id, h.seller_id,
+      coalesce(b.name, s.shop_name) as who,
+      s.handle as shop_handle
+    from hunts h
+    left join buyers b on b.id = h.buyer_id
+    left join sellers s on s.id = h.seller_id
+    where h.status = 'open'
+    order by h.created_at desc
+    limit 40
+  `) as Omit<Hunt, "replies">[];
+  if (hunts.length === 0) return [];
+  const replies = (await sql.query(
+    `select r.id, r.hunt_id, r.note, r.created_at,
+            s.shop_name, s.handle,
+            i.title as item_title, i.slug as item_slug, i.price_cents
+     from hunt_replies r
+     join sellers s on s.id = r.seller_id
+     left join items i on i.id = r.item_id
+     where r.hunt_id = any($1::int[])
+     order by r.created_at asc`,
+    [hunts.map((hunt) => hunt.id)],
+  )) as HuntReply[];
+  const byHunt = new Map<number, HuntReply[]>();
+  for (const reply of replies) {
+    const list = byHunt.get(reply.hunt_id) ?? [];
+    list.push(reply);
+    byHunt.set(reply.hunt_id, list);
+  }
+  return hunts.map((hunt) => ({ ...hunt, replies: byHunt.get(hunt.id) ?? [] }));
+}
+
+export type ListingOffer = {
+  id: number;
+  item_id: number;
+  amount_cents: number;
+  note: string;
+  status: string;
+  created_at: string;
+  from_name: string;
+  item_title: string;
+  item_slug: string;
+  price_cents: number;
+};
+
+export async function expireOffers() {
+  await sql`
+    update offers set status = 'declined'
+    where status = 'pending' and created_at < now() - interval '48 hours'
+  `;
+}
+
+export async function pendingOfferCount(sellerId: number) {
+  await expireOffers();
+  const rows = (await sql`
+    select count(*)::int as n
+    from offers o
+    join items i on i.id = o.item_id
+    where i.seller_id = ${sellerId} and o.status = 'pending' and i.status = 'available'
+  `) as { n: number }[];
+  return rows[0]?.n ?? 0;
+}
+
+export async function pendingOffersForSeller(sellerId: number): Promise<ListingOffer[]> {
+  await expireOffers();
+  return (await sql`
+    select o.id, o.item_id, o.amount_cents, o.note, o.status, o.created_at,
+      coalesce(b.name, fs.shop_name) as from_name,
+      i.title as item_title, i.slug as item_slug, i.price_cents
+    from offers o
+    join items i on i.id = o.item_id
+    left join buyers b on b.id = o.from_buyer_id
+    left join sellers fs on fs.id = o.from_seller_id
+    where i.seller_id = ${sellerId} and o.status = 'pending' and i.status = 'available'
+    order by o.created_at desc
+  `) as ListingOffer[];
+}
+
+export async function myOfferOnItem(itemId: number, buyerId: number | null, sellerId: number | null) {
+  if (!buyerId && !sellerId) return null;
+  await expireOffers();
+  const rows = (await sql`
+    select id, amount_cents, note, status, created_at
+    from offers
+    where item_id = ${itemId}
+      and (
+        (${buyerId}::int is not null and from_buyer_id = ${buyerId})
+        or (${sellerId}::int is not null and from_seller_id = ${sellerId})
+      )
+    order by created_at desc
+    limit 1
+  `) as { id: number; amount_cents: number; note: string; status: string; created_at: string }[];
+  return rows[0] ?? null;
 }

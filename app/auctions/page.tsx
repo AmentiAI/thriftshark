@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const RULES = [
-  ["Hard close", "The high bid when the clock hits zero wins. No extensions."],
+  ["Anti-snipe", "A bid in the last 20 seconds adds 20 seconds to the clock. It sells only when the clock hits zero with no new bid."],
   ["Honest reserves", "If there’s a reserve, you’ll see whether it’s met."],
   ["Pay the shop", "Winners check out like a normal order — card payment to the seller."],
 ];

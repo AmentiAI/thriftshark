@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalDoc eyebrow="Legal" title="Terms of Service" updated="October 19, 2026">
+    <LegalDoc eyebrow="Legal" title="Terms of Service" updated="October 21, 2026">
       <p>
         These Terms of Service (“<strong>Terms</strong>”) govern your access to and use of
         thriftsharks.com and related services (the “<strong>Service</strong>”) operated by
@@ -25,17 +25,24 @@ export default function TermsPage() {
 
       <h2>1. What Thrift Sharks is</h2>
       <p>
-        Thrift Sharks is an online marketplace that lets independent sellers open shops,
-        list one-of-one secondhand goods, run timed auctions, and communicate with buyers.
-        <strong> We are a platform, not the seller of most goods.</strong> Unless we
-        expressly say otherwise for a specific listing, the contract of sale is between the
-        buyer and the seller.
+        Thrift Sharks is an online marketplace. Independent sellers open shops, list
+        one-of-one secondhand goods, run timed auctions, and sell directly to buyers.
+        <strong> We are not the seller, and we have no store or warehouse.</strong> The
+        contract of sale is between the buyer and the seller. Sellers keep their own goods.
+        We do not take possession of, store, or ship product.
       </p>
       <p>
-        We do not hold buyer funds. Buyers pay sellers through Stripe Connect (direct charges
-        on the seller’s connected account). A flat platform fee may be added at checkout and
-        collected via Stripe; sellers receive their item price plus any shipping
-        charged at checkout. Stripe is a third party with its own terms.
+        We charge a platform fee on orders. Buyers pay sellers through Stripe Connect
+        (direct charges on the seller’s connected account). Item price and shipping settle
+        to the seller. The platform fee is collected through Stripe. We do not hold the
+        item, and we do not hold the seller’s payout. Stripe is a third party with its own
+        terms.
+      </p>
+      <p>
+        We do not handle returns, refunds, or exchanges. Those are between the buyer and
+        the seller. If a seller leaves an order or dispute unresolved, we may suspend that
+        shop until it is handled. Suspension does not mean we take the product or pay
+        either party.
       </p>
 
       <h2>2. Eligibility</h2>
@@ -69,7 +76,7 @@ export default function TermsPage() {
         <li>Only list items you own and have the right to sell.</li>
         <li>Describe items accurately, including flaws, measurements, and authenticity where relevant. Photograph defects honestly.</li>
         <li>Fulfill paid orders in a reasonable time and pack items securely.</li>
-        <li>Honor the terms you state for shipping, returns (if any), and communication.</li>
+        <li>Set and honor your own shipping and returns terms. Thrift Sharks does not accept returns or hold the goods.</li>
         <li>Comply with all applicable laws (consumer, tax, import/export, product safety, and secondhand-goods rules).</li>
         <li>Keep your Stripe payout setup complete so buyers can pay you.</li>
       </ul>
@@ -118,9 +125,12 @@ export default function TermsPage() {
       </p>
       <p>
         If a seller does not receive payment, they may cancel the order. If a buyer pays and
-        the seller does not ship, the buyer should first contact the seller; then contact us
-        so we can investigate and, where appropriate, suspend the seller.{" "}
-        <strong>We are not obligated to refund money we never held.</strong>
+        the seller does not ship, the buyer should contact the seller. We can suspend the
+        shop until the order is handled.{" "}
+        <strong>
+          We do not hold the product, and we are not obligated to refund money paid to the
+          seller.
+        </strong>
       </p>
 
       <h2>8. Auctions</h2>
@@ -134,11 +144,17 @@ export default function TermsPage() {
 
       <h2>9. Returns and disputes</h2>
       <p>
-        Return policies are set by individual sellers unless a listing says otherwise. Buyers
-        should read the seller’s terms and listing details (including photographed flaws)
-        before purchasing. Thrift Sharks may help facilitate communication but is not required
-        to mediate or compensate either party. Nothing in these Terms limits non-waivable
-        consumer rights under applicable law.
+        <strong>Thrift Sharks does not handle returns.</strong> We do not accept shipped-back
+        goods, issue refunds for a seller’s sale, or store an item while a dispute is open.
+        Any return, refund, or exchange is solely between the buyer and the seller, on
+        whatever terms that seller stated. Buyers should read the listing, including
+        photographed flaws, before paying.
+      </p>
+      <p>
+        If a seller will not resolve a genuine order problem, we may suspend that shop until
+        it is handled. We may also remove the listing. We are not required to mediate, to
+        take the product, or to compensate either party. Nothing in these Terms limits
+        non-waivable consumer rights under applicable law.
       </p>
 
       <h2>10. Messaging</h2>
@@ -201,10 +217,10 @@ export default function TermsPage() {
       </p>
       <p>
         TO THE MAXIMUM EXTENT PERMITTED BY LAW, OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT
-        OF THE SERVICE WILL NOT EXCEED THE GREATER OF (A) THE AMOUNTS YOU PAID TO THRIFT
-        SHARKS (IF ANY) IN THE TWELVE MONTHS BEFORE THE CLAIM, OR (B) ONE HUNDRED U.S. DOLLARS
-        (US $100). Because we typically do not charge platform fees or hold funds, that amount
-        may be $100.
+        OF THE SERVICE WILL NOT EXCEED THE GREATER OF (A) THE PLATFORM FEES YOU PAID TO THRIFT
+        SHARKS IN THE TWELVE MONTHS BEFORE THE CLAIM, OR (B) ONE HUNDRED U.S. DOLLARS
+        (US $100). Item price and shipping are paid to the seller. We do not hold that money
+        or the product.
       </p>
       <p>
         Some jurisdictions do not allow certain limitations; in those cases, our liability is
@@ -224,8 +240,10 @@ export default function TermsPage() {
         You may stop using the Service at any time. Sellers may request account closure via{" "}
         <Link href="/contact">Contact</Link>, subject to completing open orders where
         required. We may suspend or terminate access immediately for violations, legal risk,
-        or prolonged inactivity. Provisions that should survive (including IP, disclaimers,
-        limitations, and indemnity) will survive termination.
+        or prolonged inactivity. We may also suspend a seller until open orders or disputes
+        are handled. A suspension does not transfer the goods to us. Provisions that should
+        survive (including IP, disclaimers, limitations, and indemnity) will survive
+        termination.
       </p>
 
       <h2>17. Changes to the Service or Terms</h2>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 function parts(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -22,30 +22,51 @@ export function Countdown({
   className = "",
   compact = false,
   surface = "ink",
+  variant = "default",
 }: {
   endsAt: string;
   className?: string;
   compact?: boolean;
   /** `glass` is for clocks sitting on a dark panel. */
   surface?: "ink" | "glass";
+  /** `live` is the big show clock. `overlay` is the same clock on the camera, bottom left. */
+  variant?: "default" | "live" | "overlay";
 }) {
   const router = useRouter();
   const target = new Date(endsAt).getTime();
   const [remaining, setRemaining] = useState(() => target - Date.now());
-  const refreshed = useRef(false);
 
   useEffect(() => {
-    const id = window.setInterval(() => setRemaining(target - Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [target]);
+    let refreshId = 0;
+    const tick = () => {
+      const left = target - Date.now();
+      setRemaining(left);
+      if (left <= 0 && !refreshId) {
+        // Give the server a beat to pass the end time, then let it settle the lot.
+        refreshId = window.setTimeout(() => router.refresh(), 800);
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => {
+      window.clearInterval(id);
+      if (refreshId) window.clearTimeout(refreshId);
+    };
+  }, [target, router]);
 
-  useEffect(() => {
-    if (remaining > 0 || refreshed.current) return;
-    refreshed.current = true;
-    // Give the server a beat to pass the end time, then let it settle the lot.
-    const id = window.setTimeout(() => router.refresh(), 1200);
-    return () => window.clearTimeout(id);
-  }, [remaining, router]);
+  if (variant === "live" || variant === "overlay") {
+    const total = Math.max(0, Math.ceil(remaining / 1000));
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    const urgent = total <= 20;
+    const size = variant === "overlay" ? "text-2xl" : "text-5xl";
+    const color = urgent ? "text-coral" : variant === "overlay" ? "text-white" : "text-ink";
+    return (
+      <p className={`font-sans ${size} leading-none font-extrabold tabular-nums ${color} ${className}`}>
+        {minutes}:{String(seconds).padStart(2, "0")}
+      </p>
+    );
+  }
 
   if (remaining <= 0) {
     return <span className={className}>Closing…</span>;

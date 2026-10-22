@@ -1,11 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { NewsletterForm } from "@/components/newsletter-form";
+import { posts } from "@/lib/blog";
 
 export function SiteFooter() {
   return (
     <footer className="mt-8 border-t border-line bg-paper">
-      <div className="wrap grid gap-10 py-12 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div className="wrap grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Image
             src="/crest.png"
@@ -43,7 +44,6 @@ export function SiteFooter() {
             {[
               ["/sell", "How it works"],
               ["/signup", "Open a shop"],
-              ["/about", "About"],
               ["/contact", "Contact"],
               ["/terms", "Terms of Service"],
               ["/privacy", "Privacy Policy"],
@@ -51,6 +51,23 @@ export function SiteFooter() {
               <li key={label}>
                 <Link href={href} className="hover:text-ink">
                   {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="eyebrow mb-3 text-ink-faint">
+            <Link href="/blog" className="hover:text-ink">
+              Guides
+            </Link>
+          </h2>
+          <ul className="space-y-2 text-sm text-ink-soft">
+            {posts.map((post) => (
+              <li key={post.slug}>
+                <Link href={`/blog/${post.slug}`} className="hover:text-ink">
+                  {post.title}
                 </Link>
               </li>
             ))}

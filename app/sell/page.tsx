@@ -25,7 +25,11 @@ const FAQ = [
   },
   {
     q: "Who handles shipping?",
-    a: "You ship (or arrange local pickup). Buyers pay a flat $9.99 shipping fee per order that goes to you — use it for postage.",
+    a: "You ship (or arrange local pickup). Buyers pay a flat $9.99 shipping fee per order that goes to you — use it for postage. Thrift Sharks never has the item.",
+  },
+  {
+    q: "What about returns?",
+    a: "You do. Thrift Sharks does not handle returns and does not hold product. If an order is left unresolved, the shop can be suspended until it is handled.",
   },
   {
     q: "When do I know an order is real?",

@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [{ source: "/about", destination: "/", permanent: true }];
+  },
   experimental: {
     serverActions: {
       // Listing forms carry up to ten photos. The browser shrinks them before

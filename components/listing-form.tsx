@@ -13,6 +13,14 @@ import { AUCTION_DURATIONS, CONDITIONS, imageSrc, type Category, type Item } fro
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
+function localDropValue(iso: string | null | undefined) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /** Sellers choose live or draft; "sold" is set from the listings table. */
 const SELLER_STATUSES = [
   ["available", "Live — buyers can order it"],
@@ -49,6 +57,11 @@ export function ListingForm({
     null,
   );
   const auctioning = !editing && canAuction && destination === "auction";
+  const [dropsAt, setDropsAt] = useState(() => {
+    if (!item?.drops_at) return "";
+    const date = new Date(item.drops_at);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  });
 
   const dollars = (cents: number | null | undefined) =>
     cents === null || cents === undefined ? "" : (cents / 100).toFixed(2);
@@ -238,6 +251,86 @@ export function ListingForm({
                 ))}
               </select>
             </div>
+          </div>
+        </div>
+
+        <div className="panel space-y-5 p-6">
+          <h2 className="font-display text-lg font-extrabold tracking-tight">Fit and drop</h2>
+          <p className="text-sm text-ink-soft">
+            Inches let a buyer see if this is close to the size they saved. A drop
+            time keeps the piece off the rack until then, then it goes live for everyone.
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className={label} htmlFor="chest_in">
+                Chest (in)
+              </label>
+              <input
+                id="chest_in"
+                name="chest_in"
+                inputMode="decimal"
+                defaultValue={item?.chest_in ?? ""}
+                placeholder="40"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor="waist_in">
+                Waist (in)
+              </label>
+              <input
+                id="waist_in"
+                name="waist_in"
+                inputMode="decimal"
+                defaultValue={item?.waist_in ?? ""}
+                placeholder="32"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor="inseam_in">
+                Inseam (in)
+              </label>
+              <input
+                id="inseam_in"
+                name="inseam_in"
+                inputMode="decimal"
+                defaultValue={item?.inseam_in ?? ""}
+                placeholder="30"
+                className="field"
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor="shoe_size">
+                Shoe size
+              </label>
+              <input
+                id="shoe_size"
+                name="shoe_size"
+                defaultValue={item?.shoe_size ?? ""}
+                placeholder="9.5"
+                className="field"
+              />
+            </div>
+          </div>
+          <div>
+            <label className={label} htmlFor="drops_local">
+              Drop time
+            </label>
+            <input
+              id="drops_local"
+              type="datetime-local"
+              defaultValue={localDropValue(item?.drops_at)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDropsAt(value ? new Date(value).toISOString() : "");
+              }}
+              className="field"
+            />
+            <input type="hidden" name="drops_at" value={dropsAt} />
+            <p className="mt-1.5 text-xs text-ink-faint">
+              Leave this blank to publish now. A future time stays hidden, with a countdown on your shop.
+            </p>
           </div>
         </div>
 

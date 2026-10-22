@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { IdChecked } from "@/components/id-checked";
 import { ShopAvatar } from "@/components/shop-avatar";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { focalStyle } from "@/lib/types";
@@ -16,6 +17,7 @@ export function ShopMasthead({
   logoX = 50,
   logoY = 50,
   verified = false,
+  identityChecked = false,
   meta,
   actions,
   children,
@@ -28,6 +30,7 @@ export function ShopMasthead({
   logoX?: number;
   logoY?: number;
   verified?: boolean;
+  identityChecked?: boolean;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
   children?: React.ReactNode;
@@ -75,6 +78,7 @@ export function ShopMasthead({
           <h1 className="flex flex-wrap items-center gap-2 font-display text-2xl leading-tight font-extrabold tracking-tight break-anywhere sm:text-3xl">
             <span className="min-w-0">{shopName}</span>
             {verified && <VerifiedBadge />}
+            {identityChecked && <IdChecked />}
           </h1>
           {meta && (
             <div className="mt-1.5 space-y-0.5 text-sm text-ink-faint">{meta}</div>

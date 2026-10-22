@@ -1,11 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
+import { DropClock } from "@/components/drop-clock";
+import { ShopAvatar } from "@/components/shop-avatar";
 import { ItemCard } from "@/components/item-card";
 import { AuctionCard } from "@/components/auction-card";
 import { ShopsCarousel } from "@/components/shops-carousel";
 import { TopShopsWidget } from "@/components/top-shops-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
+import { listLiveShows } from "@/lib/live-shows";
+import { money } from "@/lib/format";
 import {
   getCategories,
   getCategoryCounts,
@@ -14,6 +18,7 @@ import {
   getWeeklyTopShops,
   listSellers,
   marketplaceStats,
+  upcomingDrops,
 } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
@@ -27,6 +32,8 @@ export default async function HomePage() {
     weeklyTop,
     stats,
     auctions,
+    drops,
+    liveShows,
   ] = await Promise.all([
     getFeaturedItems(8),
     getLatestItems(12),
@@ -36,6 +43,8 @@ export default async function HomePage() {
     getWeeklyTopShops(5),
     marketplaceStats(),
     liveAuctions(4),
+    upcomingDrops(4),
+    listLiveShows(),
   ]);
 
   const trending = featured.length > 0 ? featured : latest.slice(0, 8);
@@ -60,8 +69,8 @@ export default async function HomePage() {
           />
           <div className="wrap mt-3 flex flex-col gap-3 sm:mx-auto sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between sm:px-0">
             <p className="text-xs text-ink-soft sm:text-sm">
-              A marketplace for unique secondhand — buy from independent shops,
-              check out securely with Stripe.
+              One-of-one shops. You pay the seller through Stripe. Make an offer,
+              or post a hunt if it isn&apos;t listed yet.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">
@@ -74,6 +83,90 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {liveShows.length > 0 && (
+        <section className="border-b border-line py-8">
+          <div className="wrap mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold tracking-[0.14em] text-coral uppercase">Live now</p>
+              <h2 className="mt-1 font-display text-lg font-bold tracking-tight sm:text-xl">
+                On camera
+              </h2>
+            </div>
+            <Link href="/live" className="text-sm font-semibold underline">
+              All live shows
+            </Link>
+          </div>
+          <ul className="wrap grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {liveShows.map((show) => {
+              const lot = show.lots.find((item) => item.auction_id === show.current_auction_id);
+              return (
+                <li key={show.id}>
+                  <Link href={`/live/${show.id}`} className="panel block p-5 hover:border-ink">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-coral uppercase">
+                      <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-coral" />
+                      Live
+                    </span>
+                    <h3 className="mt-2 font-display text-2xl font-extrabold tracking-tight">{show.title}</h3>
+                    <p className="mt-2 inline-flex items-center gap-2 text-sm">
+                      <ShopAvatar
+                        shopName={show.seller_shop_name}
+                        logoImageId={show.seller_logo_image_id}
+                        size={28}
+                      />
+                      <span className="min-w-0 break-anywhere">{show.seller_shop_name}</span>
+                    </p>
+                    <p className="mt-3 text-sm text-ink-soft">
+                      {lot
+                        ? `On stage: ${lot.title} · ${money(lot.high_cents ?? lot.start_cents)}`
+                        : "On camera. The next piece starts when they set a price."}
+                    </p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <section className="border-b border-line">
+        <div className="wrap grid gap-6 py-6 sm:grid-cols-3 sm:py-8">
+          {[
+            ["Pay the shop", "The item price goes to that seller. We take a fee. We never hold the piece."],
+            ["Make an offer", "Offer under the listed price. The shop has 48 hours to confirm or deny. Confirming sets that price."],
+            ["Post a hunt", "Name the piece. When a shop lists something close, the hunt gets a reply pointing at it."],
+            ["ID checked", "New shops pass a document and selfie check before they can sell. The badge is public. The document is not."],
+            ["Your size", "Save chest, waist, inseam, and shoe size once. Measured listings say if they are close, small, or big."],
+            ["Drop clock", "A shop can hide a piece until a time, then it goes live for everyone. The countdown sits on the shop."],
+          ].map(([title, body]) => (
+            <div key={title}>
+              <h2 className="font-display text-base font-bold tracking-tight">{title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-ink-soft">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {drops.length > 0 && (
+        <section className="border-b border-line py-8">
+          <div className="wrap mb-4">
+            <h2 className="font-display text-lg font-bold tracking-tight sm:text-xl">Next drops</h2>
+            <p className="mt-1 text-sm text-ink-soft">Hidden until the clock ends, then live for everyone.</p>
+          </div>
+          <div className="wrap grid grid-cols-2 gap-x-3 gap-y-8 lg:grid-cols-4">
+            {drops.map((item) => (
+              <div key={item.id}>
+                <ItemCard item={item} />
+                {item.drops_at && (
+                  <div className="mt-2">
+                    <DropClock at={item.drops_at} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {shops.length > 0 && (
         <section className="border-b border-line bg-paper-dim/40 py-5 sm:py-6">

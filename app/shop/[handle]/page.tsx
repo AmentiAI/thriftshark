@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { DropClock } from "@/components/drop-clock";
 import { ItemCard } from "@/components/item-card";
 import { ShopMasthead } from "@/components/shop-masthead";
 import { Stars } from "@/components/stars";
+import { currentBuyer } from "@/lib/buyer-account";
+import { fitAgainst } from "@/lib/fit";
 import { money, shortDate } from "@/lib/format";
-import { getSellerByHandle, searchItems, sellerReviews } from "@/lib/queries";
+import { paceBits } from "@/lib/pace";
+import { getSellerByHandle, searchItems, sellerReviews, upcomingDrops } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +43,7 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
   const showSold = (Array.isArray(params.sold) ? params.sold[0] : params.sold) === "1";
   const sort = Array.isArray(params.sort) ? params.sort[0] : params.sort;
 
-  const [{ items }, reviews] = await Promise.all([
+  const [{ items }, reviews, drops, buyer] = await Promise.all([
     searchItems({
       seller: seller.handle,
       includeSold: showSold,
@@ -47,6 +51,8 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
       perPage: 60,
     }),
     sellerReviews(seller.id),
+    upcomingDrops(8, seller.id),
+    currentBuyer(),
   ]);
   const reviewAvg =
     reviews.length === 0
@@ -68,6 +74,7 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
         logoX={seller.logo_x}
         logoY={seller.logo_y}
         verified={seller.verified}
+        identityChecked={seller.identity_checked}
         meta={
           <>
             <p className="break-anywhere">
@@ -75,6 +82,9 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
               {seller.location && ` · ${seller.location}`}
             </p>
             <p className="text-xs">Joined {shortDate(seller.created_at)}</p>
+            {paceBits(seller.reply_hours, seller.ship_hours).length > 0 && (
+              <p className="text-xs">{paceBits(seller.reply_hours, seller.ship_hours).join(" · ")}</p>
+            )}
           </>
         }
         actions={
@@ -120,6 +130,24 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
           ))}
         </dl>
       </ShopMasthead>
+
+      {drops.length > 0 && (
+        <section className="pt-10">
+          <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">Next drop</h2>
+          <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-8 lg:grid-cols-4">
+            {drops.map((item) => (
+              <div key={item.id}>
+                <ItemCard item={item} note={buyer ? fitAgainst(buyer, item) : null} />
+                {item.drops_at && (
+                  <div className="mt-2">
+                    <DropClock at={item.drops_at} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="pt-10">
         <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
@@ -185,7 +213,12 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 sm:gap-y-10 lg:grid-cols-4">
             {items.map((item, i) => (
-              <ItemCard key={item.id} item={item} priority={i < 4} />
+              <ItemCard
+                key={item.id}
+                item={item}
+                priority={i < 4}
+                note={buyer ? fitAgainst(buyer, item) : null}
+              />
             ))}
           </div>
         )}

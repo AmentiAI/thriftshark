@@ -21,8 +21,10 @@ import {
   currentBuyer,
   endBuyerSession,
   isBuyerVerified,
+  requireBuyer,
   startBuyerSession,
 } from "@/lib/buyer-account";
+import { matchHuntToLiveItems, releaseDueDrops } from "@/lib/hunt-match";
 import { deleteBlobUrls, storeUpload } from "@/lib/images";
 import { getOrderByNumber, getOrderGroup, getSellerByHandle } from "@/lib/queries";
 import {
@@ -45,6 +47,7 @@ import {
   listingPhotoLimit,
   liveListingLimit,
 } from "@/lib/seller-plan";
+import { money } from "@/lib/format";
 import { STATUSES, SELLER_SETTABLE_STATUSES, CONDITIONS, type Seller } from "@/lib/types";
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -266,6 +269,29 @@ export async function startBuyerVerified(): Promise<void> {
   redirect(session.url);
 }
 
+export async function saveBuyerFit(formData: FormData) {
+  const buyer = await requireBuyer();
+  const chest = readInches(formData.get("chest_in"));
+  const waist = readInches(formData.get("waist_in"));
+  const inseam = readInches(formData.get("inseam_in"));
+  if (chest === "bad" || waist === "bad" || inseam === "bad") {
+    redirect("/account?sizes=bad");
+  }
+  const shoe = optional(formData.get("shoe_size"))?.slice(0, 16) ?? null;
+  await sql`
+    update buyers set
+      chest_in = ${chest},
+      waist_in = ${waist},
+      inseam_in = ${inseam},
+      shoe_size = ${shoe},
+      updated_at = now()
+    where id = ${buyer.id}
+  `;
+  revalidatePath("/account");
+  revalidatePath("/shop");
+  redirect("/account?sizes=saved");
+}
+
 export async function startSellerSubscription(): Promise<void> {
   const seller = await requireSeller();
   const session = await createVerifiedPassCheckout(seller);
@@ -459,6 +485,11 @@ const itemSchema = z.object({
   item_size: z.string().nullable(),
   condition: z.enum(CONDITIONS.map((c) => c.value) as [string, ...string[]]),
   color: z.string().nullable(),
+  chest_in: z.number().min(1).max(80).nullable(),
+  waist_in: z.number().min(1).max(80).nullable(),
+  inseam_in: z.number().min(1).max(80).nullable(),
+  shoe_size: z.string().max(16).nullable(),
+  drops_at: z.string().datetime().nullable(),
   status: z.enum(STATUSES as [string, ...string[]]),
   featured: z.boolean(),
 });
@@ -471,10 +502,44 @@ function toCents(raw: string): number | null {
   return Number.isFinite(value) ? Math.round(value * 100) : null;
 }
 
+function readInches(raw: FormDataEntryValue | null): number | null | "bad" {
+  const value = text(raw);
+  if (!value) return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1 || n > 80) return "bad";
+  return Math.round(n * 10) / 10;
+}
+
+function readDrop(raw: FormDataEntryValue | null): string | null | "bad" {
+  const value = text(raw);
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "bad";
+  if (date.getTime() <= Date.now()) return null;
+  if (date.getTime() > Date.now() + 60 * 24 * 60 * 60 * 1000) return "bad";
+  return date.toISOString();
+}
+
 function readItemForm(formData: FormData) {
   const price = toCents(text(formData.get("price")));
   const compareRaw = text(formData.get("compare_at"));
   const categoryRaw = text(formData.get("category_id"));
+  const chest = readInches(formData.get("chest_in"));
+  const waist = readInches(formData.get("waist_in"));
+  const inseam = readInches(formData.get("inseam_in"));
+  const drop = readDrop(formData.get("drops_at"));
+  if (chest === "bad" || waist === "bad" || inseam === "bad") {
+    return {
+      success: false as const,
+      error: { issues: [{ message: "Measurements are inches, from 1 to 80." }] },
+    };
+  }
+  if (drop === "bad") {
+    return {
+      success: false as const,
+      error: { issues: [{ message: "Pick a drop time within the next 60 days." }] },
+    };
+  }
 
   return itemSchema.safeParse({
     title: text(formData.get("title")),
@@ -486,6 +551,11 @@ function readItemForm(formData: FormData) {
     item_size: optional(formData.get("item_size")),
     condition: text(formData.get("condition")) || "good",
     color: optional(formData.get("color")),
+    chest_in: chest,
+    waist_in: waist,
+    inseam_in: inseam,
+    shoe_size: optional(formData.get("shoe_size"))?.slice(0, 16) ?? null,
+    drops_at: drop,
     status: text(formData.get("status")) || "available",
     featured: formData.get("featured") === "on",
   });
@@ -604,7 +674,12 @@ export async function setOrderStatus(formData: FormData) {
 
   if (!Number.isInteger(id) || id <= 0) return;
   if (["new", "packed", "shipped", "picked-up", "cancelled"].includes(status)) {
-    await sql`update orders set status = ${status} where id = ${id}`;
+    await sql`update orders set status = ${status},
+              shipped_at = case
+                when ${status} in ('shipped', 'picked-up') then coalesce(shipped_at, now())
+                else shipped_at
+              end
+              where id = ${id}`;
   }
   if (["pending", "paid", "refunded"].includes(payment)) {
     await sql`update orders set payment_status = ${payment} where id = ${id}`;
@@ -1059,10 +1134,12 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
     const slug = await uniqueSlug(d.title);
     const rows = (await sql`
       insert into items (slug, title, description, price_cents, compare_at_cents, category_id,
-                         brand, item_size, condition, color, status, featured, seller_id)
+                         brand, item_size, condition, color, chest_in, waist_in, inseam_in,
+                         shoe_size, drops_at, status, featured, seller_id, hunt_matched)
       values (${slug}, ${d.title}, ${d.description}, ${d.price_cents}, ${flags.compareAt},
               ${d.category_id}, ${d.brand}, ${d.item_size}, ${d.condition}, ${d.color},
-              ${lot ? "auction" : d.status}, ${flags.featured}, ${seller.id})
+              ${d.chest_in}, ${d.waist_in}, ${d.inseam_in}, ${d.shoe_size}, ${d.drops_at},
+              ${lot ? "auction" : d.status}, ${flags.featured}, ${seller.id}, false)
       returning id
     `) as { id: number }[];
 
@@ -1080,8 +1157,10 @@ export async function createListing(_prev: FormState, formData: FormData): Promi
       }
     }
 
+    await releaseDueDrops();
     revalidatePath("/shop");
     revalidatePath("/");
+    revalidatePath("/hunts");
     revalidatePath(`/shop/${seller.handle}`);
     if (auctionId) {
       revalidatePath("/auctions");
@@ -1161,14 +1240,20 @@ export async function updateListing(_prev: FormState, formData: FormData): Promi
         slug = ${slug}, title = ${d.title}, description = ${d.description},
         price_cents = ${d.price_cents}, compare_at_cents = ${flags.compareAt},
         category_id = ${d.category_id}, brand = ${d.brand}, item_size = ${d.item_size},
-        condition = ${d.condition}, color = ${d.color}, status = ${status},
+        condition = ${d.condition}, color = ${d.color},
+        chest_in = ${d.chest_in}, waist_in = ${d.waist_in}, inseam_in = ${d.inseam_in},
+        shoe_size = ${d.shoe_size}, drops_at = ${d.drops_at},
+        status = ${status},
         featured = ${flags.featured},
+        hunt_matched = case when ${status} = 'available' then false else hunt_matched end,
         updated_at = now()
       where id = ${id} and seller_id = ${seller.id}
     `;
 
+    await releaseDueDrops();
     revalidatePath("/shop");
     revalidatePath("/");
+    revalidatePath("/hunts");
     revalidatePath(`/shop/${seller.handle}`);
     revalidatePath(`/item/${slug}`);
     revalidatePath(`/dashboard/items/${id}`);
@@ -1228,8 +1313,11 @@ export async function setListingStatus(formData: FormData) {
   }
 
   // An item in a live auction stays put until the lot closes.
-  await sql`update items set status = ${status}, updated_at = now()
+  await sql`update items set status = ${status},
+            hunt_matched = case when ${status} = 'available' then false else hunt_matched end,
+            updated_at = now()
             where id = ${id} and seller_id = ${seller.id} and status <> 'auction'`;
+  if (status === "available") await releaseDueDrops();
 
   revalidatePath("/dashboard/items");
   revalidatePath("/shop");
@@ -1244,7 +1332,11 @@ export async function setSellerOrderStatus(formData: FormData) {
   if (!Number.isInteger(id) || id <= 0) return;
 
   if (["new", "packed", "shipped", "picked-up", "cancelled"].includes(status)) {
-    await sql`update orders set status = ${status}
+    await sql`update orders set status = ${status},
+              shipped_at = case
+                when ${status} in ('shipped', 'picked-up') then coalesce(shipped_at, now())
+                else shipped_at
+              end
               where id = ${id} and seller_id = ${seller.id}`;
   }
   if (["pending", "paid", "refunded"].includes(payment)) {
@@ -1493,7 +1585,8 @@ export async function cancelAuction(formData: FormData) {
   if (!auction || auction.bid_count > 0) return;
 
   await sql`update auctions set status = 'cancelled', settled_at = now() where id = ${auction.id}`;
-  await sql`update items set status = 'available', updated_at = now() where id = ${auction.item_id}`;
+  await sql`update items set status = 'available', hunt_matched = false, updated_at = now() where id = ${auction.item_id}`;
+  await releaseDueDrops();
 
   revalidatePath("/auctions");
   revalidatePath("/dashboard/auctions");
@@ -1539,12 +1632,21 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
        where t.status = 'live'
          and t.ends_at > now()
          and $4::int >= coalesce(t.high + t.increment_cents, t.start_cents)
-       returning id, amount_cents
+       returning id, auction_id, amount_cents
+     ),
+     extended as (
+       update auctions a
+       set ends_at = a.ends_at + interval '20 seconds'
+       from placed p
+       where a.id = p.auction_id
+         and a.ends_at <= now() + interval '20 seconds'
+       returning a.ends_at
      )
      select (select id from placed)                     as bid_id,
             (select amount_cents from placed)           as amount,
             (select status from target)                 as status,
             (select ends_at from target)                as ends_at,
+            (select ends_at from extended)              as extended_to,
             (select coalesce(high + increment_cents, start_cents) from target) as minimum`,
     [d.auction_id, d.bidder_name, d.bidder_email, d.amount_cents],
   )) as {
@@ -1552,6 +1654,7 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
     amount: number | null;
     status: string | null;
     ends_at: string | null;
+    extended_to: string | null;
     minimum: number | null;
   }[];
 
@@ -1568,7 +1671,19 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
 
   revalidatePath(`/auctions/${d.auction_id}`);
   revalidatePath("/auctions");
-  return { ok: `Bid placed at $${((result.amount ?? 0) / 100).toFixed(2)}. You are the high bidder.` };
+  const shows = (await sql`
+    select show_id from live_show_lots where auction_id = ${d.auction_id}
+  `) as { show_id: number }[];
+  for (const show of shows) {
+    revalidatePath(`/live/${show.show_id}`);
+    revalidatePath(`/dashboard/shows/${show.show_id}`);
+  }
+  const price = ((result.amount ?? 0) / 100).toFixed(2);
+  return {
+    ok: result.extended_to
+      ? `Bid placed at $${price}. You are the high bidder. The clock added 20 seconds.`
+      : `Bid placed at $${price}. You are the high bidder.`,
+  };
 }
 
 /**
@@ -1593,4 +1708,222 @@ export async function claimAuctionWin(_prev: FormState, formData: FormData): Pro
   }
 
   redirect(`/order/${token}`);
+}
+
+async function signedInShopper() {
+  const buyer = await currentBuyer();
+  if (buyer) return { buyer, seller: null as Awaited<ReturnType<typeof currentSeller>> };
+  const seller = await currentSeller();
+  if (seller) return { buyer: null, seller };
+  return null;
+}
+
+export async function postHunt(_prev: FormState, formData: FormData): Promise<FormState> {
+  const who = await signedInShopper();
+  if (!who) return { error: "Sign in to post a hunt." };
+  const title = text(formData.get("title")).slice(0, 80);
+  const details = text(formData.get("details")).slice(0, 600);
+  const sizeLabel = optional(formData.get("size_label"))?.slice(0, 40) ?? null;
+  const budgetRaw = text(formData.get("budget"));
+  if (title.length < 3) return { error: "Name the piece in a few words." };
+  let budgetCents: number | null = null;
+  if (budgetRaw) {
+    const dollars = Number(budgetRaw);
+    if (!Number.isFinite(dollars) || dollars < 0) return { error: "Budget should be a dollar amount." };
+    budgetCents = Math.round(dollars * 100);
+  }
+  const rows = (await sql`
+    insert into hunts (buyer_id, seller_id, title, details, size_label, budget_cents)
+    values (
+      ${who.buyer?.id ?? null},
+      ${who.seller?.id ?? null},
+      ${title},
+      ${details},
+      ${sizeLabel},
+      ${budgetCents}
+    )
+    returning id
+  `) as { id: number }[];
+  if (rows[0]) await matchHuntToLiveItems(rows[0].id);
+  revalidatePath("/hunts");
+  return { ok: "Posted. If a shop already has something close, it shows up as a reply." };
+}
+
+export async function closeHunt(_prev: FormState, formData: FormData): Promise<FormState> {
+  const who = await signedInShopper();
+  if (!who) return { error: "Sign in to close a hunt." };
+  const huntId = Number(text(formData.get("hunt_id")));
+  if (!Number.isInteger(huntId) || huntId <= 0) return { error: "Unknown hunt." };
+  const rows = (await sql`
+    update hunts
+    set status = 'closed'
+    where id = ${huntId}
+      and status = 'open'
+      and (
+        (${who.buyer?.id ?? null}::int is not null and buyer_id = ${who.buyer?.id ?? null})
+        or (${who.seller?.id ?? null}::int is not null and seller_id = ${who.seller?.id ?? null})
+      )
+    returning id
+  `) as { id: number }[];
+  if (!rows[0]) return { error: "That hunt is already closed." };
+  revalidatePath("/hunts");
+  return { ok: "Hunt closed." };
+}
+
+export async function replyToHunt(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const huntId = Number(text(formData.get("hunt_id")));
+  const note = text(formData.get("note")).slice(0, 400);
+  const itemRaw = text(formData.get("item_id"));
+  const itemId = itemRaw ? Number(itemRaw) : null;
+  if (!Number.isInteger(huntId) || huntId <= 0) return { error: "Unknown hunt." };
+  if (!note && !itemId) return { error: "Add a note or pick one of your listings." };
+
+  const hunts = (await sql`
+    select id, seller_id, buyer_id, title from hunts where id = ${huntId} and status = 'open'
+  `) as { id: number; seller_id: number | null; buyer_id: number | null; title: string }[];
+  const hunt = hunts[0];
+  if (!hunt) return { error: "That hunt is closed." };
+  if (hunt.seller_id === seller.id) return { error: "That's your hunt." };
+
+  if (itemId) {
+    const owned = (await sql`
+      select id from items
+      where id = ${itemId} and seller_id = ${seller.id} and status = 'available'
+    `) as { id: number }[];
+    if (!owned[0]) return { error: "Pick one of your live listings." };
+  }
+
+  await sql`
+    insert into hunt_replies (hunt_id, seller_id, item_id, note)
+    values (${huntId}, ${seller.id}, ${itemId}, ${note})
+  `;
+  if (hunt.seller_id) {
+    await sql`
+      insert into seller_notices (seller_id, kind, body)
+      values (
+        ${hunt.seller_id},
+        'hunt',
+        ${`${seller.shop_name} replied to your hunt “${hunt.title}”.`}
+      )
+    `;
+  }
+  revalidatePath("/hunts");
+  return { ok: "Reply posted." };
+}
+
+export async function submitOffer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const who = await signedInShopper();
+  if (!who) return { error: "Sign in to make an offer." };
+  const itemId = Number(text(formData.get("item_id")));
+  const dollars = Number(text(formData.get("amount")));
+  const note = text(formData.get("note")).slice(0, 280);
+  if (!Number.isInteger(itemId) || itemId <= 0) return { error: "Unknown listing." };
+  if (!Number.isFinite(dollars) || dollars < 1) return { error: "Enter at least $1." };
+  const amount = Math.round(dollars * 100);
+
+  const items = (await sql`
+    select id, seller_id, price_cents, status, title, slug, drops_at
+    from items where id = ${itemId}
+  `) as {
+    id: number;
+    seller_id: number | null;
+    price_cents: number;
+    status: string;
+    title: string;
+    slug: string;
+    drops_at: string | null;
+  }[];
+  const item = items[0];
+  if (!item || item.status !== "available" || !item.seller_id) {
+    return { error: "This piece isn't for sale." };
+  }
+  if (item.drops_at && new Date(item.drops_at).getTime() > Date.now()) {
+    return { error: "This piece isn't live yet." };
+  }
+  if (who.seller && who.seller.id === item.seller_id) return { error: "This is your listing." };
+  if (amount >= item.price_cents) {
+    return { error: "That's the listed price or higher. Add it to your bag." };
+  }
+
+  const fromName = who.buyer?.name ?? who.seller?.shop_name ?? "Someone";
+  if (who.buyer) {
+    await sql`
+      insert into offers (item_id, from_buyer_id, amount_cents, note)
+      values (${itemId}, ${who.buyer.id}, ${amount}, ${note})
+      on conflict (item_id, from_buyer_id) where status = 'pending'
+      do update set amount_cents = excluded.amount_cents, note = excluded.note, created_at = now()
+    `;
+  } else if (who.seller) {
+    await sql`
+      insert into offers (item_id, from_seller_id, amount_cents, note)
+      values (${itemId}, ${who.seller.id}, ${amount}, ${note})
+      on conflict (item_id, from_seller_id) where status = 'pending'
+      do update set amount_cents = excluded.amount_cents, note = excluded.note, created_at = now()
+    `;
+  }
+
+  await sql`
+    insert into seller_notices (seller_id, kind, body)
+    values (
+      ${item.seller_id},
+      'offer',
+      ${`${fromName} offered ${money(amount)} on ${item.title}.`}
+    )
+  `;
+  revalidatePath(`/item/${item.slug}`);
+  revalidatePath("/dashboard/offers");
+  return { ok: `Offer sent at ${money(amount)}. The shop has 48 hours to confirm or deny.` };
+}
+
+export async function acceptOffer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const offerId = Number(text(formData.get("offer_id")));
+  if (!Number.isInteger(offerId) || offerId <= 0) return { error: "Unknown offer." };
+
+  const rows = (await sql`
+    update items i
+    set price_cents = o.amount_cents, updated_at = now()
+    from offers o
+    where o.id = ${offerId}
+      and o.status = 'pending'
+      and i.id = o.item_id
+      and i.seller_id = ${seller.id}
+      and i.status = 'available'
+      and (i.drops_at is null or i.drops_at <= now())
+      and o.created_at > now() - interval '48 hours'
+    returning i.id, i.slug, o.amount_cents
+  `) as { id: number; slug: string; amount_cents: number }[];
+  const updated = rows[0];
+  if (!updated) return { error: "That offer is no longer open." };
+
+  await sql`update offers set status = 'accepted' where id = ${offerId}`;
+  await sql`
+    update offers set status = 'declined'
+    where item_id = ${updated.id} and status = 'pending' and id <> ${offerId}
+  `;
+  revalidatePath(`/item/${updated.slug}`);
+  revalidatePath("/dashboard/offers");
+  revalidatePath("/shop");
+  return { ok: `Accepted. The listing is now ${money(updated.amount_cents)}.` };
+}
+
+export async function declineOffer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const offerId = Number(text(formData.get("offer_id")));
+  if (!Number.isInteger(offerId) || offerId <= 0) return { error: "Unknown offer." };
+  const rows = (await sql`
+    update offers o
+    set status = 'declined'
+    from items i
+    where o.id = ${offerId}
+      and o.status = 'pending'
+      and i.id = o.item_id
+      and i.seller_id = ${seller.id}
+    returning o.id, i.slug
+  `) as { id: number; slug: string }[];
+  if (!rows[0]) return { error: "That offer is no longer open." };
+  revalidatePath(`/item/${rows[0].slug}`);
+  revalidatePath("/dashboard/offers");
+  return { ok: "Offer declined." };
 }

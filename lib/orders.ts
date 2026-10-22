@@ -104,6 +104,7 @@ export async function createOrder(itemIds: number[], details: CheckoutDetails) {
        select id, title, price_cents, seller_id
        from items
        where id = any($1::int[]) and status = 'available'
+         and (drops_at is null or drops_at <= now())
        for update
      ),
      guard as (

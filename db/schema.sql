@@ -381,3 +381,168 @@ alter table sellers
   add column if not exists identity_session_id text;
 alter table sellers
   add column if not exists identity_verified_at timestamptz;
+
+-- A buyer or shop names a piece they want. Shops reply with something they have.
+create table if not exists hunts (
+  id           serial primary key,
+  buyer_id     int references buyers(id) on delete cascade,
+  seller_id    int references sellers(id) on delete cascade,
+  title        text not null,
+  details      text not null default '',
+  size_label   text,
+  budget_cents int check (budget_cents is null or budget_cents >= 0),
+  status       text not null default 'open' check (status in ('open','closed')),
+  created_at   timestamptz not null default now(),
+  check (((buyer_id is not null)::int + (seller_id is not null)::int) = 1)
+);
+
+create index if not exists hunts_open_idx on hunts (created_at desc) where status = 'open';
+
+create table if not exists hunt_replies (
+  id         serial primary key,
+  hunt_id    int not null references hunts(id) on delete cascade,
+  seller_id  int not null references sellers(id) on delete cascade,
+  item_id    int references items(id) on delete set null,
+  note       text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists hunt_replies_hunt_idx on hunt_replies (hunt_id, created_at);
+
+-- A price offer on one listing. Accepting it drops that listing to the offer.
+create table if not exists offers (
+  id              serial primary key,
+  item_id         int not null references items(id) on delete cascade,
+  from_buyer_id   int references buyers(id) on delete cascade,
+  from_seller_id  int references sellers(id) on delete cascade,
+  amount_cents    int not null check (amount_cents > 0),
+  note            text not null default '',
+  status          text not null default 'pending'
+                    check (status in ('pending','accepted','declined')),
+  created_at      timestamptz not null default now(),
+  check (((from_buyer_id is not null)::int + (from_seller_id is not null)::int) = 1)
+);
+
+create unique index if not exists offers_buyer_pending_idx
+  on offers (item_id, from_buyer_id)
+  where status = 'pending' and from_buyer_id is not null;
+
+create unique index if not exists offers_seller_pending_idx
+  on offers (item_id, from_seller_id)
+  where status = 'pending' and from_seller_id is not null;
+
+create index if not exists offers_item_idx on offers (item_id, created_at desc);
+
+-- Buyer fit. Inches, except shoe size which stays a label ("9", "9.5").
+alter table buyers add column if not exists chest_in numeric(4,1);
+alter table buyers add column if not exists waist_in numeric(4,1);
+alter table buyers add column if not exists inseam_in numeric(4,1);
+alter table buyers add column if not exists shoe_size text;
+
+-- Listing measurements and a scheduled drop. A future drops_at stays off the rack.
+alter table items add column if not exists chest_in numeric(4,1);
+alter table items add column if not exists waist_in numeric(4,1);
+alter table items add column if not exists inseam_in numeric(4,1);
+alter table items add column if not exists shoe_size text;
+alter table items add column if not exists drops_at timestamptz;
+
+-- Existing live pieces are already public, so they do not get hunt replies retroactively.
+alter table items add column if not exists hunt_matched boolean;
+update items set hunt_matched = true where hunt_matched is null;
+alter table items alter column hunt_matched set default false;
+alter table items alter column hunt_matched set not null;
+
+alter table orders add column if not exists shipped_at timestamptz;
+
+create unique index if not exists hunt_replies_item_idx
+  on hunt_replies (hunt_id, item_id)
+  where item_id is not null;
+
+create index if not exists items_drop_idx on items (drops_at) where drops_at is not null;
+create index if not exists items_unmatched_idx on items (id) where hunt_matched = false;
+
+-- A live auction show. The auction rows stay the source of truth for bids,
+-- winners, and orders. The show is the stage and the camera session.
+create table if not exists live_shows (
+  id                   serial primary key,
+  seller_id            int not null references sellers(id) on delete cascade,
+  title                text not null,
+  status               text not null default 'draft'
+                         check (status in ('draft','live','ended')),
+  current_auction_id   int references auctions(id) on delete set null,
+  started_at           timestamptz,
+  ended_at             timestamptz,
+  created_at           timestamptz not null default now()
+);
+
+create index if not exists live_shows_seller_idx on live_shows (seller_id, created_at desc);
+create unique index if not exists live_shows_one_live_idx
+  on live_shows (seller_id) where status = 'live';
+
+create table if not exists live_show_lots (
+  id          serial primary key,
+  show_id     int not null references live_shows(id) on delete cascade,
+  auction_id  int not null unique references auctions(id) on delete cascade,
+  position    int not null,
+  unique (show_id, position)
+);
+
+create index if not exists live_show_lots_show_idx on live_show_lots (show_id, position);
+
+-- RTMP details for YouTube or Instagram. The stream key is ciphertext.
+create table if not exists live_destinations (
+  id                 serial primary key,
+  seller_id          int not null references sellers(id) on delete cascade,
+  platform           text not null check (platform in ('youtube','instagram')),
+  label              text not null default '',
+  rtmp_url           text not null,
+  stream_key_cipher  text not null,
+  created_at         timestamptz not null default now()
+);
+
+-- Pieces opened on a live show are not rack listings. An unsold one stays off the shop.
+alter table items add column if not exists live_only boolean not null default false;
+
+create index if not exists live_destinations_seller_idx
+  on live_destinations (seller_id, created_at desc);
+
+-- Likes and comments belong to one auction. The next piece is a new auction, so both start over.
+create table if not exists auction_likes (
+  id          serial primary key,
+  auction_id  int not null references auctions(id) on delete cascade,
+  buyer_id    int references buyers(id) on delete cascade,
+  seller_id   int references sellers(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  check (((buyer_id is not null)::int + (seller_id is not null)::int) = 1)
+);
+
+create unique index if not exists auction_likes_buyer_idx
+  on auction_likes (auction_id, buyer_id) where buyer_id is not null;
+
+create unique index if not exists auction_likes_seller_idx
+  on auction_likes (auction_id, seller_id) where seller_id is not null;
+
+create table if not exists auction_comments (
+  id          serial primary key,
+  auction_id  int not null references auctions(id) on delete cascade,
+  buyer_id    int references buyers(id) on delete cascade,
+  seller_id   int references sellers(id) on delete cascade,
+  author_name text not null,
+  body        text not null check (char_length(body) between 1 and 280),
+  created_at  timestamptz not null default now(),
+  check (((buyer_id is not null)::int + (seller_id is not null)::int) = 1)
+);
+
+create index if not exists auction_comments_auction_idx
+  on auction_comments (auction_id, created_at);
+
+create table if not exists live_show_outputs (
+  id              serial primary key,
+  show_id         int not null references live_shows(id) on delete cascade,
+  destination_id  int not null references live_destinations(id) on delete cascade,
+  egress_id       text,
+  status          text not null default 'starting'
+                    check (status in ('starting','live','failed','stopped')),
+  error_message   text,
+  unique (show_id, destination_id)
+);

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopMasthead } from "@/components/shop-masthead";
 import { signOutSeller } from "@/lib/actions";
+import { pendingOfferCount } from "@/lib/queries";
 import { currentSeller } from "@/lib/seller-auth";
 import { isSellerVerified } from "@/lib/seller-plan";
+import { sellerIdVerified } from "@/lib/stripe-identity";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,9 @@ const TABS = [
   ["/dashboard/items", "Listings"],
   ["/dashboard/items/new", "Add listing"],
   ["/dashboard/auctions", "Auctions"],
+  ["/dashboard/shows", "Live shows"],
   ["/dashboard/orders", "Orders"],
+  ["/dashboard/offers", "Offers"],
   ["/dashboard/messages", "Messages"],
   ["/dashboard/verified", "Verified"],
   ["/dashboard/shop", "Storefront"],
@@ -21,6 +25,7 @@ const TABS = [
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   const seller = await currentSeller();
   if (!seller) redirect("/login");
+  const offerCount = await pendingOfferCount(seller.id);
 
   return (
     <div className="wrap py-6 sm:py-10">
@@ -35,6 +40,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
         logoX={seller.logo_x}
         logoY={seller.logo_y}
         verified={isSellerVerified(seller)}
+        identityChecked={sellerIdVerified(seller)}
         meta={
           <Link href={`/shop/${seller.handle}`} className="break-anywhere hover:underline">
             thriftsharks.com/shop/{seller.handle}
@@ -63,6 +69,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
             className="tap flex shrink-0 items-center rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-ink-soft transition hover:bg-paper hover:text-ink"
           >
             {label}
+            {href === "/dashboard/offers" && offerCount > 0 ? ` (${offerCount})` : ""}
           </Link>
         ))}
       </nav>

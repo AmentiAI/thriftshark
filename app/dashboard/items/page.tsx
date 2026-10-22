@@ -102,6 +102,14 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
                       item.category_name,
                       item.brand,
                       item.item_size && `Size ${item.item_size}`,
+                      item.drops_at && new Date(item.drops_at).getTime() > Date.now()
+                        ? `Drops ${new Date(item.drops_at).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : null,
                       conditionLabel(item.condition),
                       shortDate(item.created_at),
                     ]

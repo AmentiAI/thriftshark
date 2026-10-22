@@ -5,27 +5,27 @@ import { getItemById } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Contact & returns",
+  title: "Contact",
   description:
-    "Ask about a piece, request a measurement, or start a return. We reply within a day.",
+    "Thrift Sharks is a marketplace. Sellers keep their own goods. We take a fee and do not hold product or handle returns.",
 };
 
 const FAQ = [
   {
-    q: "Can you hold something for me?",
-    a: "Only through checkout. Placing an order takes the piece off the rack immediately, and we invoice afterwards — that is as close to a hold as we get, because single-piece stock makes informal holds unfair to everyone else.",
+    q: "Do you hold the product?",
+    a: "No. There is no shop and no warehouse. Sellers keep their own goods and ship them (or arrange pickup) after you pay. We never take possession of an item.",
   },
   {
-    q: "Can I get another measurement?",
-    a: "Yes, always. Tell us the piece and what you need measured and we will go and measure it. It is usually the same afternoon.",
+    q: "Do you handle returns?",
+    a: "No. A return, refund, or exchange is between you and the seller. Message that shop from the order or the listing. If a seller will not deal with a real problem, we can suspend the shop until it is handled. Suspending a shop does not mean we take the item or issue the refund.",
   },
   {
-    q: "What is your returns policy?",
-    a: "Fourteen days from delivery, refunded in full once it is back with us in the condition it left. Return shipping is on you unless we described something wrong. Flaws listed in the description are not grounds for return, which is exactly why we photograph them.",
+    q: "What do you charge?",
+    a: "Sellers list for free. On a normal order the buyer pays a $5 platform fee per shop, and that fee is ours. The item price and the shipping charge go to the seller through Stripe.",
   },
   {
-    q: "How fast do you ship?",
-    a: "Within two working days of payment clearing, tracked. Pickup orders are ready the same day during opening hours.",
+    q: "Who do I ask about a listing?",
+    a: "The shop that listed it. They have the piece, the measurements, and the photos. Use the message button on the listing or the shop page.",
   },
 ];
 
@@ -42,11 +42,12 @@ export default async function ContactPage(props: PageProps<"/contact">) {
       <header className="pb-8">
         <p className="eyebrow-pill">Contact</p>
         <h1 className="mt-4 font-display text-4xl font-extrabold tracking-[-0.04em] sm:mt-5 sm:text-5xl lg:text-6xl">
-          Ask us anything
+          Contact
         </h1>
         <p className="mt-3 max-w-xl text-ink-soft">
-          Measurements, fit advice, returns, trade-ins, or whether that coat is
-          as green as it looks. A real person reads these.
+          Thrift Sharks lets independent sellers sell to buyers and takes a fee.
+          We do not hold product, and we do not handle returns. Questions about a
+          piece go to the shop that listed it.
         </p>
       </header>
 
@@ -57,18 +58,7 @@ export default async function ContactPage(props: PageProps<"/contact">) {
           defaultSubject={rawSubject}
         />
 
-        <aside className="space-y-10">
-          <div>
-            <h2 className="eyebrow text-ink-soft">Find us</h2>
-            <address className="mt-3 text-sm leading-relaxed not-italic text-ink-soft">
-              218 Harbour Road
-              <br />
-              Open Wednesday – Sunday, 11am – 7pm
-              <br />
-              Closed Monday and Tuesday for sorting
-            </address>
-          </div>
-
+        <aside>
           <div>
             <h2 className="eyebrow text-ink-soft">Common questions</h2>
             <dl className="mt-4 space-y-3">

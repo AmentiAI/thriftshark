@@ -59,6 +59,7 @@ export function ShopsCarousel({ sellers }: { sellers: SellerCard[] }) {
               </span>
               <span className="block truncate text-xs text-ink-faint">
                 @{seller.handle}
+                {seller.identity_checked ? " · ID checked" : ""}
                 {seller.item_count > 0
                   ? ` · ${seller.item_count} ${seller.item_count === 1 ? "listing" : "listings"}`
                   : ""}

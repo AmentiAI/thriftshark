@@ -2,13 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AddToBag } from "@/components/add-to-bag";
+import { DropClock } from "@/components/drop-clock";
+import { IdChecked } from "@/components/id-checked";
 import { ItemCard } from "@/components/item-card";
 import { ItemGallery } from "@/components/item-gallery";
 import { ShopAvatar } from "@/components/shop-avatar";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { fitAgainst, isFutureDrop } from "@/lib/fit";
 import { money } from "@/lib/format";
 import { getItemBySlug, getRelatedItems } from "@/lib/queries";
 import { getAuctionByItemId } from "@/lib/auctions";
+import { OfferForm } from "@/components/offer-form";
+import { currentBuyer } from "@/lib/buyer-account";
+import { myOfferOnItem } from "@/lib/queries";
+import { currentSeller } from "@/lib/seller-auth";
 import { SHIPPING_FLAT_CENTS, conditionLabel, imageSrc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -34,20 +41,33 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
   const item = await getItemBySlug(slug);
   if (!item || item.status === "draft") notFound();
 
-  const [related, auction] = await Promise.all([
+  const [related, auction, buyer, seller] = await Promise.all([
     getRelatedItems(item, 4),
     item.status === "auction" ? getAuctionByItemId(item.id) : Promise.resolve(null),
+    currentBuyer(),
+    currentSeller(),
   ]);
+  const ownListing = Boolean(seller && item.seller_id === seller.id);
+  const offer =
+    !ownListing && item.status === "available"
+      ? await myOfferOnItem(item.id, buyer?.id ?? null, ownListing ? null : (seller?.id ?? null))
+      : null;
   const sold = item.status !== "available";
+  const scheduled = !sold && isFutureDrop(item.drops_at);
   const onSale = !!item.compare_at_cents && item.compare_at_cents > item.price_cents;
+  const fit = buyer ? fitAgainst(buyer, item) : null;
 
   const spec = [
     ["Brand", item.brand],
     ["Size", item.item_size],
+    ["Chest", item.chest_in != null && item.chest_in !== "" ? `${item.chest_in} in` : null],
+    ["Waist", item.waist_in != null && item.waist_in !== "" ? `${item.waist_in} in` : null],
+    ["Inseam", item.inseam_in != null && item.inseam_in !== "" ? `${item.inseam_in} in` : null],
+    ["Shoe", item.shoe_size],
     ["Condition", conditionLabel(item.condition)],
     ["Colour", item.color],
     ["Category", item.category_name],
-    ["Stock", sold ? "Sold" : "1 of 1"],
+    ["Stock", sold ? "Sold" : scheduled ? "Dropping soon" : "1 of 1"],
   ].filter(([, value]) => Boolean(value)) as [string, string][];
 
   return (
@@ -88,6 +108,15 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           <p className="mt-2 text-sm text-ink-faint">
             + {money(SHIPPING_FLAT_CENTS)} flat shipping to the seller at checkout
           </p>
+          {fit && <p className="mt-3 text-sm font-semibold">{fit}</p>}
+          {!fit && !buyer && (item.chest_in || item.waist_in || item.inseam_in || item.shoe_size) && (
+            <p className="mt-3 text-sm text-ink-soft">
+              <Link href={`/login?next=/item/${item.slug}`} className="font-semibold underline">
+                Sign in
+              </Link>{" "}
+              and save your sizes to see if this is close.
+            </p>
+          )}
 
           {item.seller_handle && (
             <Link
@@ -103,6 +132,7 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
                 <span className="flex items-center gap-1 truncate text-sm font-semibold">
                   <span className="min-w-0 truncate">{item.seller_shop_name}</span>
                   {item.seller_verified && <VerifiedBadge size="sm" />}
+                  {item.seller_identity_checked && <IdChecked />}
                 </span>
                 <span className="block text-xs text-ink-faint">@{item.seller_handle}</span>
               </span>
@@ -110,7 +140,17 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
           )}
 
           <div className="mt-6 space-y-3">
-            {auction && auction.status === "live" ? (
+            {scheduled && item.drops_at ? (
+              <div className="rounded-xl border border-line p-5">
+                <p className="text-xs font-semibold tracking-wide text-ink-faint uppercase">Scheduled drop</p>
+                <div className="mt-2">
+                  <DropClock at={item.drops_at} />
+                </div>
+                <p className="mt-2 text-sm text-ink-soft">
+                  Hidden from the shop until then. When the clock hits zero it is live for everyone.
+                </p>
+              </div>
+            ) : auction && auction.status === "live" ? (
               <div className="rounded-xl border border-line p-5">
                 <p className="flex items-center gap-2 text-xs font-semibold text-coral uppercase">
                   <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-coral" />
@@ -137,6 +177,15 @@ export default async function ItemPage(props: PageProps<"/item/[slug]">) {
               >
                 Message seller
               </Link>
+            )}
+            {!sold && !scheduled && auction?.status !== "live" && !ownListing && (
+              <OfferForm
+                itemId={item.id}
+                slug={item.slug}
+                listedCents={item.price_cents}
+                signedIn={Boolean(buyer || seller)}
+                offer={offer}
+              />
             )}
           </div>
 

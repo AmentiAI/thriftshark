@@ -126,6 +126,6 @@ transform and opacity only, and everything switches off under
   page.
 - Bidding is open to anyone with an email address. Add verification before you
   run auctions that matter.
-- Replace the placeholder shop copy in `app/about`, `app/sell` and
+- Replace any leftover placeholder shop copy in `app/sell` and
   `components/site-footer.tsx`.
 - Use a long `ADMIN_PASSWORD` (20+ characters) — `/admin` can pull any listing.

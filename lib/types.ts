@@ -71,6 +71,12 @@ export type SellerCard = {
   featured: boolean;
   /** Active $20/mo Verified plan. */
   verified: boolean;
+  /** Stripe Identity passed. The document itself is never shown. */
+  identity_checked: boolean;
+  /** Hours from a buyer message to the shop's first reply. Null under 2 threads. */
+  reply_hours: number | null;
+  /** Hours from a paid order to shipped or picked up. Null under 2 orders. */
+  ship_hours: number | null;
   created_at: string;
   item_count: number;
   sold_count: number;
@@ -98,6 +104,10 @@ export type Buyer = {
   stripe_customer_id: string | null;
   verified_until: string | null;
   status: "active" | "suspended";
+  chest_in: number | string | null;
+  waist_in: number | string | null;
+  inseam_in: number | string | null;
+  shoe_size: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -218,9 +228,15 @@ export type Item = {
   item_size: string | null;
   condition: Condition;
   color: string | null;
+  chest_in: number | string | null;
+  waist_in: number | string | null;
+  inseam_in: number | string | null;
+  shoe_size: string | null;
+  drops_at: string | null;
   status: ItemStatus;
   featured: boolean;
   created_at: string;
+  seller_identity_checked: boolean;
   images: ItemImage[];
 };
 

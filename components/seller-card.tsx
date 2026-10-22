@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import { IdChecked } from "@/components/id-checked";
 import { ShopAvatar } from "@/components/shop-avatar";
 import { Stars } from "@/components/stars";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { paceBits } from "@/lib/pace";
 import { focalStyle, type SellerCard as SellerCardType } from "@/lib/types";
 
 export function SellerCard({
@@ -52,9 +54,10 @@ export function SellerCard({
           />
         </div>
 
-        <h3 className="mt-3 flex items-center gap-1.5 font-display text-lg font-bold tracking-tight group-hover:underline">
+        <h3 className="mt-3 flex flex-wrap items-center gap-1.5 font-display text-lg font-bold tracking-tight group-hover:underline">
           <span className="min-w-0 truncate">{seller.shop_name}</span>
           {seller.verified && <VerifiedBadge size="sm" />}
+          {seller.identity_checked && <IdChecked />}
         </h3>
         <p className="mt-0.5 truncate text-xs text-ink-faint">
           @{seller.handle}
@@ -70,6 +73,9 @@ export function SellerCard({
             {seller.item_count} {seller.item_count === 1 ? "listing" : "listings"}
           </span>
           {seller.sold_count > 0 && <span>{seller.sold_count} sold</span>}
+          {paceBits(seller.reply_hours, seller.ship_hours).map((bit) => (
+            <span key={bit}>{bit}</span>
+          ))}
           {seller.review_count > 0 && seller.review_avg != null && (
             <span className="inline-flex items-center gap-1">
               <Stars rating={Number(seller.review_avg)} />

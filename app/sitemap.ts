@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { posts } from "@/lib/blog";
 import { sql } from "@/lib/db";
 
 // Rendered per request: a build should never fail because the database is
@@ -18,8 +19,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: siteUrl, changeFrequency: "daily", priority: 1 },
     { url: `${siteUrl}/shop`, changeFrequency: "daily", priority: 0.9 },
     { url: `${siteUrl}/sell`, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/hunts`, changeFrequency: "daily", priority: 0.6 },
     { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/blog`, changeFrequency: "weekly", priority: 0.6 },
+    ...posts.map((post) => ({
+      url: `${siteUrl}/blog/${post.slug}`,
+      lastModified: new Date(`${post.date}T12:00:00Z`),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
     ...categories.map((c) => ({
       url: `${siteUrl}/shop?category=${c.slug}`,
       changeFrequency: "daily" as const,

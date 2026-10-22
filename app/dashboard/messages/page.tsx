@@ -38,6 +38,16 @@ export default async function DashboardMessagesPage() {
                   Pay to keep Verified
                 </Link>
               )}
+              {notice.kind === "offer" && (
+                <Link href="/dashboard/offers" className="btn btn-ink mt-4">
+                  Confirm or deny
+                </Link>
+              )}
+              {notice.kind === "hunt" && (
+                <Link href="/hunts" className="btn btn-ink mt-4">
+                  See the hunt
+                </Link>
+              )}
             </li>
           ))}
         </ul>

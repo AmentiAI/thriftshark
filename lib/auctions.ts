@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
+import { releaseDueDrops } from "@/lib/hunt-match";
 import { PLATFORM_FEE_CENTS, SHIPPING_FLAT_CENTS } from "@/lib/types";
 import type { Auction } from "@/lib/types";
 
@@ -128,7 +129,10 @@ export async function settleDueAuctions(auctionId?: number) {
          returning 1
        ),
        relisted as (
-         update items set status = 'available', updated_at = now()
+         update items set
+           status = case when live_only then 'draft' else 'available' end,
+           hunt_matched = case when live_only then true else false end,
+           updated_at = now()
          where id = (select item_id from due)
            and not exists (select 1 from winner)
          returning 1
@@ -148,6 +152,7 @@ export async function settleDueAuctions(auctionId?: number) {
     );
   }
 
+  if (due.length > 0) await releaseDueDrops();
   return due.length;
 }
 
@@ -156,10 +161,10 @@ export async function listAuctions(filter: "live" | "ended" | "all" = "live") {
 
   const where =
     filter === "live"
-      ? "where a.status = 'live'"
+      ? "where a.status = 'live' and i.live_only = false"
       : filter === "ended"
-        ? "where a.status in ('ended','sold')"
-        : "where a.status <> 'cancelled'";
+        ? "where a.status in ('ended','sold') and i.live_only = false"
+        : "where a.status <> 'cancelled' and i.live_only = false";
 
   const order =
     filter === "live"
@@ -193,7 +198,7 @@ export async function liveAuctions(limit = 4) {
   await settleDueAuctions();
   return (await sql.query(
     `select ${AUCTION_COLUMNS} ${AUCTION_FROM}
-     where a.status = 'live'
+     where a.status = 'live' and i.live_only = false
      order by a.ends_at asc
      limit $1`,
     [limit],
@@ -224,7 +229,9 @@ export async function auctionBids(auctionId: number) {
 export async function auctionStats() {
   const rows = (await sql`
     select
-      (select count(*)::int from auctions where status = 'live')  as live,
+      (select count(*)::int from auctions a
+        join items i on i.id = a.item_id
+        where a.status = 'live' and i.live_only = false) as live,
       (select count(*)::int from auctions where status = 'sold')  as sold,
       (select count(*)::int from bids)                            as bids
   `) as { live: number; sold: number; bids: number }[];

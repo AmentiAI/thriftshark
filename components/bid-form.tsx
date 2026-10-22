@@ -97,9 +97,9 @@ export function BidForm({
       </button>
 
       <p className="text-xs leading-relaxed text-ink-faint">
-        Bids are binding. Win and you get an order page with the shop&apos;s Cash
-        App code — pay that and they ship it. Your email is only shown to the
-        shop.
+        Bids are binding. A bid in the last 20 seconds adds 20 seconds to the clock. Win and
+        you get an order page with the shop&apos;s Cash App code — pay that and
+        they ship it. Your email is only shown to the shop.
       </p>
     </form>
   );

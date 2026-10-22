@@ -3,7 +3,15 @@ import Link from "next/link";
 import { isFresh, money } from "@/lib/format";
 import { imageSrc, type Item } from "@/lib/types";
 
-export function ItemCard({ item, priority = false }: { item: Item; priority?: boolean }) {
+export function ItemCard({
+  item,
+  priority = false,
+  note,
+}: {
+  item: Item;
+  priority?: boolean;
+  note?: string | null;
+}) {
   const image = item.images?.[0];
   const src = imageSrc(image);
   const sold = item.status === "sold";
@@ -69,6 +77,7 @@ export function ItemCard({ item, priority = false }: { item: Item; priority?: bo
             .filter(Boolean)
             .join(" · ") || "—"}
         </p>
+        {note && <p className="mt-1 text-xs font-semibold text-ink">{note}</p>}
       </div>
     </Link>
   );

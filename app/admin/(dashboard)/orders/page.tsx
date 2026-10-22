@@ -43,7 +43,7 @@ export default async function AdminOrdersPage() {
                   </p>
                   <p className="mt-0.5 text-xs text-ink-faint">
                     {shortDate(order.created_at)} ·{" "}
-                    {order.fulfilment === "pickup" ? "Store pickup" : "Ship"}
+                    {order.fulfilment === "pickup" ? "Pickup" : "Ship"}
                   </p>
                 </div>
                 <p className="font-display text-xl font-bold">{money(order.total_cents)}</p>

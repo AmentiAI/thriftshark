@@ -2,7 +2,8 @@ import Link from "next/link";
 import { startSellerIdentity } from "@/lib/actions";
 import { money, shortDate } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
-import { sellerInsights, sellerOrders, sellerReviews, sellerStats } from "@/lib/queries";
+import { OfferList } from "@/components/offer-list";
+import { pendingOffersForSeller, sellerInsights, sellerOrders, sellerReviews, sellerStats } from "@/lib/queries";
 import { Stars } from "@/components/stars";
 import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
 import { confirmSellerIdentity, sellerIdVerified } from "@/lib/stripe-identity";
@@ -26,11 +27,12 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
   const verified = isSellerVerified(seller);
   const idVerified = sellerIdVerified(seller);
 
-  const [stats, orders, insights, reviews] = await Promise.all([
+  const [stats, orders, insights, reviews, offers] = await Promise.all([
     sellerStats(seller.id),
     sellerOrders(seller.id),
     verified ? sellerInsights(seller.id) : Promise.resolve(null),
     sellerReviews(seller.id, 8),
+    pendingOffersForSeller(seller.id),
   ]);
 
   const tiles = [
@@ -88,6 +90,20 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
             <Link href="/dashboard/items/new" className="btn btn-ghost-light">
               List your first piece
             </Link>
+          </div>
+        </section>
+      )}
+
+      {offers.length > 0 && (
+        <section className="rounded-2xl border border-gold/40 bg-gold/10 p-5 sm:p-6">
+          <h2 className="font-display text-xl font-bold">
+            {offers.length === 1 ? "1 offer waiting" : `${offers.length} offers waiting`}
+          </h2>
+          <p className="mt-2 text-sm text-ink-soft">
+            Confirm drops the listing to their price. Deny leaves the price as it is.
+          </p>
+          <div className="mt-4">
+            <OfferList offers={offers} />
           </div>
         </section>
       )}
