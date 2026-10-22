@@ -22,11 +22,14 @@ const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft up
 export function SelfCamera({
   onStream,
   pip = false,
+  fill = false,
   children,
   footer,
 }: {
   onStream?: (stream: MediaStream) => void;
   pip?: boolean;
+  /** Cover a full-screen live room. Hides the camera picker. */
+  fill?: boolean;
   children?: ReactNode;
   /** Sits under the picture and above the camera picker, so a phone host sees it first. */
   footer?: ReactNode;
@@ -76,12 +79,14 @@ export function SelfCamera({
   }, []);
 
   return (
-    <div className={pip ? "contents" : "space-y-3"}>
+    <div className={fill ? "absolute inset-0" : pip ? "contents" : "space-y-3"}>
       <div
         className={
-          pip
-            ? "absolute top-2 right-2 z-10 aspect-video w-[38%] max-w-36 overflow-hidden rounded-2xl bg-ink shadow-lg ring-2 ring-white sm:top-3 sm:right-3 sm:w-[70%] sm:max-w-lg"
-            : "relative overflow-hidden rounded-2xl bg-ink"
+          fill
+            ? "relative h-full w-full bg-ink"
+            : pip
+              ? "absolute top-2 right-2 z-10 aspect-video w-[38%] max-w-36 overflow-hidden rounded-2xl bg-ink shadow-lg ring-2 ring-white sm:top-3 sm:right-3 sm:w-[70%] sm:max-w-lg"
+              : "relative overflow-hidden rounded-2xl bg-ink"
         }
       >
         <video
@@ -90,21 +95,23 @@ export function SelfCamera({
           muted
           playsInline
           className={
-            pip
-              ? "aspect-video w-full bg-ink object-cover"
-              : "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video"
+            fill
+              ? "h-full w-full object-cover"
+              : pip
+                ? "aspect-video w-full bg-ink object-cover"
+                : "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video"
           }
           style={{ transform: "scaleX(-1)" }}
         />
-        {!pip && (
+        {!pip && !fill && (
           <span className="absolute top-3 left-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">
             You
           </span>
         )}
-        {!pip && children}
+        {!pip && !fill && children}
       </div>
-      {!pip && footer}
-      <details className="rounded-2xl border border-line bg-paper px-3">
+      {!pip && !fill && footer}
+      {!fill && <details className="rounded-2xl border border-line bg-paper px-3">
         <summary className="tap cursor-pointer text-sm font-semibold">Camera and microphone</summary>
         <div className="grid gap-3 pb-3 sm:grid-cols-2">
         <label className="block">
@@ -146,8 +153,12 @@ export function SelfCamera({
           </select>
         </label>
         </div>
-      </details>
-      {error && <p className="text-sm text-coral">{error}</p>}
+      </details>}
+      {error && (
+        <p className={fill ? "absolute bottom-36 left-4 z-30 max-w-[70%] text-sm font-semibold text-white" : "text-sm text-coral"}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }

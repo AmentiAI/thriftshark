@@ -1,16 +1,26 @@
 "use client";
 
 import { useActionState } from "react";
+import { ImageField } from "@/components/image-field";
 import { goLiveNow, openShowLot, saveLiveDestination, sendShowOut } from "@/lib/live-actions";
 import type { FormState } from "@/lib/actions";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
-export function GoLiveButton() {
+export function GoLiveForm() {
+  const [state, action, pending] = useActionState<FormState, FormData>(goLiveNow, null);
   return (
-    <form action={goLiveNow}>
-      <button type="submit" className="btn bg-coral text-white hover:opacity-90">
-        Go live
+    <form action={action} className="space-y-4">
+      <ImageField
+        name="cover"
+        label="Thumbnail"
+        hint="This picture is the live card. People see it before they join."
+        shape="wide"
+        maxEdge={1200}
+      />
+      {state?.error && <p className="text-sm text-coral">{state.error}</p>}
+      <button disabled={pending} className="btn bg-coral text-white hover:opacity-90">
+        {pending ? "Going live…" : "Go live"}
       </button>
     </form>
   );

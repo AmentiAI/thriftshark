@@ -6,7 +6,7 @@ import { signUp, type FormState } from "@/lib/actions";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
-export function SignupForm() {
+export function SignupForm({ next = "" }: { next?: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(signUp, null);
   const [role, setRole] = useState<"buyer" | "store">("buyer");
   const [handle, setHandle] = useState("");
@@ -17,6 +17,7 @@ export function SignupForm() {
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="role" value={role} />
+      {next ? <input type="hidden" name="next" value={next} /> : null}
 
       <div className="grid grid-cols-2 gap-2 rounded-full bg-paper-dim p-1">
         <button

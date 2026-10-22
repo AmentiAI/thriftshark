@@ -1,17 +1,19 @@
 import Link from "next/link";
+import { WinnerList } from "@/components/winner-list";
 import { toggleMessageHandled } from "@/lib/actions";
 import { shortDate, shortWhen } from "@/lib/format";
-import { sellerMessages, listSellerThreads, sellerNotices } from "@/lib/queries";
+import { sellerMessages, listSellerThreads, sellerAuctionWins, sellerNotices } from "@/lib/queries";
 import { requireSeller } from "@/lib/seller-auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardMessagesPage() {
   const seller = await requireSeller();
-  const [threads, older, notices] = await Promise.all([
+  const [threads, older, notices, wins] = await Promise.all([
     listSellerThreads(seller.id),
     sellerMessages(seller.id),
     sellerNotices(seller.id),
+    sellerAuctionWins(seller.id),
   ]);
   const waiting = threads.filter((thread) => thread.last_sender === "buyer").length;
 
@@ -21,7 +23,7 @@ export default async function DashboardMessagesPage() {
         <h2 className="font-display text-3xl font-extrabold tracking-[-0.03em]">Messages</h2>
         <p className="mt-2 text-sm text-ink-soft">
           {waiting} waiting on you · {threads.length} conversation{threads.length === 1 ? "" : "s"}.
-          Buyers reach you from Message seller. Reply here.
+          Buyers reach you from Message seller. Winners of your pieces are listed here so you can message them.
         </p>
       </header>
 
@@ -51,6 +53,12 @@ export default async function DashboardMessagesPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {wins.length > 0 && (
+        <div className="mb-10">
+          <WinnerList wins={wins} />
+        </div>
       )}
 
       {threads.length === 0 ? (

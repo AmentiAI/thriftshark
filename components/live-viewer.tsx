@@ -7,10 +7,13 @@ import { viewerShowToken } from "@/lib/live-actions";
 export function LiveViewer({
   showId,
   active,
+  fill = false,
   children,
 }: {
   showId: number;
   active: boolean;
+  /** Cover the live room instead of sitting in a card. */
+  fill?: boolean;
   children?: ReactNode;
 }) {
   const cameraRef = useRef<HTMLVideoElement>(null);
@@ -60,39 +63,42 @@ export function LiveViewer({
 
   if (!active) return null;
 
+  const cameraClass = screenOn
+    ? "absolute top-16 right-3 z-10 aspect-video w-[38%] max-w-36 rounded-2xl bg-ink object-cover ring-2 ring-white"
+    : fill
+      ? phase === "playing"
+        ? "h-full w-full object-cover"
+        : "h-full w-full object-cover opacity-0"
+      : phase === "playing"
+        ? "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video"
+        : "aspect-[3/4] w-full bg-ink object-cover opacity-0 sm:aspect-video";
+
   return (
-    <div className="overflow-hidden rounded-2xl bg-ink">
-      <div className="relative">
+    <div className={fill ? "absolute inset-0 bg-ink" : "overflow-hidden rounded-2xl bg-ink"}>
+      <div className={fill ? "relative h-full" : "relative"}>
         <video
           ref={screenRef}
           autoPlay
           playsInline
           muted
-          className={screenOn ? "aspect-video w-full bg-black object-contain" : "hidden"}
+          className={screenOn ? (fill ? "h-full w-full bg-black object-contain" : "aspect-video w-full bg-black object-contain") : "hidden"}
         />
         <video
           ref={cameraRef}
           autoPlay
           playsInline
           muted={muted}
-          className={
-            screenOn
-              ? "absolute top-2 right-2 z-10 aspect-video w-[38%] max-w-36 rounded-2xl bg-ink object-cover ring-2 ring-white sm:top-3 sm:right-3 sm:w-[70%] sm:max-w-lg"
-              : phase === "playing"
-                ? "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video"
-                : "aspect-[3/4] w-full bg-ink object-cover opacity-0 sm:aspect-video"
-          }
-          style={{ transform: "scaleX(-1)" }}
+          className={cameraClass}
         />
         {phase !== "playing" && (
-          <p className="absolute top-3 left-3 max-w-[70%] text-xs font-semibold text-white">
+          <p className={`absolute max-w-[70%] text-xs font-semibold text-white ${fill ? "top-20 left-4" : "top-3 left-3"}`}>
             {phase === "off" ? "Camera connects when the shop is sending it." : "Waiting for the camera…"}
           </p>
         )}
         <button
           type="button"
           className={`tap absolute z-30 rounded-full bg-black/60 px-3 text-xs font-semibold text-white ${
-            screenOn ? "right-3 bottom-3" : "top-3 right-3"
+            fill ? "top-20 right-3" : screenOn ? "right-3 bottom-3" : "top-3 right-3"
           }`}
           onClick={() => {
             setMuted((value) => !value);

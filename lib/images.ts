@@ -42,7 +42,7 @@ function guessTypeFromName(name: string) {
   return byExt[ext] ?? "";
 }
 
-export type ImagePurpose = "item" | "logo" | "banner" | "cashapp-qr";
+export type ImagePurpose = "item" | "logo" | "banner" | "cashapp-qr" | "cover";
 
 export type UploadResult =
   | { ok: true; id: number; url: string }

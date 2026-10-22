@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
@@ -394,18 +395,25 @@ export async function openDm(_prev: FormState, formData: FormData): Promise<Form
 
 export async function replyAsBuyer(_prev: FormState, formData: FormData): Promise<FormState> {
   const key = await currentBuyerKey();
-  if (!key) return { error: "Open this conversation from the browser you started it in." };
+  const buyer = await currentBuyer();
+  if (!key && !buyer) return { error: "Sign in to reply." };
 
   const id = Number(text(formData.get("thread_id")));
   const body = dmReplySchema.safeParse(text(formData.get("body")));
   if (!Number.isInteger(id) || id <= 0) return { error: "That conversation is missing." };
   if (!body.success) return { error: body.error.issues[0].message };
 
-  const owned = (await sql`
-    update dm_threads set updated_at = now()
-    where id = ${id} and buyer_key = ${key}
-    returning id
-  `) as { id: number }[];
+  const owned = (await sql.query(
+    `update dm_threads set updated_at = now()
+     where id = $1
+       and (
+         ($2::text is not null and buyer_key = $2)
+         or ($3::int is not null and buyer_id = $3)
+         or ($4::text is not null and lower(buyer_email) = lower($4))
+       )
+     returning id`,
+    [id, key, buyer?.id ?? null, buyer?.email ?? null],
+  )) as { id: number }[];
   if (!owned[0]) return { error: "That conversation is not yours." };
 
   await sql`
@@ -446,6 +454,84 @@ export async function replyAsSeller(_prev: FormState, formData: FormData): Promi
   revalidatePath(`/dashboard/messages/${id}`);
   revalidatePath("/admin/messages");
   redirect(`/dashboard/messages/${id}`);
+}
+
+/** Opens the host's conversation with the person who won this piece. */
+export async function messageAuctionWinner(formData: FormData) {
+  const seller = await requireSeller();
+  const auctionId = Number(text(formData.get("auction_id")));
+  if (!Number.isInteger(auctionId) || auctionId <= 0) return;
+
+  const wins = (await sql`
+    select a.item_id, i.title, o.customer_name, o.email, o.buyer_id
+    from auctions a
+    join items i on i.id = a.item_id
+    join orders o on o.id = a.order_id
+    where a.id = ${auctionId} and a.seller_id = ${seller.id} and a.status = 'sold'
+  `) as {
+    item_id: number;
+    title: string;
+    customer_name: string;
+    email: string;
+    buyer_id: number | null;
+  }[];
+  const win = wins[0];
+  if (!win) return;
+
+  const buyerId =
+    win.buyer_id ??
+    ((
+      await sql`
+        select id from buyers
+        where lower(email) = lower(${win.email}) and status = 'active'
+        limit 1
+      `
+    ) as { id: number }[])[0]?.id ??
+    null;
+
+  const existing = (await sql`
+    select id from dm_threads
+    where seller_id = ${seller.id}
+      and (
+        (${buyerId}::int is not null and buyer_id = ${buyerId})
+        or lower(buyer_email) = lower(${win.email})
+      )
+    order by updated_at desc
+    limit 1
+  `) as { id: number }[];
+
+  let threadId = existing[0]?.id;
+  if (threadId) {
+    await sql`
+      update dm_threads
+      set buyer_name = ${win.customer_name},
+          buyer_id = coalesce(buyer_id, ${buyerId}),
+          item_id = ${win.item_id},
+          updated_at = now()
+      where id = ${threadId} and seller_id = ${seller.id}
+    `;
+  } else {
+    const key = buyerId ? `acct-${buyerId}` : `win-${randomBytes(16).toString("hex")}`;
+    const created = (await sql`
+      insert into dm_threads (seller_id, buyer_name, buyer_email, buyer_key, buyer_id, item_id)
+      values (${seller.id}, ${win.customer_name}, ${win.email}, ${key}, ${buyerId}, ${win.item_id})
+      on conflict (seller_id, buyer_key) do update
+        set buyer_name = excluded.buyer_name,
+            buyer_email = excluded.buyer_email,
+            buyer_id = coalesce(dm_threads.buyer_id, excluded.buyer_id),
+            item_id = excluded.item_id,
+            updated_at = now()
+      returning id
+    `) as { id: number }[];
+    threadId = created[0]?.id;
+  }
+  if (!threadId) return;
+
+  revalidatePath("/dashboard/messages");
+  revalidatePath(`/dashboard/messages/${threadId}`);
+  revalidatePath("/inbox");
+  revalidatePath(`/inbox/${threadId}`);
+  redirect(`/dashboard/messages/${threadId}`);
 }
 
 export async function subscribe(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -823,7 +909,9 @@ export async function signUpBuyer(_prev: FormState, formData: FormData): Promise
 
   await endSellerSession();
   await startBuyerSession(rows[0].id);
-  redirect("/account");
+  const next = text(formData.get("next"));
+  const dest = next.startsWith("/") && !next.startsWith("//") ? next : "";
+  redirect(dest || "/account");
 }
 
 export async function signUp(prev: FormState, formData: FormData): Promise<FormState> {
@@ -1616,6 +1704,8 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
+  const buyer = await currentBuyer();
+  const buyerId = buyer && buyer.email.toLowerCase() === d.bidder_email ? buyer.id : null;
 
   const rows = (await sql.query(
     `with target as (
@@ -1626,8 +1716,8 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
        for update
      ),
      placed as (
-       insert into bids (auction_id, bidder_name, bidder_email, amount_cents)
-       select t.id, $2, $3, $4::int
+       insert into bids (auction_id, bidder_name, bidder_email, amount_cents, buyer_id)
+       select t.id, $2, $3, $4::int, $5::int
        from target t
        where t.status = 'live'
          and t.ends_at > now()
@@ -1648,7 +1738,7 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
             (select ends_at from target)                as ends_at,
             (select ends_at from extended)              as extended_to,
             (select coalesce(high + increment_cents, start_cents) from target) as minimum`,
-    [d.auction_id, d.bidder_name, d.bidder_email, d.amount_cents],
+    [d.auction_id, d.bidder_name, d.bidder_email, d.amount_cents, buyerId],
   )) as {
     bid_id: number | null;
     amount: number | null;

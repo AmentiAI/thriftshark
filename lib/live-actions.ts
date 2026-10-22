@@ -15,6 +15,7 @@ import {
   stopCameraEgress,
 } from "@/lib/livekit";
 import { currentBuyer } from "@/lib/buyer-account";
+import { storeUpload } from "@/lib/images";
 import { isSellerVerified } from "@/lib/seller-plan";
 import { currentSeller, requireSeller } from "@/lib/seller-auth";
 import { sellerIdVerified } from "@/lib/stripe-identity";
@@ -58,7 +59,7 @@ function isUniqueViolation(error: unknown) {
 }
 
 /** Opens the shop's show on Thrift Sharks. An existing live show is reused. */
-async function beginShow(sellerId: number, shopName: string, title: string) {
+async function beginShow(sellerId: number, shopName: string, title: string, coverImageId: number) {
   const existing = (await sql`
     select id from live_shows
     where seller_id = ${sellerId} and status = 'live'
@@ -68,8 +69,8 @@ async function beginShow(sellerId: number, shopName: string, title: string) {
 
   try {
     const rows = (await sql`
-      insert into live_shows (seller_id, title, status, started_at)
-      values (${sellerId}, ${showTitle(shopName, title)}, 'live', now())
+      insert into live_shows (seller_id, title, status, started_at, cover_image_id)
+      values (${sellerId}, ${showTitle(shopName, title)}, 'live', now(), ${coverImageId})
       returning id
     `) as { id: number }[];
     return rows[0].id;
@@ -94,11 +95,31 @@ function refreshShow(showId: number) {
 }
 
 /** One step: the shop is live on Thrift Sharks. Social streams are not started. */
-export async function goLiveNow() {
+export async function goLiveNow(_prev: FormState, formData: FormData): Promise<FormState> {
   const seller = await currentSeller();
   if (!seller) redirect("/login?next=/dashboard/shows");
-  if (!sellerIdVerified(seller) || !isSellerVerified(seller)) redirect("/dashboard/shows");
-  const showId = await beginShow(seller.id, seller.shop_name, "");
+  if (!sellerIdVerified(seller) || !isSellerVerified(seller)) {
+    return { error: "Live shows need a verified ID and the Verified plan." };
+  }
+
+  const existing = (await sql`
+    select id from live_shows
+    where seller_id = ${seller.id} and status = 'live'
+    limit 1
+  `) as { id: number }[];
+  if (existing[0]) {
+    refreshShow(existing[0].id);
+    redirect(`/dashboard/shows/${existing[0].id}`);
+  }
+
+  const file = formData.get("cover");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Add a thumbnail before you go live. It shows on the live card." };
+  }
+  const uploaded = await storeUpload(file, seller.id, "cover");
+  if (!uploaded.ok) return { error: uploaded.error };
+
+  const showId = await beginShow(seller.id, seller.shop_name, "", uploaded.id);
   refreshShow(showId);
   redirect(`/dashboard/shows/${showId}`);
 }
@@ -591,6 +612,49 @@ export async function postLotComment(_prev: FormState, formData: FormData): Prom
 
   revalidatePath(`/live/${stage.show_id}`);
   revalidatePath(`/dashboard/shows/${stage.show_id}`);
+  return { ok: "Posted." };
+}
+
+/** A line in the show chat. Works as soon as someone has joined, before a piece is up. */
+export async function postShowMessage(_prev: FormState, formData: FormData): Promise<FormState> {
+  const showId = Number(text(formData.get("show_id")));
+  const body = text(formData.get("body")).slice(0, 280);
+  if (!Number.isInteger(showId)) return { error: "This live is not open." };
+  if (body.length < 1) return { error: "Write a comment." };
+  const viewer = await viewerIdentity();
+  if (!viewer) return { error: "Sign in to chat." };
+
+  const shows = (await sql`
+    select id from live_shows where id = ${showId} and status = 'live'
+  `) as { id: number }[];
+  if (!shows[0]) return { error: "This live has ended." };
+
+  const prior = viewer.buyerId
+    ? ((await sql`
+        select count(*)::int as n from live_show_messages
+        where show_id = ${showId} and buyer_id = ${viewer.buyerId}
+      `) as { n: number }[])
+    : ((await sql`
+        select count(*)::int as n from live_show_messages
+        where show_id = ${showId} and seller_id = ${viewer.sellerId}
+      `) as { n: number }[]);
+  if ((prior[0]?.n ?? 0) >= 80) return { error: "That's enough for this live." };
+
+  if (viewer.buyerId) {
+    await sql`
+      insert into live_show_messages (show_id, buyer_id, author_name, body)
+      values (${showId}, ${viewer.buyerId}, ${viewer.name}, ${body})
+    `;
+  } else if (viewer.sellerId) {
+    await sql`
+      insert into live_show_messages (show_id, seller_id, author_name, body)
+      values (${showId}, ${viewer.sellerId}, ${viewer.name}, ${body})
+    `;
+  }
+
+  revalidatePath(`/live/${showId}`);
+  revalidatePath(`/dashboard/shows/${showId}`);
+  revalidatePath("/");
   return { ok: "Posted." };
 }
 

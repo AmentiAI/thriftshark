@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { GoLiveButton } from "@/components/show-forms";
+import { GoLiveForm } from "@/components/show-forms";
+import { WinnerList } from "@/components/winner-list";
 import { startLiveShow } from "@/lib/live-actions";
 import { sellerShows } from "@/lib/live-shows";
+import { sellerAuctionWins } from "@/lib/queries";
 import { requireSeller } from "@/lib/seller-auth";
 import { isSellerVerified, SELLER_PLAN_PRICE_USD } from "@/lib/seller-plan";
 import { sellerIdVerified } from "@/lib/stripe-identity";
@@ -10,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ShowsPage() {
   const seller = await requireSeller();
-  const shows = await sellerShows(seller.id);
+  const [shows, wins] = await Promise.all([sellerShows(seller.id), sellerAuctionWins(seller.id)]);
   const ready = sellerIdVerified(seller) && isSellerVerified(seller);
 
   return (
@@ -27,11 +29,11 @@ export default async function ShowsPage() {
         <section className="panel p-6">
           <h3 className="font-display text-xl font-bold">Go live</h3>
           <p className="mt-2 text-sm text-ink-soft">
-            One press puts the camera on Thrift Sharks. Add YouTube or Instagram afterward only if
-            you want them.
+            Add a thumbnail, then go live. That picture is the card people tap. YouTube and
+            Instagram can wait until you are on camera.
           </p>
           <div className="mt-4">
-            <GoLiveButton />
+            <GoLiveForm />
           </div>
         </section>
       ) : (
@@ -54,6 +56,8 @@ export default async function ShowsPage() {
           </div>
         </section>
       )}
+
+      <WinnerList wins={wins} />
 
       <section>
         <h3 className="font-display text-xl font-bold">Your shows</h3>

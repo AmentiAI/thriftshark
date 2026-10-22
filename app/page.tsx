@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { DropClock } from "@/components/drop-clock";
-import { ShopAvatar } from "@/components/shop-avatar";
+import { LiveCard } from "@/components/live-card";
 import { ItemCard } from "@/components/item-card";
 import { AuctionCard } from "@/components/auction-card";
 import { ShopsCarousel } from "@/components/shops-carousel";
@@ -9,7 +9,6 @@ import { TopShopsWidget } from "@/components/top-shops-widget";
 import { liveAuctions } from "@/lib/auctions";
 import { categoryImage } from "@/lib/category-images";
 import { listLiveShows } from "@/lib/live-shows";
-import { money } from "@/lib/format";
 import {
   getCategories,
   getCategoryCounts,
@@ -98,33 +97,9 @@ export default async function HomePage() {
             </Link>
           </div>
           <ul className="wrap grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {liveShows.map((show) => {
-              const lot = show.lots.find((item) => item.auction_id === show.current_auction_id);
-              return (
-                <li key={show.id}>
-                  <Link href={`/live/${show.id}`} className="panel block p-5 hover:border-ink">
-                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[0.14em] text-coral uppercase">
-                      <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-coral" />
-                      Live
-                    </span>
-                    <h3 className="mt-2 font-display text-2xl font-extrabold tracking-tight">{show.title}</h3>
-                    <p className="mt-2 inline-flex items-center gap-2 text-sm">
-                      <ShopAvatar
-                        shopName={show.seller_shop_name}
-                        logoImageId={show.seller_logo_image_id}
-                        size={28}
-                      />
-                      <span className="min-w-0 break-anywhere">{show.seller_shop_name}</span>
-                    </p>
-                    <p className="mt-3 text-sm text-ink-soft">
-                      {lot
-                        ? `On stage: ${lot.title} · ${money(lot.high_cents ?? lot.start_cents)}`
-                        : "On camera. The next piece starts when they set a price."}
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
+            {liveShows.map((show) => (
+              <LiveCard key={show.id} show={show} />
+            ))}
           </ul>
         </section>
       )}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { currentBuyer } from "@/lib/buyer-account";
 import { currentBuyerKey } from "@/lib/buyer-auth";
 import { shortWhen } from "@/lib/format";
 import { listBuyerThreads } from "@/lib/queries";
@@ -9,14 +10,14 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Your messages" };
 
 export default async function InboxPage() {
-  const key = await currentBuyerKey();
-  const threads = key ? await listBuyerThreads(key) : [];
+  const [key, buyer] = await Promise.all([currentBuyerKey(), currentBuyer()]);
+  const threads = await listBuyerThreads(key, buyer ? { id: buyer.id, email: buyer.email } : null);
 
   return (
     <div className="wrap max-w-2xl py-10">
       <h1 className="font-display text-4xl font-extrabold tracking-[-0.04em]">Your messages</h1>
       <p className="mt-3 text-sm text-ink-soft">
-        Direct messages with sellers. Replies show up here on this browser.
+        Direct messages with sellers. If you win a piece, the shop can message you here once you are signed in.
       </p>
 
       {threads.length === 0 ? (

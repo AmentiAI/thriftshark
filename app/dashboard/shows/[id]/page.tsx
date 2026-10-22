@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LotReactions } from "@/components/lot-reactions";
+import { LiveCommentBar } from "@/components/live-comment-bar";
 import { LiveHud } from "@/components/live-hud";
+import { ShowChat } from "@/components/show-chat";
 import { DestinationForm, OpenLotForm, SendOutForm } from "@/components/show-forms";
 import { LiveRefresh } from "@/components/live-refresh";
 import { LiveStudio } from "@/components/live-studio";
+import { messageAuctionWinner } from "@/lib/actions";
 import {
   closeShowLot,
   deleteLiveDestination,
   endLiveShow,
 } from "@/lib/live-actions";
-import { getShow, lotCrowd, lotOutcome, sellerDestinations, showOutputs } from "@/lib/live-shows";
+import { getShow, lotOutcome, sellerDestinations, showChat, showOutputs } from "@/lib/live-shows";
 import { livekitConfigured } from "@/lib/livekit";
 import { money } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
@@ -33,9 +35,7 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
   const waiting = Boolean(
     onStage && onStage.auction_status === "live" && new Date(onStage.ends_at).getTime() > Date.now(),
   );
-  const crowd = onStage
-    ? await lotCrowd(onStage.auction_id, { buyerId: null, sellerId: seller.id })
-    : null;
+  const chat = show.status === "live" ? await showChat(show.id, onStage?.auction_id ?? null) : [];
   const outcome = onStage && !waiting ? lotOutcome(onStage) : null;
 
   return (
@@ -71,27 +71,16 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
             amount={onStage ? money(onStage.high_cents ?? onStage.start_cents) : null}
             endsAt={waiting && onStage ? onStage.ends_at : null}
             outcome={outcome}
-            notes={crowd?.notes ?? []}
+            notes={chat}
           />
         }
         stream={
           show.status === "live" ? (
             <section className="panel p-3 sm:p-4">
-              {onStage && crowd ? (
-                <LotReactions
-                  key={onStage.auction_id}
-                  auctionId={onStage.auction_id}
-                  likes={crowd.likes}
-                  liked={crowd.liked}
-                  notes={crowd.notes}
-                  canWrite={waiting}
-                  guest={false}
-                  host
-                  loginHref={`/login?next=/live/${show.id}`}
-                />
-              ) : (
-                <p className="text-sm text-ink-soft">Comments and bids show up here once a piece is up.</p>
-              )}
+              <ShowChat notes={chat} tall />
+              <div className="mt-3">
+                <LiveCommentBar showId={show.id} loginHref={`/login?next=/live/${show.id}`} />
+              </div>
               {waiting && (
                 <form action={closeShowLot} className="mt-3">
                   <input type="hidden" name="show_id" value={show.id} />
@@ -124,10 +113,18 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
                     {lot.title}
                     {lot.auction_id === show.current_auction_id ? (waiting ? " · on stage" : " · last") : ""}
                   </p>
-                  <p className="text-xs text-ink-faint">
-                    {lot.auction_status} · {money(lot.high_cents ?? lot.start_cents)} · {lot.bid_count} bids
+                  <p className="text-xs break-anywhere text-ink-faint">
+                    {lot.auction_status === "sold" && lot.winner_name
+                      ? `Sold to ${lot.winner_name}${lot.winner_email ? ` · ${lot.winner_email}` : ""} · ${money(lot.high_cents ?? lot.start_cents)}`
+                      : `${lot.auction_status} · ${money(lot.high_cents ?? lot.start_cents)} · ${lot.bid_count} bids`}
                   </p>
                 </div>
+                {lot.auction_status === "sold" && (
+                  <form action={messageAuctionWinner} className="shrink-0">
+                    <input type="hidden" name="auction_id" value={lot.auction_id} />
+                    <button className="btn btn-ink !px-3.5 !py-2 text-sm">Message</button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

@@ -53,7 +53,10 @@ export function SellerLoginForm({ next = "" }: { next?: string }) {
 
       <p className="text-center text-sm text-ink-soft">
         No account yet?{" "}
-        <Link href="/signup" className="font-semibold underline hover:text-reef-dark">
+        <Link
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+          className="font-semibold underline hover:text-reef-dark"
+        >
           Create one
         </Link>
       </p>

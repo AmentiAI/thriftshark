@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { DmComposer } from "@/components/dm-composer";
 import { DmTranscript } from "@/components/dm-transcript";
 import { replyAsBuyer } from "@/lib/actions";
+import { currentBuyer } from "@/lib/buyer-account";
 import { currentBuyerKey } from "@/lib/buyer-auth";
 import { getBuyerThread, listDmMessages } from "@/lib/queries";
 
@@ -14,10 +15,10 @@ export const metadata: Metadata = { title: "Message" };
 export default async function InboxThreadPage(props: { params: Promise<{ id: string }> }) {
   const { id: raw } = await props.params;
   const id = Number(raw);
-  const key = await currentBuyerKey();
-  if (!key || !Number.isInteger(id)) notFound();
+  const [key, buyer] = await Promise.all([currentBuyerKey(), currentBuyer()]);
+  if (!Number.isInteger(id)) notFound();
 
-  const thread = await getBuyerThread(id, key);
+  const thread = await getBuyerThread(id, key, buyer ? { id: buyer.id, email: buyer.email } : null);
   if (!thread) notFound();
   const messages = await listDmMessages(thread.id);
 

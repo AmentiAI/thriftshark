@@ -11,11 +11,14 @@ export function LiveBid({
   minimum,
   bidderName,
   bidderEmail,
+  overlay = false,
 }: {
   auctionId: number;
   minimum: number;
   bidderName: string;
   bidderEmail: string;
+  /** Coral pill on the video, to the right of the comment line. */
+  overlay?: boolean;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<FormState, FormData>(placeBid, null);
@@ -25,19 +28,19 @@ export function LiveBid({
   }, [state, router]);
 
   return (
-    <form action={action} className="space-y-2">
+    <form action={action} className={overlay ? "flex shrink-0 flex-col items-end gap-1" : "space-y-2"}>
       <input type="hidden" name="auction_id" value={auctionId} />
       <input type="hidden" name="bidder_name" value={bidderName} />
       <input type="hidden" name="bidder_email" value={bidderEmail} />
+      {state?.error && <p className="max-w-44 text-right text-xs text-coral">{state.error}</p>}
       <button
         name="amount"
         value={(minimum / 100).toFixed(2)}
         disabled={pending}
-        className="btn btn-ink w-full"
+        className={overlay ? "btn bg-coral text-white hover:opacity-90" : "btn btn-ink w-full"}
       >
         {pending ? "Bidding…" : `Bid ${money(minimum)}`}
       </button>
-      {state?.error && <p className="text-sm text-coral">{state.error}</p>}
     </form>
   );
 }

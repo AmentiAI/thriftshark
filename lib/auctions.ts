@@ -73,20 +73,25 @@ export async function settleDueAuctions(auctionId?: number) {
          for update
        ),
        top as (
-         select b.bidder_name, b.bidder_email, b.amount_cents
+         select b.bidder_name, b.bidder_email, b.amount_cents, b.buyer_id
          from bids b join due on due.id = b.auction_id
          order by b.amount_cents desc, b.id asc
          limit 1
        ),
        winner as (
          select t.bidder_name, t.bidder_email, t.amount_cents,
+                coalesce(t.buyer_id, (
+                  select u.id from buyers u
+                  where lower(u.email) = lower(t.bidder_email) and u.status = 'active'
+                  limit 1
+                )) as buyer_id,
                 d.item_id, d.seller_id
          from top t join due d on true
          where t.amount_cents >= coalesce(d.reserve_cents, 0)
        ),
        new_order as (
          insert into orders (order_number, seller_id, group_token, email, customer_name,
-           subtotal_cents, shipping_cents, platform_fee_cents, total_cents, fulfilment, notes)
+           subtotal_cents, shipping_cents, platform_fee_cents, total_cents, fulfilment, notes, buyer_id)
          select $2, w.seller_id, $3, w.bidder_email, w.bidder_name,
                 w.amount_cents,
                 $5::int,
@@ -113,7 +118,8 @@ export async function settleDueAuctions(auctionId?: number) {
                     and u.verified_until > now()
                 ) then 0 else $4::int end,
                 'ship',
-                'Auction win — seller ships; buyer still needs to confirm address.'
+                'Auction win — seller ships; buyer still needs to confirm address.',
+                w.buyer_id
          from winner w
          returning id
        ),

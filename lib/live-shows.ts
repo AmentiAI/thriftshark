@@ -21,6 +21,8 @@ export type LiveLot = {
   image_id: number | null;
   image_url: string | null;
   like_count: number;
+  winner_name: string | null;
+  winner_email: string | null;
 };
 
 export type LotComment = {
@@ -64,6 +66,7 @@ export type LiveShow = {
   seller_handle: string;
   seller_shop_name: string;
   seller_logo_image_id: number | null;
+  cover_image_id: number | null;
   lots: LiveLot[];
 };
 
@@ -95,14 +98,15 @@ const LOT_COLUMNS = `
     where im.item_id = i.id order by im.position, im.id limit 1) as image_id,
   (select im.url from item_images im
     where im.item_id = i.id order by im.position, im.id limit 1) as image_url,
-  (select count(*)::int from auction_likes k where k.auction_id = a.id) as like_count
+  (select count(*)::int from auction_likes k where k.auction_id = a.id) as like_count,
+  o.customer_name as winner_name, o.email as winner_email
 `;
 
 export async function listLiveShows(): Promise<LiveShow[]> {
   await settleDueAuctions();
   const shows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
-           s.started_at, s.ended_at, s.created_at,
+           s.started_at, s.ended_at, s.created_at, s.cover_image_id,
            sel.handle as seller_handle, sel.shop_name as seller_shop_name,
            sel.logo_image_id as seller_logo_image_id
     from live_shows s
@@ -136,7 +140,7 @@ export async function getShow(id: number): Promise<LiveShow | null> {
   await settleDueAuctions();
   const rows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
-           s.started_at, s.ended_at, s.created_at,
+           s.started_at, s.ended_at, s.created_at, s.cover_image_id,
            sel.handle as seller_handle, sel.shop_name as seller_shop_name,
            sel.logo_image_id as seller_logo_image_id
     from live_shows s
@@ -154,6 +158,7 @@ async function lotsFor(showId: number): Promise<LiveLot[]> {
      from live_show_lots l
      join auctions a on a.id = l.auction_id
      join items i on i.id = a.item_id
+     left join orders o on o.id = a.order_id
      where l.show_id = $1
      order by l.position`,
     [showId],
@@ -225,6 +230,63 @@ export async function lotCrowd(
     liked = rows.length > 0;
   }
   return { likes: counts[0]?.likes ?? 0, liked, notes };
+}
+
+/** Show chat, plus bids (and comments) on the piece that is up right now. */
+export async function showChat(showId: number, auctionId: number | null): Promise<LotNote[]> {
+  const messages = (await sql`
+    select id, author_name, body, created_at
+    from live_show_messages
+    where show_id = ${showId}
+    order by created_at desc
+    limit 80
+  `) as LotComment[];
+  const notes: LotNote[] = messages.map((message) => ({
+    key: `m-${message.id}`,
+    kind: "comment" as const,
+    author_name: message.author_name,
+    body: message.body,
+    created_at: stamp(message.created_at),
+  }));
+
+  if (auctionId) {
+    const comments = (await sql`
+      select id, author_name, body, created_at
+      from auction_comments
+      where auction_id = ${auctionId}
+      order by created_at desc
+      limit 40
+    `) as LotComment[];
+    const bidRows = (await sql`
+      select id, bidder_name, amount_cents, created_at
+      from bids
+      where auction_id = ${auctionId}
+      order by created_at desc
+      limit 40
+    `) as { id: number; bidder_name: string; amount_cents: number; created_at: string | Date }[];
+    for (const comment of comments) {
+      notes.push({
+        key: `c-${comment.id}`,
+        kind: "comment",
+        author_name: comment.author_name,
+        body: comment.body,
+        created_at: stamp(comment.created_at),
+      });
+    }
+    for (const bid of bidRows) {
+      notes.push({
+        key: `b-${bid.id}`,
+        kind: "bid",
+        author_name: bid.bidder_name,
+        body: `bid ${money(Number(bid.amount_cents))}`,
+        created_at: stamp(bid.created_at),
+      });
+    }
+  }
+
+  return notes
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(-60);
 }
 
 export async function showOutputs(showId: number): Promise<LiveOutput[]> {

@@ -106,7 +106,7 @@ create table if not exists images (
   bytes       bytea,
   byte_size   int  not null,
   purpose     text not null default 'item'
-                check (purpose in ('item','logo','banner','cashapp-qr')),
+                check (purpose in ('item','logo','banner','cashapp-qr','cover')),
   blob_url    text,
   created_at  timestamptz not null default now()
 );
@@ -536,6 +536,28 @@ create table if not exists auction_comments (
 create index if not exists auction_comments_auction_idx
   on auction_comments (auction_id, created_at);
 
+-- Cover the host picks before going live. It is the picture on the live card.
+alter table live_shows add column if not exists cover_image_id int references images(id) on delete set null;
+
+alter table images drop constraint if exists images_purpose_check;
+alter table images add constraint images_purpose_check
+  check (purpose in ('item','logo','banner','cashapp-qr','cover'));
+
+-- Chat for the whole show, so people can talk as soon as they join.
+create table if not exists live_show_messages (
+  id          serial primary key,
+  show_id     int not null references live_shows(id) on delete cascade,
+  buyer_id    int references buyers(id) on delete cascade,
+  seller_id   int references sellers(id) on delete cascade,
+  author_name text not null,
+  body        text not null check (char_length(body) between 1 and 280),
+  created_at  timestamptz not null default now(),
+  check (((buyer_id is not null)::int + (seller_id is not null)::int) = 1)
+);
+
+create index if not exists live_show_messages_show_idx
+  on live_show_messages (show_id, created_at);
+
 create table if not exists live_show_outputs (
   id              serial primary key,
   show_id         int not null references live_shows(id) on delete cascade,
@@ -546,3 +568,26 @@ create table if not exists live_show_outputs (
   error_message   text,
   unique (show_id, destination_id)
 );
+
+-- Who won, tied to their account when they bid while signed in.
+alter table bids add column if not exists buyer_id int references buyers(id) on delete set null;
+alter table orders add column if not exists buyer_id int references buyers(id) on delete set null;
+alter table dm_threads add column if not exists buyer_id int references buyers(id) on delete set null;
+
+create index if not exists bids_buyer_idx on bids (buyer_id) where buyer_id is not null;
+create index if not exists orders_buyer_idx on orders (buyer_id) where buyer_id is not null;
+create index if not exists dm_threads_buyer_account_idx on dm_threads (buyer_id) where buyer_id is not null;
+
+update bids b
+set buyer_id = u.id
+from buyers u
+where b.buyer_id is null
+  and lower(b.bidder_email) = lower(u.email)
+  and u.status = 'active';
+
+update orders o
+set buyer_id = u.id
+from buyers u
+where o.buyer_id is null
+  and lower(o.email) = lower(u.email)
+  and u.status = 'active';

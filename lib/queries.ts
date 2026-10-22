@@ -618,12 +618,18 @@ const DM_THREAD_FROM = `
   ) last on true
 `;
 
-export async function listBuyerThreads(buyerKey: string): Promise<DmThread[]> {
+export async function listBuyerThreads(
+  buyerKey: string | null,
+  account?: { id: number; email: string } | null,
+): Promise<DmThread[]> {
+  if (!buyerKey && !account) return [];
   return (await sql.query(
     `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
-     where t.buyer_key = $1
+     where ($1::text is not null and t.buyer_key = $1)
+        or ($2::int is not null and t.buyer_id = $2)
+        or ($3::text is not null and lower(t.buyer_email) = lower($3))
      order by t.updated_at desc`,
-    [buyerKey],
+    [buyerKey, account?.id ?? null, account?.email ?? null],
   )) as DmThread[];
 }
 
@@ -671,13 +677,55 @@ export async function findBuyerThread(sellerId: number, buyerKey: string): Promi
   return rows[0] ?? null;
 }
 
-export async function getBuyerThread(id: number, buyerKey: string): Promise<DmThread | null> {
+export async function getBuyerThread(
+  id: number,
+  buyerKey: string | null,
+  account?: { id: number; email: string } | null,
+): Promise<DmThread | null> {
+  if (!buyerKey && !account) return null;
   const rows = (await sql.query(
     `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM}
-     where t.id = $1 and t.buyer_key = $2`,
-    [id, buyerKey],
+     where t.id = $1
+       and (
+         ($2::text is not null and t.buyer_key = $2)
+         or ($3::int is not null and t.buyer_id = $3)
+         or ($4::text is not null and lower(t.buyer_email) = lower($4))
+       )`,
+    [id, buyerKey, account?.id ?? null, account?.email ?? null],
   )) as DmThread[];
   return rows[0] ?? null;
+}
+
+export type AuctionWin = {
+  auction_id: number;
+  title: string;
+  winner_name: string;
+  winner_email: string;
+  amount_cents: number;
+  settled_at: string | null;
+  show_title: string | null;
+};
+
+/** Every piece this shop has sold at auction, newest first. */
+export async function sellerAuctionWins(sellerId: number): Promise<AuctionWin[]> {
+  return (await sql`
+    select a.id as auction_id, i.title,
+           o.customer_name as winner_name, o.email as winner_email,
+           coalesce(
+             (select oi.price_cents from order_items oi
+              where oi.order_id = o.id order by oi.id limit 1),
+             o.subtotal_cents
+           ) as amount_cents,
+           a.settled_at, sh.title as show_title
+    from auctions a
+    join orders o on o.id = a.order_id
+    join items i on i.id = a.item_id
+    left join live_show_lots l on l.auction_id = a.id
+    left join live_shows sh on sh.id = l.show_id
+    where a.seller_id = ${sellerId} and a.status = 'sold'
+    order by a.settled_at desc nulls last, a.id desc
+    limit 100
+  `) as AuctionWin[];
 }
 
 export async function getSellerThread(id: number, sellerId: number): Promise<DmThread | null> {

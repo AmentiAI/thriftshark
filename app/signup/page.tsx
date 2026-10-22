@@ -18,9 +18,12 @@ const PERKS = [
   ["Stores need an ID check", "Stripe checks a photo ID before a new shop can sell."],
 ];
 
-export default async function SignupPage() {
-  if (await currentSeller()) redirect("/dashboard");
-  if (await currentBuyer()) redirect("/account");
+export default async function SignupPage(props: PageProps<"/signup">) {
+  const params = await props.searchParams;
+  const next = typeof params.next === "string" ? params.next : "";
+  const dest = next.startsWith("/") && !next.startsWith("//") ? next : "";
+  if (await currentSeller()) redirect(dest || "/dashboard");
+  if (await currentBuyer()) redirect(dest || "/account");
 
   return (
     <div className="wrap grid gap-10 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-14">
@@ -52,7 +55,7 @@ export default async function SignupPage() {
         <h2 className="font-display text-xl font-bold tracking-tight">Create your account</h2>
         <p className="mt-1 text-sm text-ink-faint">Pick buyer, or open a store.</p>
         <div className="mt-6">
-          <SignupForm />
+          <SignupForm next={dest} />
         </div>
       </div>
     </div>
