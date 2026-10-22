@@ -1685,7 +1685,11 @@ const bidSchema = z.object({
   auction_id: z.number().int().positive(),
   bidder_name: z.string().min(2, "Tell the shop who is bidding."),
   bidder_email: z.string().email("Enter a valid email so we can reach you if you win."),
-  amount_cents: z.number().int().positive("Enter a bid amount."),
+  amount_cents: z
+    .number()
+    .int()
+    .positive("Enter a bid amount.")
+    .max(10_000_000, "Bids top out at $100,000."),
 });
 
 /**
@@ -1970,16 +1974,27 @@ export async function submitOffer(_prev: FormState, formData: FormData): Promise
   }
 
   await sql`
-    insert into seller_notices (seller_id, kind, body)
+    insert into seller_notices (seller_id, kind, body, href)
     values (
       ${item.seller_id},
       'offer',
-      ${`${fromName} offered ${money(amount)} on ${item.title}.`}
+      ${`${fromName} offered ${money(amount)} on ${item.title}.`},
+      '/dashboard/offers'
     )
   `;
   revalidatePath(`/item/${item.slug}`);
   revalidatePath("/dashboard/offers");
   return { ok: `Offer sent at ${money(amount)}. The shop has 48 hours to confirm or deny.` };
+}
+
+/** Opening Messages clears the unread count. */
+export async function markNoticesRead() {
+  const seller = await requireSeller();
+  await sql`
+    update seller_notices set read_at = now()
+    where seller_id = ${seller.id} and read_at is null
+  `;
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function acceptOffer(_prev: FormState, formData: FormData): Promise<FormState> {

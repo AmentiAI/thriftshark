@@ -523,12 +523,33 @@ export async function sellerInsights(sellerId: number) {
 
 export async function sellerNotices(sellerId: number) {
   return (await sql`
-    select id, kind, body, created_at
+    select id, kind, body, href, read_at, created_at
     from seller_notices
     where seller_id = ${sellerId}
     order by created_at desc
-    limit 20
-  `) as { id: number; kind: string; body: string; created_at: string }[];
+    limit 30
+  `) as {
+    id: number;
+    kind: string;
+    body: string;
+    href: string | null;
+    read_at: string | null;
+    created_at: string;
+  }[];
+}
+
+/** Unread notices plus conversations where the buyer spoke last. */
+export async function sellerInboxCount(sellerId: number) {
+  const rows = (await sql`
+    select
+      (select count(*)::int from seller_notices
+        where seller_id = ${sellerId} and read_at is null) as notices,
+      (select count(*)::int from dm_threads t
+        where t.seller_id = ${sellerId}
+          and (select m.sender from dm_messages m
+               where m.thread_id = t.id order by m.id desc limit 1) = 'buyer') as waiting
+  `) as { notices: number; waiting: number }[];
+  return (rows[0]?.notices ?? 0) + (rows[0]?.waiting ?? 0);
 }
 
 export async function sellerReviews(sellerId: number, limit = 40): Promise<SellerReview[]> {

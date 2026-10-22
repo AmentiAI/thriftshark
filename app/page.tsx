@@ -104,24 +104,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      <section className="border-b border-line">
-        <div className="wrap grid gap-6 py-6 sm:grid-cols-3 sm:py-8">
-          {[
-            ["Pay the shop", "The item price goes to that seller. We take a fee. We never hold the piece."],
-            ["Make an offer", "Offer under the listed price. The shop has 48 hours to confirm or deny. Confirming sets that price."],
-            ["Post a hunt", "Name the piece. When a shop lists something close, the hunt gets a reply pointing at it."],
-            ["ID checked", "New shops pass a document and selfie check before they can sell. The badge is public. The document is not."],
-            ["Your size", "Save chest, waist, inseam, and shoe size once. Measured listings say if they are close, small, or big."],
-            ["Drop clock", "A shop can hide a piece until a time, then it goes live for everyone. The countdown sits on the shop."],
-          ].map(([title, body]) => (
-            <div key={title}>
-              <h2 className="font-display text-base font-bold tracking-tight">{title}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-ink-soft">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {drops.length > 0 && (
         <section className="border-b border-line py-8">
           <div className="wrap mb-4">
@@ -297,6 +279,24 @@ export default async function HomePage() {
               How it works
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="border-t border-line">
+        <div className="wrap grid gap-6 py-6 sm:grid-cols-3 sm:py-8">
+          {[
+            ["Pay the shop", "The item price goes to that seller. We take a fee. We never hold the piece."],
+            ["Make an offer", "Offer under the listed price. The shop has 48 hours to confirm or deny. Confirming sets that price."],
+            ["Post a hunt", "Name the piece. When a shop lists something close, the hunt gets a reply pointing at it."],
+            ["ID checked", "New shops pass a document and selfie check before they can sell. The badge is public. The document is not."],
+            ["Your size", "Save chest, waist, inseam, and shoe size once. Measured listings say if they are close, small, or big."],
+            ["Drop clock", "A shop can hide a piece until a time, then it goes live for everyone. The countdown sits on the shop."],
+          ].map(([title, body]) => (
+            <div key={title}>
+              <h2 className="font-display text-base font-bold tracking-tight">{title}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-ink-soft">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
     </>

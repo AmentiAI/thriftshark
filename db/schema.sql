@@ -617,3 +617,32 @@ alter table live_shows add column if not exists host_token text;
 update live_shows
 set host_seen_at = now()
 where status = 'live' and host_seen_at is null;
+
+-- What the host puts over the camera, and a note pinned above chat.
+alter table live_shows add column if not exists screen_text text;
+alter table live_shows add column if not exists screen_style text not null default 'banner';
+alter table live_shows add column if not exists screen_spot text not null default 'top';
+alter table live_shows add column if not exists pinned_text text;
+alter table live_shows drop constraint if exists live_shows_screen_style_check;
+alter table live_shows add constraint live_shows_screen_style_check
+  check (screen_style in ('banner','headline','sticker'));
+alter table live_shows drop constraint if exists live_shows_screen_spot_check;
+alter table live_shows add constraint live_shows_screen_spot_check
+  check (screen_spot in ('top','middle','low'));
+
+-- Who is watching. One row per signed-in person per show, refreshed by their open tab.
+create table if not exists live_viewers (
+  show_id     int not null references live_shows(id) on delete cascade,
+  viewer_key  text not null,
+  seen_at     timestamptz not null default now(),
+  primary key (show_id, viewer_key)
+);
+
+create index if not exists live_viewers_seen_idx on live_viewers (show_id, seen_at);
+
+-- Shop notices: unread until the shop opens Messages.
+alter table seller_notices add column if not exists read_at timestamptz;
+alter table seller_notices add column if not exists href text;
+
+create index if not exists seller_notices_unread_idx
+  on seller_notices (seller_id) where read_at is null;

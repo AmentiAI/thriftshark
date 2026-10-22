@@ -66,6 +66,13 @@ export async function createSellerIdentitySession(
   } catch (err) {
     console.error("createSellerIdentitySession", err);
     const message = err instanceof Error ? err.message : "Could not start the ID check.";
+    if (/not set up to use Identity|identity\/application/i.test(message)) {
+      return {
+        ok: false,
+        error:
+          "ID checks aren't switched on for Thrift Sharks yet, so this can't start. Nothing is wrong with your shop. Try again later or contact us.",
+      };
+    }
     return { ok: false, error: message };
   }
 }

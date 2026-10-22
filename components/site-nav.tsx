@@ -89,7 +89,18 @@ export type NavSeller = {
   shop_name: string;
   handle: string;
   logo_image_id: number | null;
+  /** Unread notices plus buyer messages waiting on a reply. */
+  alerts: number;
 };
+
+function AlertCount({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="rounded-full bg-coral px-1.5 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 export type NavBuyer = {
   name: string;
@@ -208,7 +219,8 @@ export function SiteNav({
 
             {seller ? (
               <Link
-                href="/dashboard"
+                href={seller.alerts > 0 ? "/dashboard/messages" : "/dashboard"}
+                aria-label={seller.alerts > 0 ? `${seller.shop_name}, ${seller.alerts} new` : undefined}
                 className="hidden items-center gap-2 rounded-full py-1 pr-2.5 pl-1 text-sm font-medium text-white/80 hover:bg-white/10 sm:flex"
               >
                 <ShopAvatar
@@ -217,6 +229,7 @@ export function SiteNav({
                   size={28}
                 />
                 <span className="max-w-[7rem] truncate">{seller.shop_name}</span>
+                <AlertCount count={seller.alerts} />
               </Link>
             ) : buyer ? (
               <Link
@@ -281,8 +294,11 @@ export function SiteNav({
               }}
               aria-expanded={open}
               aria-label="Toggle menu"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white sm:h-10 sm:w-10 lg:hidden"
+              className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-white sm:h-10 sm:w-10 lg:hidden"
             >
+              {seller && seller.alerts > 0 && !open && (
+                <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-coral ring-2 ring-black sm:hidden" aria-hidden />
+              )}
               <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden>
                 <path
                   d={open ? "M4 4l12 12M16 4L4 16" : "M3 6h14M3 10h14M3 14h14"}
@@ -340,6 +356,16 @@ export function SiteNav({
                   {link.label}
                 </Link>
               ),
+            )}
+            {seller && seller.alerts > 0 && (
+              <Link
+                href="/dashboard/messages"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between border-b border-line py-3.5 text-base font-semibold"
+              >
+                Shop notifications
+                <AlertCount count={seller.alerts} />
+              </Link>
             )}
             {seller || buyer ? (
               <Link

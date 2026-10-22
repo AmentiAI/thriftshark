@@ -68,8 +68,17 @@ export type LiveShow = {
   seller_shop_name: string;
   seller_logo_image_id: number | null;
   cover_image_id: number | null;
+  screen_text: string | null;
+  screen_style: ScreenStyle;
+  screen_spot: ScreenSpot;
+  pinned_text: string | null;
+  /** Only filled on the live list. */
+  viewer_count?: number;
   lots: LiveLot[];
 };
+
+export type ScreenStyle = "banner" | "headline" | "sticker";
+export type ScreenSpot = "top" | "middle" | "low";
 
 export type LiveDestination = {
   id: number;
@@ -137,7 +146,8 @@ export async function finishLiveShow(showId: number) {
 
 /**
  * Ends a show whose host tab is gone. A leave signal waits 12 seconds so a
- * refresh can cancel it. A tab that vanishes without a signal ends after 45s.
+ * refresh can cancel it. A tab that vanishes without a signal ends after 90s,
+ * which still clears Chrome's once-a-minute timer throttling in background tabs.
  */
 export async function releaseAbandonedShows() {
   const stale = (await sql`
@@ -152,7 +162,7 @@ export async function releaseAbandonedShows() {
         )
         or (
           host_seen_at is not null
-          and host_seen_at < now() - interval '45 seconds'
+          and host_seen_at < now() - interval '90 seconds'
           and (host_gone_at is null or host_seen_at > host_gone_at)
         )
       )
@@ -167,6 +177,9 @@ export async function listLiveShows(): Promise<LiveShow[]> {
   const shows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
            s.started_at, s.ended_at, s.created_at, s.cover_image_id,
+           s.screen_text, s.screen_style, s.screen_spot, s.pinned_text,
+           (select count(*)::int from live_viewers v
+             where v.show_id = s.id and v.seen_at > now() - interval '30 seconds') as viewer_count,
            sel.handle as seller_handle, sel.shop_name as seller_shop_name,
            sel.logo_image_id as seller_logo_image_id
     from live_shows s
@@ -176,6 +189,15 @@ export async function listLiveShows(): Promise<LiveShow[]> {
     limit 12
   `) as Omit<LiveShow, "lots">[];
   return Promise.all(shows.map(async (show) => ({ ...show, lots: await lotsFor(show.id) })));
+}
+
+/** People with the live open in the last 30 seconds. The host is not counted. */
+export async function viewerCount(showId: number) {
+  const rows = (await sql`
+    select count(*)::int as n from live_viewers
+    where show_id = ${showId} and seen_at > now() - interval '30 seconds'
+  `) as { n: number }[];
+  return rows[0]?.n ?? 0;
 }
 
 export async function sellerShows(sellerId: number) {
@@ -203,6 +225,7 @@ export async function getShow(id: number): Promise<LiveShow | null> {
   const rows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
            s.started_at, s.ended_at, s.created_at, s.cover_image_id,
+           s.screen_text, s.screen_style, s.screen_spot, s.pinned_text,
            sel.handle as seller_handle, sel.shop_name as seller_shop_name,
            sel.logo_image_id as seller_logo_image_id
     from live_shows s

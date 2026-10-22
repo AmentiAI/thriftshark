@@ -381,6 +381,58 @@ export async function endLiveShow(formData: FormData) {
   revalidatePath("/dashboard/shows");
 }
 
+const SCREEN_STYLES = new Set(["banner", "headline", "sticker"]);
+const SCREEN_SPOTS = new Set(["top", "middle", "low"]);
+
+/** Puts a line of text over the camera, or takes it off. */
+export async function setScreenText(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const showId = Number(text(formData.get("show_id")));
+  if (!Number.isInteger(showId)) return { error: "This show is not live." };
+  const clear = text(formData.get("intent")) === "clear";
+  const body = text(formData.get("screen_text")).replace(/\s+/g, " ").slice(0, 80);
+  const style = text(formData.get("screen_style"));
+  const spot = text(formData.get("screen_spot"));
+  if (!clear && body.length < 1) return { error: "Type what should go on screen." };
+  if (!SCREEN_STYLES.has(style) || !SCREEN_SPOTS.has(spot)) return { error: "Pick a look and a spot." };
+
+  const rows = (await sql`
+    update live_shows
+    set screen_text = ${clear ? null : body},
+        screen_style = ${style},
+        screen_spot = ${spot}
+    where id = ${showId} and seller_id = ${seller.id} and status = 'live'
+    returning id
+  `) as { id: number }[];
+  if (!rows[0]) return { error: "This show is not live." };
+
+  revalidatePath(`/live/${showId}`);
+  revalidatePath(`/dashboard/shows/${showId}`);
+  return { ok: clear ? "Taken off the screen." : "On screen now." };
+}
+
+/** One note pinned above the live chat. */
+export async function setPinnedNote(_prev: FormState, formData: FormData): Promise<FormState> {
+  const seller = await requireSeller();
+  const showId = Number(text(formData.get("show_id")));
+  if (!Number.isInteger(showId)) return { error: "This show is not live." };
+  const clear = text(formData.get("intent")) === "clear";
+  const body = text(formData.get("pinned_text")).replace(/\s+/g, " ").slice(0, 140);
+  if (!clear && body.length < 1) return { error: "Write the note to pin." };
+
+  const rows = (await sql`
+    update live_shows
+    set pinned_text = ${clear ? null : body}
+    where id = ${showId} and seller_id = ${seller.id} and status = 'live'
+    returning id
+  `) as { id: number }[];
+  if (!rows[0]) return { error: "This show is not live." };
+
+  revalidatePath(`/live/${showId}`);
+  revalidatePath(`/dashboard/shows/${showId}`);
+  return { ok: clear ? "Unpinned." : "Pinned." };
+}
+
 export async function saveLiveDestination(_prev: FormState, formData: FormData): Promise<FormState> {
   const ready = await readySeller();
   if (ready.error) return { error: ready.error };

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "@/lib/db";
 import { releaseDueDrops } from "@/lib/hunt-match";
+import { noticeAuctionWon } from "@/lib/notices";
 import { PLATFORM_FEE_CENTS, SHIPPING_FLAT_CENTS } from "@/lib/types";
 import type { Auction } from "@/lib/types";
 
@@ -65,7 +66,7 @@ export async function settleDueAuctions(auctionId?: number) {
   )) as { id: number }[];
 
   for (const { id } of due) {
-    await sql.query(
+    const settled = (await sql.query(
       `with due as (
          select a.id, a.item_id, a.seller_id, a.reserve_cents
          from auctions a
@@ -147,7 +148,8 @@ export async function settleDueAuctions(auctionId?: number) {
          status = case when exists (select 1 from winner) then 'sold' else 'ended' end,
          order_id = (select id from new_order),
          settled_at = now()
-       where id = (select id from due)`,
+       where id = (select id from due)
+       returning order_id`,
       [
         id,
         orderNumber(),
@@ -155,7 +157,8 @@ export async function settleDueAuctions(auctionId?: number) {
         PLATFORM_FEE_CENTS,
         SHIPPING_FLAT_CENTS,
       ],
-    );
+    )) as { order_id: number | null }[];
+    if (settled[0]?.order_id) await noticeAuctionWon(settled[0].order_id);
   }
 
   if (due.length > 0) await releaseDueDrops();

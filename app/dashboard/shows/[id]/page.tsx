@@ -6,13 +6,16 @@ import { ShowChat } from "@/components/show-chat";
 import { DestinationForm, OpenLotForm, SendOutForm } from "@/components/show-forms";
 import { LiveRefresh } from "@/components/live-refresh";
 import { LiveStudio } from "@/components/live-studio";
+import { ScreenControls } from "@/components/screen-controls";
+import { ScreenOverlay } from "@/components/screen-overlay";
 import { messageAuctionWinner } from "@/lib/actions";
 import {
   closeShowLot,
   deleteLiveDestination,
   endLiveShow,
 } from "@/lib/live-actions";
-import { getShow, lotOutcome, sellerDestinations, showChat, showOutputs } from "@/lib/live-shows";
+import { getShow, lotOutcome, sellerDestinations, showChat, showOutputs, viewerCount } from "@/lib/live-shows";
+import { ViewerCount } from "@/components/viewer-count";
 import { livekitConfigured } from "@/lib/livekit";
 import { money } from "@/lib/format";
 import { requireSeller } from "@/lib/seller-auth";
@@ -27,9 +30,10 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
   const show = await getShow(showId);
   if (!show || show.seller_id !== seller.id) notFound();
 
-  const [destinations, outputs] = await Promise.all([
+  const [destinations, outputs, watching] = await Promise.all([
     sellerDestinations(seller.id),
     showOutputs(show.id),
+    viewerCount(show.id),
   ]);
   const onStage = show.lots.find((lot) => lot.auction_id === show.current_auction_id) ?? null;
   const waiting = Boolean(
@@ -42,7 +46,10 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold tracking-[0.14em] text-ink-faint uppercase">{show.status}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-bold tracking-[0.14em] text-ink-faint uppercase">{show.status}</p>
+            {show.status === "live" && <ViewerCount count={watching} dark={false} />}
+          </div>
           <h2 className="font-display text-2xl font-extrabold tracking-tight break-anywhere sm:text-3xl">{show.title}</h2>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -66,13 +73,22 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
         live={show.status === "live"}
         videoReady={livekitConfigured()}
         hud={
-          <LiveHud
-            title={onStage?.title ?? null}
-            amount={onStage ? money(onStage.high_cents ?? onStage.start_cents) : null}
-            endsAt={waiting && onStage ? onStage.ends_at : null}
-            outcome={outcome}
-            notes={chat}
-          />
+          <>
+            {show.status === "live" && (
+              <span className="pointer-events-none absolute top-3 right-3 z-20">
+                <ViewerCount count={watching} />
+              </span>
+            )}
+            <ScreenOverlay text={show.screen_text} style={show.screen_style} spot={show.screen_spot} />
+            <LiveHud
+              title={onStage?.title ?? null}
+              amount={onStage ? money(onStage.high_cents ?? onStage.start_cents) : null}
+              endsAt={waiting && onStage ? onStage.ends_at : null}
+              outcome={outcome}
+              notes={chat}
+              pinned={show.pinned_text}
+            />
+          </>
         }
         stream={
           show.status === "live" ? (
@@ -91,6 +107,22 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
           ) : null
         }
       />
+
+      {show.status === "live" && (
+        <details className="panel p-4" open>
+          <summary className="tap cursor-pointer font-display text-xl font-bold">On screen</summary>
+          <p className="mt-1 text-sm text-ink-soft">Viewers see this over your camera within a couple of seconds.</p>
+          <div className="mt-4">
+            <ScreenControls
+              showId={show.id}
+              screenText={show.screen_text}
+              screenStyle={show.screen_style}
+              screenSpot={show.screen_spot}
+              pinnedText={show.pinned_text}
+            />
+          </div>
+        </details>
+      )}
 
       {show.status === "live" && !waiting && (
         <section className="panel p-4">

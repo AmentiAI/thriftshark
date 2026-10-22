@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShopAvatar } from "@/components/shop-avatar";
+import { ViewerCount } from "@/components/viewer-count";
 import { money } from "@/lib/format";
 import type { LiveShow } from "@/lib/live-shows";
 
@@ -27,6 +28,11 @@ export function LiveCard({ show }: { show: LiveShow }) {
             <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-white" />
             Live
           </span>
+          {show.viewer_count !== undefined && (
+            <span className="absolute top-3 right-3">
+              <ViewerCount count={show.viewer_count} />
+            </span>
+          )}
         </div>
         <div className="p-4">
           <h3 className="font-display text-xl font-extrabold tracking-tight break-anywhere">{show.title}</h3>

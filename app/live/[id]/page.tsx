@@ -8,11 +8,14 @@ import { LiveCommentBar } from "@/components/live-comment-bar";
 import { LiveRefresh } from "@/components/live-refresh";
 import { LiveViewer } from "@/components/live-viewer";
 import { LockScroll } from "@/components/lock-scroll";
+import { PinnedNote, ScreenOverlay } from "@/components/screen-overlay";
 import { ShopAvatar } from "@/components/shop-avatar";
 import { currentBuyer } from "@/lib/buyer-account";
 import { money } from "@/lib/format";
 import { beginLiveCardSetup, toggleLotLike } from "@/lib/live-actions";
-import { getShow, lotCrowd, lotOutcome, showChat } from "@/lib/live-shows";
+import { getShow, lotCrowd, lotOutcome, showChat, viewerCount } from "@/lib/live-shows";
+import { ViewerCount } from "@/components/viewer-count";
+import { ViewerPresence } from "@/components/viewer-presence";
 import { currentSeller } from "@/lib/seller-auth";
 import { saveLiveCard } from "@/lib/stripe-billing";
 
@@ -47,7 +50,10 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
   const crowd = lot
     ? await lotCrowd(lot.auction_id, { buyerId: buyer?.id ?? null, sellerId: seller?.id ?? null })
     : null;
-  const chat = await showChat(show.id, lot?.auction_id ?? null);
+  const [chat, watching] = await Promise.all([
+    showChat(show.id, lot?.auction_id ?? null),
+    viewerCount(show.id),
+  ]);
   const recent = chat.slice(-6);
   const minimum = lot ? (lot.high_cents == null ? lot.start_cents : lot.high_cents + lot.increment_cents) : 0;
   const bidder = buyer
@@ -65,6 +71,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
     <div className="fixed inset-0 z-[60] flex justify-center bg-black">
       <LockScroll />
       <LiveRefresh active={live} />
+      {live && !hosting && <ViewerPresence showId={show.id} />}
       <div className="relative h-full w-full max-w-[calc(100dvh*9/16)]">
         {hosting && live ? (
           <HostStage showId={show.id} />
@@ -75,6 +82,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
         )}
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/75" />
+        {live && <ScreenOverlay text={show.screen_text} style={show.screen_style} spot={show.screen_spot} />}
 
         <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div className="flex min-w-0 items-center gap-2">
@@ -94,10 +102,13 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{show.seller_shop_name}</p>
               {live ? (
-                <p className="inline-flex items-center gap-1 text-[11px] font-bold tracking-[0.14em] text-coral uppercase">
-                  <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-coral" />
-                  Live
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-bold tracking-[0.14em] text-coral uppercase">
+                    <span className="live-dot relative inline-block h-1.5 w-1.5 rounded-full text-coral" />
+                    Live
+                  </p>
+                  <ViewerCount count={watching} />
+                </div>
               ) : (
                 <p className="text-[11px] font-bold tracking-[0.14em] text-white/70 uppercase">Ended</p>
               )}
@@ -127,6 +138,11 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
         </header>
 
         <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col justify-end px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {live && show.pinned_text && (
+            <div className="mb-1.5 w-[min(18rem,86%)]">
+              <PinnedNote text={show.pinned_text} />
+            </div>
+          )}
           <div className="mb-2 flex max-h-[34%] w-[min(18rem,86%)] flex-col justify-end gap-1 overflow-hidden">
             {recent.map((note) => (
               <p
@@ -174,7 +190,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
               <LiveCommentBar showId={show.id} loginHref={loginHref} overlay />
               {!hosting && bidding && lot && bidder && hasCard && (
                 <LiveBid
-                  key={`${lot.auction_id}-${minimum}`}
+                  key={lot.auction_id}
                   auctionId={lot.auction_id}
                   minimum={minimum}
                   bidderName={bidder.name}

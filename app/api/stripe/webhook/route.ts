@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { sql } from "@/lib/db";
+import { noticeOrderPaid } from "@/lib/notices";
 import { getStripe } from "@/lib/stripe";
 import {
   markOrderPaidFromCheckout,
@@ -86,13 +87,15 @@ export async function POST(request: Request) {
             paymentIntentId: paymentIntent,
           });
         } else if (session.id) {
-          await sql`
+          const paid = (await sql`
             update orders set
               payment_status = 'paid',
               stripe_payment_intent_id = coalesce(${paymentIntent}, stripe_payment_intent_id)
             where stripe_checkout_session_id = ${session.id}
               and payment_status = 'pending'
-          `;
+            returning id
+          `) as { id: number }[];
+          for (const order of paid) await noticeOrderPaid(order.id);
         }
         break;
       }

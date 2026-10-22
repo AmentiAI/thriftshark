@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarkNoticesRead } from "@/components/mark-notices-read";
 import { WinnerList } from "@/components/winner-list";
 import { toggleMessageHandled } from "@/lib/actions";
 import { shortDate, shortWhen } from "@/lib/format";
@@ -6,6 +7,13 @@ import { sellerMessages, listSellerThreads, sellerAuctionWins, sellerNotices } f
 import { requireSeller } from "@/lib/seller-auth";
 
 export const dynamic = "force-dynamic";
+
+const NOTICE_LABEL: Record<string, string> = {
+  sale: "Sold",
+  auction_sold: "Auction won",
+  offer: "Offer",
+  hunt: "Hunt",
+};
 
 export default async function DashboardMessagesPage() {
   const seller = await requireSeller();
@@ -16,6 +24,7 @@ export default async function DashboardMessagesPage() {
     sellerAuctionWins(seller.id),
   ]);
   const waiting = threads.filter((thread) => thread.last_sender === "buyer").length;
+  const unread = notices.filter((notice) => !notice.read_at).length;
 
   return (
     <div>
@@ -23,18 +32,30 @@ export default async function DashboardMessagesPage() {
         <h2 className="font-display text-3xl font-extrabold tracking-[-0.03em]">Messages</h2>
         <p className="mt-2 text-sm text-ink-soft">
           {waiting} waiting on you · {threads.length} conversation{threads.length === 1 ? "" : "s"}.
-          Buyers reach you from Message seller. Winners of your pieces are listed here so you can message them.
+          Sales, auction wins, and offers show up here first. Buyers reach you from Message seller.
         </p>
       </header>
 
+      <MarkNoticesRead unread={unread} />
       {notices.length > 0 && (
         <ul className="mb-8 space-y-3">
           {notices.map((notice) => (
-            <li key={notice.id} className="panel p-5 ring-2 ring-gold/40">
+            <li
+              key={notice.id}
+              className={`panel p-5 break-anywhere ${notice.read_at ? "" : "ring-2 ring-gold/40"}`}
+            >
               <p className="text-[11px] font-bold tracking-wider text-ink-faint uppercase">
-                Thrift Sharks · {shortWhen(notice.created_at)}
+                {NOTICE_LABEL[notice.kind] ?? "Thrift Sharks"} · {shortWhen(notice.created_at)}
+                {!notice.read_at && (
+                  <span className="ml-2 rounded-full bg-coral px-2 py-0.5 align-middle text-white">New</span>
+                )}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-ink">{notice.body}</p>
+              {(notice.kind === "sale" || notice.kind === "auction_sold") && (
+                <Link href={notice.href ?? "/dashboard/orders"} className="btn btn-ink mt-4">
+                  See the order
+                </Link>
+              )}
               {notice.kind === "verified_expiring" && (
                 <Link href="/dashboard/verified" className="btn btn-ink mt-4">
                   Pay to keep Verified

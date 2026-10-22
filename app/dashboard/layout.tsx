@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShopMasthead } from "@/components/shop-masthead";
 import { signOutSeller } from "@/lib/actions";
-import { pendingOfferCount } from "@/lib/queries";
+import { pendingOfferCount, sellerInboxCount } from "@/lib/queries";
 import { currentSeller } from "@/lib/seller-auth";
 import { isSellerVerified } from "@/lib/seller-plan";
 import { sellerIdVerified } from "@/lib/stripe-identity";
@@ -25,7 +25,10 @@ const TABS = [
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
   const seller = await currentSeller();
   if (!seller) redirect("/login");
-  const offerCount = await pendingOfferCount(seller.id);
+  const [offerCount, inboxCount] = await Promise.all([
+    pendingOfferCount(seller.id),
+    sellerInboxCount(seller.id),
+  ]);
 
   return (
     <div className="wrap py-6 sm:py-10">
@@ -70,6 +73,11 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
           >
             {label}
             {href === "/dashboard/offers" && offerCount > 0 ? ` (${offerCount})` : ""}
+            {href === "/dashboard/messages" && inboxCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-coral px-1.5 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums">
+                {inboxCount > 99 ? "99+" : inboxCount}
+              </span>
+            )}
           </Link>
         ))}
       </nav>

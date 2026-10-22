@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { sql } from "@/lib/db";
 import { BRAND } from "@/lib/brand";
+import { noticeOrderPaid } from "@/lib/notices";
 import {
   applyThriftSharksAccountBranding,
   checkoutBrandingSettings,
@@ -261,12 +262,14 @@ export async function markOrderPaidFromCheckout(opts: {
   sessionId: string;
   paymentIntentId: string | null;
 }) {
-  await sql`
+  const paid = (await sql`
     update orders set
       payment_status = 'paid',
       stripe_checkout_session_id = coalesce(stripe_checkout_session_id, ${opts.sessionId}),
       stripe_payment_intent_id = coalesce(${opts.paymentIntentId}, stripe_payment_intent_id)
     where id = ${opts.orderId}
       and payment_status = 'pending'
-  `;
+    returning id
+  `) as { id: number }[];
+  for (const order of paid) await noticeOrderPaid(order.id);
 }

@@ -1,4 +1,5 @@
 import { Countdown } from "@/components/countdown";
+import { PinnedNote } from "@/components/screen-overlay";
 import type { LotNote } from "@/lib/live-shows";
 
 /** Compact auction card on the bottom left of the camera. */
@@ -8,6 +9,7 @@ export function LiveHud({
   endsAt,
   outcome,
   notes,
+  pinned = null,
   lifted = false,
 }: {
   title: string | null;
@@ -15,6 +17,7 @@ export function LiveHud({
   endsAt: string | null;
   outcome: string | null;
   notes: Pick<LotNote, "key" | "kind" | "author_name" | "body">[];
+  pinned?: string | null;
   /** Keep the stream above the phone comment and bid bar. */
   lifted?: boolean;
 }) {
@@ -26,6 +29,9 @@ export function LiveHud({
         lifted ? "bottom-40 sm:bottom-3" : "bottom-3"
       }`}
     >
+      <div className="shrink-0">
+        <PinnedNote text={pinned} />
+      </div>
       {recent.map((note) => (
         <p
           key={note.key}
