@@ -29,9 +29,9 @@ const SELLER_STATUSES = [
   ["sold", "Sold"],
 ];
 
-/** Shown when the piece is mid-auction, where status is not the seller's to set. */
+/** Shown when the item is mid-auction, where status is not the seller's to set. */
 const AUCTION_NOTE =
-  "This piece is in a live auction, so its status is managed by the lot.";
+  "This item is in a live auction, so its status is set by the auction.";
 
 export function ListingForm({
   categories,
@@ -125,7 +125,7 @@ export function ListingForm({
         </div>
 
         <div className="panel space-y-5 p-6">
-          <h2 className="font-display text-lg font-extrabold tracking-tight">The piece</h2>
+          <h2 className="font-display text-lg font-extrabold tracking-tight">The item</h2>
 
           <div>
             <label className={label} htmlFor="title">
@@ -158,7 +158,7 @@ export function ListingForm({
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
             <label className={label} htmlFor="price">
-              {auctioning ? "Rack price (USD)" : "Price (USD)"}
+              {auctioning ? "Buy-now price (USD)" : "Price (USD)"}
             </label>
               <input
                 id="price"
@@ -171,7 +171,7 @@ export function ListingForm({
               />
               {auctioning && (
                 <p className="mt-1.5 text-xs text-ink-faint">
-                  What you would take on the rack. The floor can open lower.
+                  What you would sell it for outright. The starting bid can be lower.
                 </p>
               )}
             </div>
@@ -258,7 +258,7 @@ export function ListingForm({
           <h2 className="font-display text-lg font-extrabold tracking-tight">Fit and drop</h2>
           <p className="text-sm text-ink-soft">
             Inches let a buyer see if this is close to the size they saved. A drop
-            time keeps the piece off the rack until then, then it goes live for everyone.
+            time hides the listing until then, then it goes live for everyone.
           </p>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
@@ -367,7 +367,7 @@ export function ListingForm({
                   className="field"
                 />
                 <p className="mt-1.5 text-xs text-ink-faint">
-                  Hidden. Miss it and the piece goes back on the rack.
+                  Hidden from bidders. If bids don&apos;t reach it, the item goes back up for sale at your price.
                 </p>
               </div>
               <div>
@@ -412,7 +412,7 @@ export function ListingForm({
                   [
                     {
                       value: "rack" as const,
-                      title: "On the rack",
+                      title: "Fixed price",
                       body: "Buyers pay your price today.",
                       enabled: true,
                     },
@@ -523,7 +523,7 @@ export function ListingForm({
                   Spotlight on homepage
                 </span>
                 <span className="mt-0.5 block text-xs text-ink-faint">
-                  Pin up to {spotlightCap} live pieces in “Worth a look”.
+                  Pin up to {spotlightCap} listings in “Worth a look” on the homepage.
                 </span>
               </span>
             </label>
@@ -555,7 +555,7 @@ export function ListingForm({
                 ? "Save changes"
                 : auctioning
                   ? "Open the lot"
-                  : "Put it on the rack"}
+                  : "List it for sale"}
           </button>
 
           {item && item.status === "available" && (

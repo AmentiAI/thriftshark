@@ -50,7 +50,7 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
     !payoutReady && ["Connect Stripe payouts", "/dashboard/shop"],
     !seller.logo_image_id && ["Add your logo", "/dashboard/shop"],
     !seller.bio && ["Write a shop bio", "/dashboard/shop"],
-    stats.available === 0 && ["List your first piece", "/dashboard/items/new"],
+    stats.available === 0 && ["List your first item", "/dashboard/items/new"],
   ].filter(Boolean) as [string, string][];
 
   return (
@@ -80,15 +80,14 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
             <Link href={`/shop/${seller.handle}`} className="text-reef underline">
               /shop/{seller.handle}
             </Link>
-            . Connect Stripe next so buyers can pay you, then put something on the
-            rack.
+            . Connect Stripe next so buyers can pay you, then list something for sale.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/dashboard/shop" className="btn btn-lime">
               Connect payouts
             </Link>
             <Link href="/dashboard/items/new" className="btn btn-ghost-light">
-              List your first piece
+              List your first item
             </Link>
           </div>
         </section>
@@ -133,8 +132,8 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {[
-              ["Rack value", money(insights.stock_value_cents)],
-              ["Live on rack", String(insights.live_listings)],
+              ["Stock value", money(insights.stock_value_cents)],
+              ["Listed for sale", String(insights.live_listings)],
               ["Spotlights", String(insights.spotlights)],
               ["Paid orders (7d)", String(insights.paid_orders_7d)],
               ["Earned (7d)", money(insights.earned_cents_7d)],
@@ -157,7 +156,7 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
             Shop insights
           </h2>
           <p className="mt-2 max-w-lg text-sm text-ink-soft">
-            Verified shops get rack value, 7-day sales, spotlight count, and chat
+            Verified shops get stock value, 7-day sales, spotlight count, and chat
             activity on this dashboard.
           </p>
           <Link href="/dashboard/verified" className="btn btn-ink mt-4">
@@ -242,7 +241,7 @@ export default async function DashboardHome(props: PageProps<"/dashboard">) {
                     <p className="font-mono text-xs font-bold">{order.order_number}</p>
                     <p className="mt-0.5 text-sm">
                       {order.customer_name} · {order.lines.length}{" "}
-                      {order.lines.length === 1 ? "piece" : "pieces"}
+                      {order.lines.length === 1 ? "item" : "items"}
                     </p>
                     <p className="text-xs text-ink-faint">{shortDate(order.created_at)}</p>
                   </div>

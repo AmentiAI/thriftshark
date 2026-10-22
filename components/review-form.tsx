@@ -52,7 +52,7 @@ export function ReviewForm({ orderId, token }: { orderId: number; token: string 
           name="body"
           rows={3}
           maxLength={500}
-          placeholder="How did the piece and the shipping go?"
+          placeholder="How were the item and the shipping?"
           className="field"
         />
       </label>

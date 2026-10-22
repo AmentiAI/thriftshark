@@ -20,7 +20,7 @@ export default async function ShowsPage() {
       <header>
         <h2 className="font-display text-3xl font-extrabold tracking-[-0.03em]">Live shows</h2>
         <p className="mt-2 text-sm text-ink-soft">
-          Go live on Thrift Sharks. Name each piece and set a starting price while you are on
+          Go live on Thrift Sharks. Name each item and set a starting price while you are on
           camera. YouTube and Instagram are optional.
         </p>
       </header>

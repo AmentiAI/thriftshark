@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Auctions",
   description:
-    "Timed auctions on one-of-one secondhand. Bid against the clock, pay the shop through Stripe.",
+    "Timed auctions on clothes, shoes, and more from independent shops. Bid against the clock, pay the shop through Stripe.",
 };
 
 const RULES = [
@@ -47,11 +47,12 @@ export default async function AuctionsPage() {
               Auction house
             </h1>
             <p className="mt-2 text-sm text-ink-soft sm:text-base">
-              One-of-one lots on a hard clock. Highest bid wins — pay that shop through Stripe.
+              Shops put items up on a timer. Highest bid when it ends wins, and you
+              pay that shop through Stripe.
             </p>
           </div>
           <Link href={listHref} className="btn btn-ink shrink-0">
-            Auction a piece
+            Auction an item
           </Link>
         </div>
       </section>
@@ -63,14 +64,14 @@ export default async function AuctionsPage() {
           <div className="rounded-2xl border border-dashed border-line bg-paper-dim px-6 py-16 text-center">
             <h2 className="font-display text-2xl font-bold tracking-tight">No lots live</h2>
             <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-              Put a piece on the clock from a new listing, or move one from your rack.
+              Shops can auction a new listing, or move one they already have for sale.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link href={listHref} className="btn btn-ink">
-                Auction a piece
+                Auction an item
               </Link>
               <Link href="/shop" className="btn btn-ghost">
-                Shop buy-now
+                Shop buy now
               </Link>
             </div>
           </div>

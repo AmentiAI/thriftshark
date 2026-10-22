@@ -10,7 +10,7 @@ export function WinnerList({ wins }: { wins: AuctionWin[] }) {
     <section>
       <h3 className="font-display text-xl font-bold">Winners</h3>
       <p className="mt-1 text-sm text-ink-soft">
-        Everyone who won a piece. Message them here about shipping.
+        Everyone who won an item. Message them here about shipping.
       </p>
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {wins.map((win) => (

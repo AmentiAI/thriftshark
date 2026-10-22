@@ -17,7 +17,7 @@ export default async function InboxPage() {
     <div className="wrap max-w-2xl py-10">
       <h1 className="font-display text-4xl font-extrabold tracking-[-0.04em]">Your messages</h1>
       <p className="mt-3 text-sm text-ink-soft">
-        Direct messages with sellers. If you win a piece, the shop can message you here once you are signed in.
+        Direct messages with sellers. If you win an auction, the shop can message you here once you are signed in.
       </p>
 
       {threads.length === 0 ? (

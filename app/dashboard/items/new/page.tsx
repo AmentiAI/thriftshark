@@ -21,7 +21,7 @@ export default async function NewListingPage() {
           Add a listing
         </h2>
         <p className="mt-2 text-ink-soft">
-          Photos and measurements do the selling. Put it on the rack for a set
+          Photos and measurements do the selling. List it for a set
           price
           {verified
             ? ", spotlight it, or send it to the auction house."

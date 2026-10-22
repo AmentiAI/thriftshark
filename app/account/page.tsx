@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BuyerCheck } from "@/components/buyer-check";
+import { GiveawaySection } from "@/components/giveaway-section";
 import { DropClock } from "@/components/drop-clock";
 import { ItemCard } from "@/components/item-card";
 import { saveBuyerFit, startBuyerVerified, signOutSeller } from "@/lib/actions";
@@ -84,6 +85,8 @@ export default async function AccountPage(props: PageProps<"/account">) {
         <p className="mt-6 rounded-2xl bg-coral/10 px-4 py-3 text-sm">Measurements are inches, from 1 to 80.</p>
       )}
 
+      <GiveawaySection className="mt-8" />
+
       <section className="panel mt-8 p-6">
         <h2 className="font-display text-xl font-bold">Buyer Verified</h2>
         <p className="mt-2 text-sm text-ink-soft">
@@ -150,7 +153,7 @@ export default async function AccountPage(props: PageProps<"/account">) {
 
       {closeRack.length > 0 && (
         <section className="mt-8">
-          <h2 className="font-display text-xl font-bold">On the rack, close to you</h2>
+          <h2 className="font-display text-xl font-bold">For sale in your size</h2>
           <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-8">
             {closeRack.map((item) => (
               <ItemCard key={item.id} item={item} note={fitAgainst(buyer, item)} />

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { DropClock } from "@/components/drop-clock";
+import { GiveawaySection } from "@/components/giveaway-section";
 import { LiveCard } from "@/components/live-card";
 import { ItemCard } from "@/components/item-card";
 import { AuctionCard } from "@/components/auction-card";
@@ -54,12 +55,12 @@ export default async function HomePage() {
       {/* Hero — centered middle bar, not full-bleed */}
       <section className="border-b border-line bg-paper">
         <h1 className="sr-only">
-          Thrift Sharks — buy and sell one-of-one secondhand
+          Thrift Sharks — buy and sell clothes, shoes, and more
         </h1>
         <div className="py-3 sm:wrap sm:py-6">
           <Image
             src="/hero-banner.jpg"
-            alt="Thrift Sharks — streetwear, sneakers, and luxury finds"
+            alt="Thrift Sharks — clothes, sneakers, and more from independent sellers"
             width={1024}
             height={244}
             priority
@@ -68,8 +69,9 @@ export default async function HomePage() {
           />
           <div className="wrap mt-3 flex flex-col gap-3 sm:mx-auto sm:max-w-6xl sm:flex-row sm:items-center sm:justify-between sm:px-0">
             <p className="text-xs text-ink-soft sm:text-sm">
-              One-of-one shops. You pay the seller through Stripe. Make an offer,
-              or post a hunt if it isn&apos;t listed yet.
+              Buy and sell clothes, shoes, and more with independent shops. Pay
+              the seller through Stripe, make an offer, or post a hunt for what
+              you can&apos;t find.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">
@@ -82,6 +84,10 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <div className="border-b border-line bg-paper-dim/50">
+        <GiveawaySection className="wrap py-6 sm:py-8" />
+      </div>
 
       {liveShows.length > 0 && (
         <section className="border-b border-line py-8">
@@ -139,11 +145,10 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Fresh drops — merch first */}
       <section className="wrap py-10 sm:py-12">
         <div className="flex items-end justify-between gap-4">
           <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
-            Fresh drops
+            Just listed
           </h2>
           <Link href="/shop?sort=newest" className="text-sm font-semibold text-ink-faint hover:text-ink">
             See all
@@ -154,7 +159,7 @@ export default async function HomePage() {
           <div className="mt-8 rounded-2xl border border-dashed border-line bg-paper-dim px-6 py-16 text-center">
             <p className="font-display text-xl font-bold tracking-tight">Nothing listed yet</p>
             <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-              Be the first shop on the rack — listing takes about a minute.
+              Be the first to sell something. Listing takes about a minute.
             </p>
             <Link href="/signup" className="btn btn-ink mt-6">
               Open a shop
@@ -268,7 +273,8 @@ export default async function HomePage() {
               Selling is free
             </h2>
             <p className="mt-2 text-sm text-ink-soft sm:text-base">
-              Your storefront, your payouts. List in under a minute.
+              Clothes, shoes, accessories, home goods: if you own it, you can sell
+              it. Your own storefront, paid out through Stripe. List in under a minute.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -285,12 +291,12 @@ export default async function HomePage() {
       <section className="border-t border-line">
         <div className="wrap grid gap-6 py-6 sm:grid-cols-3 sm:py-8">
           {[
-            ["Pay the shop", "The item price goes to that seller. We take a fee. We never hold the piece."],
-            ["Make an offer", "Offer under the listed price. The shop has 48 hours to confirm or deny. Confirming sets that price."],
-            ["Post a hunt", "Name the piece. When a shop lists something close, the hunt gets a reply pointing at it."],
+            ["Pay the shop", "The item price goes straight to the seller. We take a small fee and never hold the item."],
+            ["Make an offer", "Offer under the listed price. The shop has 48 hours to accept or decline. Accepting sets that price."],
+            ["Post a hunt", "Say what you're looking for. When a shop lists something close, they reply to your hunt with it."],
             ["ID checked", "New shops pass a document and selfie check before they can sell. The badge is public. The document is not."],
-            ["Your size", "Save chest, waist, inseam, and shoe size once. Measured listings say if they are close, small, or big."],
-            ["Drop clock", "A shop can hide a piece until a time, then it goes live for everyone. The countdown sits on the shop."],
+            ["Your size", "Save chest, waist, inseam, and shoe size once. Measured listings tell you if they run close, small, or big."],
+            ["Drop clock", "A shop can hide a new listing until a set time, then it goes live for everyone. The countdown shows on the shop."],
           ].map(([title, body]) => (
             <div key={title}>
               <h2 className="font-display text-base font-bold tracking-tight">{title}</h2>

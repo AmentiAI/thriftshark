@@ -16,7 +16,8 @@ export function SiteFooter() {
             className="h-10 w-auto"
           />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">
-            One-of-one secondhand. Independent shops, Stripe payouts.
+            The marketplace to buy and sell clothes, shoes, and more. Independent
+            shops, paid through Stripe.
           </p>
         </div>
 
@@ -24,9 +25,11 @@ export function SiteFooter() {
           <h2 className="eyebrow mb-3 text-ink-faint">Shop</h2>
           <ul className="space-y-2 text-sm text-ink-soft">
             {[
-              ["/shop", "All finds"],
-              ["/shop?sort=newest", "New drops"],
+              ["/shop", "Shop everything"],
+              ["/shop?sort=newest", "Just listed"],
               ["/auctions", "Auctions"],
+              ["/live", "Live shows"],
+              ["/hunts", "Hunts"],
               ["/sellers", "Shops"],
             ].map(([href, label]) => (
               <li key={label}>
@@ -42,7 +45,7 @@ export function SiteFooter() {
           <h2 className="eyebrow mb-3 text-ink-faint">Company</h2>
           <ul className="space-y-2 text-sm text-ink-soft">
             {[
-              ["/sell", "How it works"],
+              ["/sell", "How selling works"],
               ["/signup", "Open a shop"],
               ["/contact", "Contact"],
               ["/terms", "Terms of Service"],
@@ -78,8 +81,8 @@ export function SiteFooter() {
       <div className="border-t border-line">
         <div className="wrap grid gap-6 py-8 md:grid-cols-[1fr_1.2fr] md:items-center">
           <div>
-            <h2 className="text-base font-semibold">Get the drops</h2>
-            <p className="mt-1 text-sm text-ink-faint">One email a week.</p>
+            <h2 className="text-base font-semibold">New listings, weekly</h2>
+            <p className="mt-1 text-sm text-ink-faint">One email a week with what just went up.</p>
           </div>
           <NewsletterForm />
         </div>
@@ -96,7 +99,7 @@ export function SiteFooter() {
               Privacy
             </Link>
             <span className="font-medium tracking-[0.1em] text-ink-soft uppercase">
-              Secondhand. Not second best.
+              Buy it. Sell it. Thrift it.
             </span>
           </div>
         </div>

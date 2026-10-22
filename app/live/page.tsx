@@ -26,8 +26,8 @@ export default async function LiveIndexPage() {
           <p className="eyebrow-pill">Live</p>
           <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight">Auction shows</h1>
           <p className="mt-2 max-w-xl text-sm text-ink-soft">
-            Go live on Thrift Sharks, hold up an object, and set a price. People bid, like, and
-            comment on that piece. YouTube and Instagram are optional.
+            Shops go live on camera, show an item, and set a starting price. Viewers bid,
+            like, and comment as it happens.
           </p>
         </div>
         <Link href={ready ? "/dashboard/shows" : goLiveHref} className="btn bg-coral text-white hover:opacity-90">

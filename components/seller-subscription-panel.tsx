@@ -22,7 +22,7 @@ const PERKS = [
   `Up to ${VERIFIED_SPOTLIGHT_CAP} homepage spotlights`,
   "Sale “was” pricing on listings",
   "Priority in shop search, fresh drops, and the shops rail",
-  "Shop insights on your dashboard (7-day sales, rack value)",
+  "Shop insights on your dashboard (7-day sales, stock value)",
 ];
 
 export function SellerSubscriptionPanel({

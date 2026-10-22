@@ -15,8 +15,8 @@ export default async function OffersPage() {
     <div className="max-w-2xl">
       <h2 className="font-display text-2xl font-extrabold tracking-tight">Offers</h2>
       <p className="mt-2 text-sm text-ink-soft">
-        Confirming an offer changes that listing to their price. The piece stays one of one,
-        so the next person to check out gets it. Offers close after 48 hours.
+        Accepting an offer changes that listing to their price. It is still a single
+        item, so whoever checks out first gets it. Offers close after 48 hours.
       </p>
       <div className="mt-6">
         <OfferList offers={offers} />

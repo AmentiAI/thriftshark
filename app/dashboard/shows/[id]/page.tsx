@@ -100,7 +100,7 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
               {waiting && (
                 <form action={closeShowLot} className="mt-3">
                   <input type="hidden" name="show_id" value={show.id} />
-                  <button className="tap text-sm font-semibold text-ink-faint underline">Close this piece</button>
+                  <button className="tap text-sm font-semibold text-ink-faint underline">Close this item</button>
                 </form>
               )}
             </section>
@@ -127,7 +127,7 @@ export default async function ShowStudioPage(props: PageProps<"/dashboard/shows/
       {show.status === "live" && !waiting && (
         <section className="panel p-4">
           {outcome && <p className="mb-4 text-sm font-semibold">{outcome}</p>}
-          <h3 className="font-display text-xl font-bold">Next piece</h3>
+          <h3 className="font-display text-xl font-bold">Next item</h3>
           <div className="mt-4">
             <OpenLotForm showId={show.id} />
           </div>

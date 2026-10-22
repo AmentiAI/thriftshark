@@ -72,8 +72,8 @@ export function BagView({ buyerVerified = false }: { buyerVerified?: boolean }) 
       <div className="panel px-6 py-20 text-center">
         <h2 className="font-display text-3xl font-extrabold tracking-tight">Your bag is empty</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-          Nothing in here yet. The rack restocks every Thursday and the good
-          pieces rarely last the weekend.
+          Nothing in here yet. Shops list new things every day, and most
+          listings are the only one, so good finds go fast.
         </p>
         <Link
           href="/shop"
@@ -140,7 +140,7 @@ export function BagView({ buyerVerified = false }: { buyerVerified?: boolean }) 
           <dl className="mt-5 space-y-2.5 text-sm">
             <div className="flex justify-between">
               <dt className="text-ink-soft">
-                Subtotal ({available.length} {available.length === 1 ? "piece" : "pieces"})
+                Subtotal ({available.length} {available.length === 1 ? "item" : "items"})
               </dt>
               <dd className="font-medium">{money(subtotal)}</dd>
             </div>
@@ -172,7 +172,7 @@ export function BagView({ buyerVerified = false }: { buyerVerified?: boolean }) 
 
           {unavailable.length > 0 && (
             <p className="mt-4 rounded-2xl bg-coral/10 px-3 py-2.5 text-xs text-ink-soft">
-              Remove the sold {unavailable.length === 1 ? "piece" : "pieces"} above
+              Remove the sold {unavailable.length === 1 ? "item" : "items"} above
               to check out.
             </p>
           )}

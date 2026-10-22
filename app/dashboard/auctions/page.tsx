@@ -30,8 +30,7 @@ export default async function DashboardAuctionsPage() {
           Your auctions
         </h2>
         <p className="mt-2 text-ink-soft">
-          {live.length} live · {past.length} finished. New pieces can go on the
-          block from{" "}
+          {live.length} live · {past.length} finished. New items can be auctioned from{" "}
           <Link href="/dashboard/items/new" className="font-semibold underline hover:text-reef-dark">
             Add a listing
           </Link>
@@ -99,7 +98,7 @@ export default async function DashboardAuctionsPage() {
 
       <section>
         <h3 className="font-display text-xl font-extrabold tracking-tight">
-          Put a piece on the block
+          Auction something you already listed
         </h3>
         {verified ? (
           <>

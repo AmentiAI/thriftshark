@@ -43,7 +43,7 @@ export function LiveCard({ show }: { show: LiveShow }) {
           <p className="mt-3 text-sm text-ink-soft">
             {lot
               ? `On stage: ${lot.title} · ${money(lot.high_cents ?? lot.start_cents)}`
-              : "On camera. Bidding opens when they name a piece."}
+              : "On camera. Bidding opens when they show the next item."}
           </p>
         </div>
       </Link>

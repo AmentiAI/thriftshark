@@ -5,9 +5,9 @@ import { marketplaceStats } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Sell your merch",
+  title: "Sell on Thrift Sharks",
   description:
-    "Open a free Thrift Sharks shop. Your storefront, your listings, paid through Stripe.",
+    "Open a free Thrift Sharks shop and sell clothes, shoes, accessories, and more. Your storefront, your listings, paid through Stripe.",
 };
 
 const FAQ = [
@@ -37,7 +37,11 @@ const FAQ = [
   },
   {
     q: "Can I sell multiples?",
-    a: "Not yet. Every listing is one-of-one — when it sells, it comes off the rack.",
+    a: "Not yet. Each listing is a single item. When it sells, it comes down. Have more than one? List each one separately.",
+  },
+  {
+    q: "What can I sell?",
+    a: "Clothes, shoes, accessories, bags, and other things you own: home goods, collectibles, oddities. New or used is fine as long as you describe it honestly. Stolen, counterfeit, and prohibited items are not allowed (see the Terms).",
   },
 ];
 
@@ -53,8 +57,9 @@ export default async function SellPage() {
             Sell without listing fees
           </h1>
           <p className="mt-4 text-base text-ink-soft sm:text-lg">
-            Your storefront. Stripe payouts. Buyers cover a $5 platform fee per
-            order unless their account is Verified.
+            Sell clothes, shoes, and anything else you own from your own
+            storefront, paid out through Stripe. Buyers cover a $5 platform fee
+            per order unless their account is Verified.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="/signup" className="btn btn-ink">
@@ -74,7 +79,7 @@ export default async function SellPage() {
             ["01", "Sign up", "Shop name and handle."],
             ["02", "Connect Stripe", "Finish payout setup so buyers can pay."],
             ["03", "List", "Photos, price, size, condition — auctions with Verified."],
-            ["04", "Get paid", "Buyer checks out — you ship."],
+            ["04", "Get paid", "A buyer checks out, the money goes to you, and you ship."],
           ].map(([n, title, body]) => (
             <li key={title} className="rounded-xl border border-line p-5">
               <p className="text-xs font-semibold text-ink-faint">{n}</p>
@@ -101,7 +106,7 @@ export default async function SellPage() {
           <aside className="rounded-xl border border-line bg-paper-dim p-6 lg:self-start">
             <h2 className="font-display text-xl font-bold tracking-tight">Ready?</h2>
             <p className="mt-2 text-sm text-ink-soft">
-              {stats.shops} shops · {stats.listings} finds live
+              {stats.shops} shops · {stats.listings} items for sale
             </p>
             <Link href="/signup" className="btn btn-ink mt-5 w-full">
               Create your shop

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const FAQ = [
   {
     q: "Do you hold the product?",
-    a: "No. There is no shop and no warehouse. Sellers keep their own goods and ship them (or arrange pickup) after you pay. We never take possession of an item.",
+    a: "No. Thrift Sharks has no store and no warehouse. Sellers keep their own goods and ship them (or arrange pickup) after you pay. We never take possession of an item.",
   },
   {
     q: "Do you handle returns?",
@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "Who do I ask about a listing?",
-    a: "The shop that listed it. They have the piece, the measurements, and the photos. Use the message button on the listing or the shop page.",
+    a: "The shop that listed it. They have the item, the measurements, and the photos. Use the message button on the listing or the shop page.",
   },
 ];
 
@@ -45,9 +45,9 @@ export default async function ContactPage(props: PageProps<"/contact">) {
           Contact
         </h1>
         <p className="mt-3 max-w-xl text-ink-soft">
-          Thrift Sharks lets independent sellers sell to buyers and takes a fee.
-          We do not hold product, and we do not handle returns. Questions about a
-          piece go to the shop that listed it.
+          Thrift Sharks is a marketplace where people buy and sell clothes, shoes,
+          and more. We take a small fee, but we don&apos;t hold products or handle
+          returns. Questions about an item go to the shop that listed it.
         </p>
       </header>
 

@@ -61,7 +61,7 @@ export function CheckoutForm({
       <div className="space-y-10">
         {unavailable.length > 0 && (
           <p className="rounded-2xl bg-coral/10 px-4 py-3 text-sm">
-            {unavailable.length} piece{unavailable.length === 1 ? "" : "s"} sold while
+            {unavailable.length} item{unavailable.length === 1 ? "" : "s"} sold while
             you were deciding and {unavailable.length === 1 ? "has" : "have"} been left
             out of this order.{" "}
             <Link href="/cart" className="underline">
@@ -72,7 +72,7 @@ export function CheckoutForm({
         )}
 
         <fieldset>
-          <legend className="font-display text-xl font-bold">Who are we shipping to?</legend>
+          <legend className="font-display text-xl font-bold">Where should it ship?</legend>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div>
               <label className={label} htmlFor="customer_name">Full name</label>
@@ -167,7 +167,7 @@ export function CheckoutForm({
       <aside className="lg:sticky lg:top-44 lg:self-start">
         <div className="panel p-6">
           <h2 className="font-display text-lg font-bold">
-            {available.length} {available.length === 1 ? "piece" : "pieces"}
+            {available.length} {available.length === 1 ? "item" : "items"}
           </h2>
 
           <ul className="mt-5 space-y-4">

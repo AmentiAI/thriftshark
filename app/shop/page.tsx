@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Shop everything",
   description:
-    "Every piece currently in the shop: jackets, denim, tops, dresses, shoes, accessories and home oddities. One of each.",
+    "Everything for sale from every shop on Thrift Sharks: jackets, denim, tops, dresses, shoes, accessories, home goods, and more.",
 };
 
 const first = (v: string | string[] | undefined) =>
@@ -91,7 +91,7 @@ export default async function ShopPage(props: PageProps<"/shop">) {
         <section>
           <div className="hidden items-baseline justify-between gap-4 pb-6 lg:flex">
             <p className="text-sm text-ink-soft">
-              {result.total} {result.total === 1 ? "piece" : "pieces"}
+              {result.total} {result.total === 1 ? "item" : "items"}
               {result.pages > 1 && ` · page ${result.page} of ${result.pages}`}
             </p>
           </div>
@@ -105,15 +105,15 @@ export default async function ShopPage(props: PageProps<"/shop">) {
             <div className="panel px-6 py-20 text-center">
               <h2 className="font-display text-3xl font-extrabold tracking-tight">Nothing matches that</h2>
               <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-                Our stock turns over weekly, so try a looser filter — or tell us
-                what you are hunting for and we will watch for it.
+                Shops list new things every day, so try a looser filter. Or post a
+                hunt and shops that have it can reply.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Link href="/shop" className="btn btn-ink">
                   Clear filters
                 </Link>
-                <Link href="/contact" className="btn btn-ghost">
-                  Send a wishlist
+                <Link href="/hunts" className="btn btn-ghost">
+                  Post a hunt
                 </Link>
               </div>
             </div>

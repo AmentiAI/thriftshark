@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { DmTranscript } from "@/components/dm-transcript";
 import { requireAdmin } from "@/lib/auth";
 import { shortWhen } from "@/lib/format";
-import { getAdminThread, listDmMessages } from "@/lib/queries";
+import { dmBuyerProfile, getAdminThread, listDmMessages } from "@/lib/queries";
+import { DmBuyerCard } from "@/components/dm-buyer-card";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function AdminThreadPage(props: { params: Promise<{ id: str
 
   const thread = await getAdminThread(id);
   if (!thread) notFound();
-  const messages = await listDmMessages(thread.id);
+  const [messages, profile] = await Promise.all([listDmMessages(thread.id), dmBuyerProfile(thread.id, thread.seller_id)]);
 
   return (
     <div className="max-w-2xl">
@@ -45,6 +46,8 @@ export default async function AdminThreadPage(props: { params: Promise<{ id: str
       <p className="mt-3 text-xs font-semibold text-ink-faint">
         Read only. This is the full thread, for a dispute or a report.
       </p>
+
+      {profile && <DmBuyerCard profile={profile} email={thread.buyer_email} scope="this shop" />}
 
       <div className="mt-8">
         <DmTranscript

@@ -54,7 +54,7 @@ export function LiveHud({
             {!endsAt && outcome && <p className="mt-1 text-xs font-semibold">{outcome}</p>}
           </>
         ) : (
-          <p className="text-sm font-semibold">Next piece coming up</p>
+          <p className="text-sm font-semibold">Next item coming up</p>
         )}
       </div>
     </div>

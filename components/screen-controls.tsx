@@ -10,7 +10,7 @@ const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft up
 const PRESETS = [
   "Free shipping tonight",
   "Starting at $1",
-  "Next piece up",
+  "Next item up",
   "Last chance",
   "Be right back",
   "Thanks for watching",

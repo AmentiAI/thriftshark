@@ -26,7 +26,8 @@ export default function TermsPage() {
       <h2>1. What Thrift Sharks is</h2>
       <p>
         Thrift Sharks is an online marketplace. Independent sellers open shops, list
-        one-of-one secondhand goods, run timed auctions, and sell directly to buyers.
+        clothing, shoes, accessories, and other goods (new or secondhand), run timed
+        auctions and live shows, and sell directly to buyers.
         <strong> We are not the seller, and we have no store or warehouse.</strong> The
         contract of sale is between the buyer and the seller. Sellers keep their own goods.
         We do not take possession of, store, or ship product.
@@ -98,7 +99,7 @@ export default function TermsPage() {
         believe these rules are violated.
       </p>
       <p>
-        Stock on Thrift Sharks is generally <strong>one-of-one</strong>. When an item is sold
+        Each listing on Thrift Sharks is generally a <strong>single item</strong>. When an item is sold
         or won at auction, it should no longer be available for purchase by others.
       </p>
 

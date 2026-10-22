@@ -21,15 +21,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Thrift Sharks — one-of-one secondhand",
+    default: "Thrift Sharks — buy and sell clothes, shoes, and more",
     template: "%s · Thrift Sharks",
   },
   description:
-    "The marketplace for one-of-one secondhand. Hunt rare pieces, open your shop free, get paid through Stripe.",
+    "The marketplace where anyone can buy and sell clothes, shoes, accessories, and more. Shop independent sellers, or open your own shop free and get paid through Stripe.",
   openGraph: {
-    title: "Thrift Sharks — one-of-one secondhand",
+    title: "Thrift Sharks — buy and sell clothes, shoes, and more",
     description:
-      "Hunt rare pieces, open your shop free, get paid through Stripe.",
+      "Shop independent sellers, or open your own shop free and get paid through Stripe.",
     type: "website",
     url: siteUrl,
   },

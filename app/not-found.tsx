@@ -11,13 +11,13 @@ export default function NotFound() {
         That one got away
       </h1>
       <p className="mt-3 leading-relaxed text-ink-soft">
-        Either this page never existed, or the piece sold and swam off. Our stock
-        is single-piece, so links do go stale — the rest of the rack is still
-        here.
+        Either this page never existed, or the item sold and swam off. Most
+        listings are the only one, so links go stale fast. Plenty more is still
+        for sale.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/shop" className="btn btn-ink">
-          Back to the shop
+          Keep shopping
         </Link>
         <Link href="/shop?includeSold=1" className="btn btn-ghost">
           Browse the sold archive

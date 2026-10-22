@@ -6,12 +6,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useState, type ReactNode } from "react";
 import { BagCount } from "@/components/bag-count";
 import { BuyerCheck } from "@/components/buyer-check";
-import { GiveawayNav } from "@/components/giveaway-nav";
 import { Wordmark } from "@/components/logo";
 import { SellerBell, type BellNotice } from "@/components/seller-bell";
 import { ShopAvatar } from "@/components/shop-avatar";
-import type { WeeklyGiveaway } from "@/lib/types";
-
 /** Always in the bar on desktop. Everything else lives in the menu. */
 const PRIMARY = [
   { href: "/shop", label: "Shop" },
@@ -99,13 +96,6 @@ export type NavBuyer = {
   verified: boolean;
 };
 
-export type NavGiveaway = {
-  giveaway: WeeklyGiveaway;
-  alreadyEntered: boolean;
-  account: "guest" | "shop" | "buyer";
-  buyerVerified: boolean;
-};
-
 function SearchIcon() {
   return (
     <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden>
@@ -131,16 +121,13 @@ export function SiteNav({
   categories,
   seller,
   buyer,
-  giveaway,
 }: {
   categories: { slug: string; name: string }[];
   seller: NavSeller | null;
   buyer?: NavBuyer | null;
-  giveaway?: NavGiveaway | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [giveawayOpen, setGiveawayOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const close = () => setOpen(false);
   const showCategories = pathname === "/" || pathname === "/shop";
@@ -192,21 +179,6 @@ export function SiteNav({
             </Form>
 
             <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 md:ml-0">
-              {giveaway && (
-                <GiveawayNav
-                  giveaway={giveaway.giveaway}
-                  alreadyEntered={giveaway.alreadyEntered}
-                  account={giveaway.account}
-                  buyerVerified={giveaway.buyerVerified}
-                  open={giveawayOpen}
-                  onToggle={() => {
-                    setOpen(false);
-                    setBellOpen(false);
-                    setGiveawayOpen((v) => !v);
-                  }}
-                />
-              )}
-
               {seller ? (
                 <>
                   <SellerBell
@@ -216,7 +188,6 @@ export function SiteNav({
                     open={bellOpen}
                     onToggle={() => {
                       setOpen(false);
-                      setGiveawayOpen(false);
                       setBellOpen((v) => !v);
                     }}
                     onClose={() => setBellOpen(false)}
@@ -269,7 +240,6 @@ export function SiteNav({
               <button
                 type="button"
                 onClick={() => {
-                  setGiveawayOpen(false);
                   setBellOpen(false);
                   setOpen((v) => !v);
                 }}

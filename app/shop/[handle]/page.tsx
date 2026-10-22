@@ -25,7 +25,7 @@ export async function generateMetadata(
     description:
       seller.tagline ??
       seller.bio?.slice(0, 160) ??
-      `${seller.shop_name} on Thrift Sharks — ${seller.item_count} one-of-one listings.`,
+      `${seller.shop_name} on Thrift Sharks — ${seller.item_count} ${seller.item_count === 1 ? "listing" : "listings"} for sale.`,
     openGraph: {
       title: seller.shop_name,
       description: seller.tagline ?? `${seller.item_count} listings on Thrift Sharks.`,
@@ -113,7 +113,7 @@ export default async function StorefrontPage(props: PageProps<"/shop/[handle]">)
           {[
             [`${seller.item_count}`, "for sale"],
             [`${seller.sold_count}`, "sold"],
-            [money(stockValue), "on rack"],
+            [money(stockValue), "for sale"],
             reviews.length > 0
               ? [`${reviewAvg!.toFixed(1)}`, `${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}`]
               : null,

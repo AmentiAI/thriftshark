@@ -166,7 +166,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
                 <div className="space-y-4">
                   <p className="rounded-2xl bg-paper-dim px-4 py-3 text-sm text-ink-soft">
                     This lot closed without meeting its reserve, so it went back
-                    on the rack at a fixed price.
+                    up for sale at a fixed price.
                   </p>
                   <Link href={`/item/${auction.item_slug}`} className="btn btn-ink w-full">
                     See it in the shop
@@ -258,7 +258,7 @@ export default async function AuctionPage(props: PageProps<"/auctions/[id]">) {
               </strong>{" "}
               {auction.reserve_cents === null
                 ? "Whatever the high bid is at the close takes it."
-                : "If the close is under the shop's hidden reserve, nobody wins and the piece returns to the shop."}
+                : "If the close is under the shop's hidden reserve, nobody wins and the item goes back to the shop."}
             </li>
             <li>
               <strong className="text-ink">Paying.</strong> The win turns into a

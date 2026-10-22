@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Hunts",
   description:
-    "Post what you're looking for. Independent shops reply with a one-of-one piece they actually have.",
+    "Post what you're looking for. Independent shops reply with a listing they actually have.",
 };
 
 export default async function HuntsPage() {
@@ -29,8 +29,8 @@ export default async function HuntsPage() {
           Tell shops what you&apos;re looking for
         </h1>
         <p className="mt-4 max-w-xl text-ink-soft">
-          If it isn&apos;t listed, post it. A shop that has the piece can reply with the
-          listing. They keep the item. You pay them through Stripe if you buy it.
+          Can&apos;t find it? Post it. A shop that has it can reply with their
+          listing. If you buy, you pay that shop through Stripe and they ship it to you.
         </p>
       </header>
 

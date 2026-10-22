@@ -102,7 +102,7 @@ export default async function AdminDashboard() {
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line text-left">
-                {["Order", "Customer", "Pieces", "Total", "Status", "Placed"].map((h) => (
+                {["Order", "Customer", "Items", "Total", "Status", "Placed"].map((h) => (
                   <th key={h} className="eyebrow py-2.5 text-ink-faint">{h}</th>
                 ))}
               </tr>

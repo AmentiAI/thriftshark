@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Your bag",
-  description: "Review the pieces in your bag before checking out.",
+  description: "Review the items in your bag before checking out.",
 };
 
 export default async function CartPage() {
@@ -23,8 +23,8 @@ export default async function CartPage() {
         <p className="eyebrow-pill">Step 1 of 2</p>
         <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em]">Your bag</h1>
         <p className="mt-3 max-w-xl text-ink-soft">
-          Nothing is reserved until you check out — single-piece inventory means
-          first paid, first served.
+          Nothing is held for you until you check out. Most listings are the
+          only one, so whoever pays first gets it.
         </p>
       </header>
       <div className="pt-10">

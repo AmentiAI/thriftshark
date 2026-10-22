@@ -32,7 +32,7 @@ export function CreateAuctionForm({ items }: { items: Item[] }) {
     <form action={action} className="grid gap-8 lg:grid-cols-[1fr_20rem]">
       <div className="panel space-y-6 p-6">
         <div>
-          <p className={label}>Pick the piece</p>
+          <p className={label}>Pick the item</p>
           <ul className="grid max-h-80 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
             {items.map((option) => {
               const src = imageSrc(option.images[0]);
@@ -97,8 +97,8 @@ export function CreateAuctionForm({ items }: { items: Item[] }) {
               className="field"
             />
             <p className="mt-1.5 text-xs text-ink-faint">
-              Hidden from bidders. Below it, nobody wins and the piece goes back
-              on the rack.
+              Hidden from bidders. Below it, nobody wins and the item goes back
+              up for sale at its fixed price.
             </p>
           </div>
           <div>

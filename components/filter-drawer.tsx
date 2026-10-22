@@ -22,7 +22,7 @@ export function FilterDrawer({
     <>
       <div className="flex items-center justify-between gap-3 lg:hidden">
         <p className="text-sm font-semibold text-ink-soft">
-          {resultCount} {resultCount === 1 ? "piece" : "pieces"}
+          {resultCount} {resultCount === 1 ? "item" : "items"}
         </p>
         <button
           onClick={() => setOpen((v) => !v)}

@@ -68,7 +68,7 @@ export default async function DashboardItemsPage(props: PageProps<"/dashboard/it
             Nothing here yet
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
-            Your rack is empty. Photos, a price and a size is all a listing
+            Nothing listed yet. Photos, a price, and a size are all a listing
             needs.
           </p>
           <Link href="/dashboard/items/new" className="btn btn-lime mt-6">

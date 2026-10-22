@@ -799,6 +799,156 @@ export async function getSellerThread(id: number, sellerId: number): Promise<DmT
   return rows[0] ?? null;
 }
 
+export type DmBuyerProfile = {
+  account: {
+    id: number;
+    name: string;
+    member_since: string;
+    suspended: boolean;
+    verified: boolean;
+    has_card: boolean;
+    sizes: { label: string; value: string }[];
+  } | null;
+  own_shop: { shop_name: string; handle: string } | null;
+  paid_orders: number;
+  spent_cents: number;
+  site_paid_orders: number;
+  bids: number;
+  auction_wins: number;
+  offers: number;
+  pending_offers: number;
+  recent_orders: {
+    id: number;
+    order_number: string;
+    created_at: string;
+    total_cents: number;
+    status: string;
+    payment_status: string;
+    fulfilment: string;
+    place: string | null;
+    items: string | null;
+  }[];
+};
+
+/**
+ * Who is on the other end of a thread. `sellerId` limits orders, bids and
+ * offers to that shop; pass null for the admin view of every shop.
+ */
+export async function dmBuyerProfile(threadId: number, sellerId: number | null): Promise<DmBuyerProfile | null> {
+  const heads = (await sql`
+    select t.buyer_email,
+           b.id, b.name, b.created_at, b.status, b.verified, b.has_card,
+           b.chest_in, b.waist_in, b.inseam_in, b.shoe_size,
+           sh.shop_name as own_shop_name, sh.handle as own_shop_handle
+    from dm_threads t
+    left join lateral (
+      select id, name, created_at, status,
+             coalesce(verified_until > now(), false) as verified,
+             payment_method_id is not null as has_card,
+             chest_in, waist_in, inseam_in, shoe_size
+      from buyers
+      where id = t.buyer_id or lower(email) = lower(t.buyer_email)
+      order by (id = t.buyer_id) desc nulls last
+      limit 1
+    ) b on true
+    left join sellers sh on lower(sh.email) = lower(t.buyer_email) and sh.id <> t.seller_id
+    where t.id = ${threadId}
+      and (${sellerId}::int is null or t.seller_id = ${sellerId}::int)
+  `) as {
+    buyer_email: string;
+    id: number | null;
+    name: string | null;
+    created_at: unknown;
+    status: string | null;
+    verified: boolean | null;
+    has_card: boolean | null;
+    chest_in: number | string | null;
+    waist_in: number | string | null;
+    inseam_in: number | string | null;
+    shoe_size: string | null;
+    own_shop_name: string | null;
+    own_shop_handle: string | null;
+  }[];
+  const head = heads[0];
+  if (!head) return null;
+
+  const buyerId = head.id;
+  const email = head.buyer_email;
+  const [statRows, orderRows] = await Promise.all([
+    sql`
+      select
+        (select count(*)::int from orders o
+          where (o.buyer_id = ${buyerId}::int or lower(o.email) = lower(${email}))
+            and o.payment_status = 'paid'
+            and (${sellerId}::int is null or o.seller_id = ${sellerId}::int)) as paid_orders,
+        (select coalesce(sum(o.total_cents), 0)::int from orders o
+          where (o.buyer_id = ${buyerId}::int or lower(o.email) = lower(${email}))
+            and o.payment_status = 'paid'
+            and (${sellerId}::int is null or o.seller_id = ${sellerId}::int)) as spent_cents,
+        (select count(*)::int from orders o
+          where (o.buyer_id = ${buyerId}::int or lower(o.email) = lower(${email}))
+            and o.payment_status = 'paid') as site_paid_orders,
+        (select count(*)::int from bids bd join auctions a on a.id = bd.auction_id
+          where (bd.buyer_id = ${buyerId}::int or lower(bd.bidder_email) = lower(${email}))
+            and (${sellerId}::int is null or a.seller_id = ${sellerId}::int)) as bids,
+        (select count(*)::int from auctions a join orders o on o.id = a.order_id
+          where a.status = 'sold'
+            and (o.buyer_id = ${buyerId}::int or lower(o.email) = lower(${email}))
+            and (${sellerId}::int is null or a.seller_id = ${sellerId}::int)) as auction_wins,
+        (select count(*)::int from offers f join items i on i.id = f.item_id
+          where f.from_buyer_id = ${buyerId}::int
+            and (${sellerId}::int is null or i.seller_id = ${sellerId}::int)) as offers,
+        (select count(*)::int from offers f join items i on i.id = f.item_id
+          where f.from_buyer_id = ${buyerId}::int and f.status = 'pending'
+            and (${sellerId}::int is null or i.seller_id = ${sellerId}::int)) as pending_offers
+    `,
+    sql`
+      select o.id, o.order_number, o.created_at, o.total_cents, o.status, o.payment_status, o.fulfilment,
+             nullif(concat_ws(', ', o.city, o.region), '') as place,
+             (select string_agg(oi.title, ', ' order by oi.id) from order_items oi where oi.order_id = o.id) as items
+      from orders o
+      where (o.buyer_id = ${buyerId}::int or lower(o.email) = lower(${email}))
+        and (${sellerId}::int is null or o.seller_id = ${sellerId}::int)
+      order by o.created_at desc
+      limit 4
+    `,
+  ]);
+  const stats = statRows[0] as Omit<DmBuyerProfile, "account" | "own_shop" | "recent_orders">;
+  const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : String(value));
+  const inches = (value: number | string | null) =>
+    value != null && value !== "" ? `${Number(value)} in` : null;
+  const sizes = [
+    { label: "Chest", value: inches(head.chest_in) },
+    { label: "Waist", value: inches(head.waist_in) },
+    { label: "Inseam", value: inches(head.inseam_in) },
+    { label: "Shoe", value: head.shoe_size || null },
+  ].filter((size): size is { label: string; value: string } => size.value !== null);
+
+  return {
+    account:
+      buyerId != null
+        ? {
+            id: buyerId,
+            name: head.name ?? "",
+            member_since: iso(head.created_at),
+            suspended: head.status === "suspended",
+            verified: Boolean(head.verified),
+            has_card: Boolean(head.has_card),
+            sizes,
+          }
+        : null,
+    own_shop:
+      head.own_shop_name && head.own_shop_handle
+        ? { shop_name: head.own_shop_name, handle: head.own_shop_handle }
+        : null,
+    ...stats,
+    recent_orders: (orderRows as DmBuyerProfile["recent_orders"]).map((order) => ({
+      ...order,
+      created_at: iso(order.created_at),
+    })),
+  };
+}
+
 export async function getAdminThread(id: number): Promise<DmThread | null> {
   const rows = (await sql.query(
     `select ${DM_THREAD_COLUMNS} ${DM_THREAD_FROM} where t.id = $1`,

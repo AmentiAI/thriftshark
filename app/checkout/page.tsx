@@ -25,8 +25,9 @@ export default async function CheckoutPage() {
         <p className="eyebrow-pill">Thrift Sharks · Checkout</p>
         <h1 className="mt-5 font-display text-5xl font-extrabold tracking-[-0.05em]">Checkout</h1>
         <p className="mt-3 max-w-xl text-ink-soft">
-          Placing the order takes your pieces off the rack. Next you&apos;ll pay
-          securely by card — money goes to the seller through Stripe.
+          Placing the order holds your items so no one else can buy them. Next
+          you&apos;ll pay securely by card, and the money goes to the seller
+          through Stripe. The seller ships it to you.
         </p>
       </header>
       <div className="pt-10">

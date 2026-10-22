@@ -67,7 +67,7 @@ export default async function OrderPage(props: PageProps<"/order/[token]">) {
               ? "Every shop on this bag is paid. Sellers will ship (or arrange pickup) next."
               : "Payment received. The seller will ship (or arrange pickup) next."
             : multi
-              ? "Pieces from different shops mean one secure payment per shop. Pay each shop below."
+              ? "Items from different shops mean one secure payment per shop. Pay each shop below."
               : "Pay the seller securely below. Money goes to their Stripe account — we never hold it."}
         </p>
         {(paidFlag || cancelledFlag) && !allPaid && (

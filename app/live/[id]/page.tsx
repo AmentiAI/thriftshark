@@ -176,7 +176,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
               </>
             ) : (
               <p className="text-sm font-semibold">
-                Next piece coming up
+                Next item coming up
                 {!hosting && live && !hasCard ? " · a card is required to bid" : ""}
               </p>
             )}
