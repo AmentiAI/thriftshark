@@ -85,8 +85,6 @@ export default async function AccountPage(props: PageProps<"/account">) {
         <p className="mt-6 rounded-2xl bg-coral/10 px-4 py-3 text-sm">Measurements are inches, from 1 to 80.</p>
       )}
 
-      <GiveawaySection className="mt-8" />
-
       <section className="panel mt-8 p-6">
         <h2 className="font-display text-xl font-bold">Buyer Verified</h2>
         <p className="mt-2 text-sm text-ink-soft">
@@ -164,6 +162,8 @@ export default async function AccountPage(props: PageProps<"/account">) {
           </Link>
         </section>
       )}
+
+      <GiveawaySection className="mt-8" />
 
       <form action={signOutSeller} className="mt-6">
         <button className="text-sm font-semibold text-ink-faint underline">Sign out</button>

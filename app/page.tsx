@@ -85,10 +85,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="border-b border-line bg-paper-dim/50">
-        <GiveawaySection className="wrap py-6 sm:py-8" />
-      </div>
-
       {liveShows.length > 0 && (
         <section className="border-b border-line py-8">
           <div className="wrap mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -305,6 +301,10 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <div className="border-t border-line bg-paper-dim/50">
+        <GiveawaySection className="wrap py-6 sm:py-8" />
+      </div>
     </>
   );
 }
