@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { HostStage } from "@/components/camera-relay";
 import { Countdown } from "@/components/countdown";
 import { LiveBid } from "@/components/live-bid";
 import { LiveCommentBar } from "@/components/live-comment-bar";
 import { LiveRefresh } from "@/components/live-refresh";
 import { LiveViewer } from "@/components/live-viewer";
 import { LockScroll } from "@/components/lock-scroll";
-import { SelfCamera } from "@/components/self-camera";
 import { ShopAvatar } from "@/components/shop-avatar";
 import { currentBuyer } from "@/lib/buyer-account";
 import { money } from "@/lib/format";
-import { toggleLotLike } from "@/lib/live-actions";
+import { beginLiveCardSetup, toggleLotLike } from "@/lib/live-actions";
 import { getShow, lotCrowd, lotOutcome, showChat } from "@/lib/live-shows";
 import { currentSeller } from "@/lib/seller-auth";
+import { saveLiveCard } from "@/lib/stripe-billing";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,11 @@ export async function generateMetadata(props: PageProps<"/live/[id]">): Promise<
 
 export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
   const { id } = await props.params;
+  const params = await props.searchParams;
+  const cardFlag = typeof params.card === "string" ? params.card : "";
   const showId = Number(id);
   if (!Number.isInteger(showId)) notFound();
+  if (cardFlag.startsWith("cs_")) await saveLiveCard(cardFlag);
   const show = await getShow(showId);
   if (!show || show.status === "draft") notFound();
 
@@ -52,6 +56,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
       ? { name: seller.shop_name, email: seller.email }
       : null;
   const hosting = seller?.id === show.seller_id;
+  const hasCard = Boolean(buyer?.payment_method_id || seller?.payment_method_id);
   const outcome = lot && !bidding ? lotOutcome(lot) : null;
   const live = show.status === "live";
   const loginHref = `/login?next=/live/${show.id}`;
@@ -62,7 +67,7 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
       <LiveRefresh active={live} />
       <div className="relative h-full w-full max-w-[calc(100dvh*9/16)]">
         {hosting && live ? (
-          <SelfCamera fill />
+          <HostStage showId={show.id} />
         ) : live ? (
           <LiveViewer showId={show.id} active fill />
         ) : (
@@ -150,17 +155,24 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
                       ? "Starting bid"
                       : `Next bid ${money(minimum)} · last 20 seconds adds 20 seconds`
                     : (outcome ?? "Closed")}
+                  {!hosting && live && !hasCard ? " · a card is required to bid" : ""}
                 </p>
               </>
             ) : (
-              <p className="text-sm font-semibold">Next piece coming up</p>
+              <p className="text-sm font-semibold">
+                Next piece coming up
+                {!hosting && live && !hasCard ? " · a card is required to bid" : ""}
+              </p>
             )}
           </div>
 
+          {live && !hosting && cardFlag === "error" && (
+            <p className="mb-2 text-right text-xs font-semibold text-coral">Card setup did not start. Try the bid button again.</p>
+          )}
           {live && (
             <div className="flex items-end gap-2">
               <LiveCommentBar showId={show.id} loginHref={loginHref} overlay />
-              {bidding && lot && bidder && (
+              {!hosting && bidding && lot && bidder && hasCard && (
                 <LiveBid
                   key={`${lot.auction_id}-${minimum}`}
                   auctionId={lot.auction_id}
@@ -169,6 +181,19 @@ export default async function LiveShowPage(props: PageProps<"/live/[id]">) {
                   bidderEmail={bidder.email}
                   overlay
                 />
+              )}
+              {!hosting && hasCard && !(bidding && lot && bidder) && (
+                <button type="button" disabled className="btn shrink-0 bg-coral text-white opacity-70">
+                  Bid
+                </button>
+              )}
+              {!hosting && !hasCard && (
+                <form action={beginLiveCardSetup}>
+                  <input type="hidden" name="show_id" value={show.id} />
+                  <button className="btn shrink-0 bg-coral text-white hover:opacity-90">
+                    {bidding && lot ? `Bid ${money(minimum)}` : "Bid"}
+                  </button>
+                </form>
               )}
             </div>
           )}

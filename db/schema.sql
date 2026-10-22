@@ -591,3 +591,29 @@ from buyers u
 where o.buyer_id is null
   and lower(o.email) = lower(u.email)
   and u.status = 'active';
+
+-- A card on file. Live bids are refused until this is set. Nothing is charged here.
+alter table buyers add column if not exists payment_method_id text;
+alter table sellers add column if not exists payment_method_id text;
+
+-- Camera signaling only (offers and answers). The video itself stays peer to peer.
+create table if not exists live_signals (
+  id          serial primary key,
+  show_id     int not null references live_shows(id) on delete cascade,
+  viewer_key  text not null,
+  kind        text not null check (kind in ('join','offer','answer','ice')),
+  from_host   boolean not null default false,
+  payload     text not null default '',
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists live_signals_show_idx on live_signals (show_id, id);
+
+-- Host tab presence. A closed tab sets host_gone_at; the read path ends the show.
+alter table live_shows add column if not exists host_seen_at timestamptz;
+alter table live_shows add column if not exists host_gone_at timestamptz;
+alter table live_shows add column if not exists host_token text;
+
+update live_shows
+set host_seen_at = now()
+where status = 'live' and host_seen_at is null;

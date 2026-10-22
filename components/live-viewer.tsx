@@ -2,6 +2,7 @@
 
 import { Room, RoomEvent, Track, type RemoteTrack } from "livekit-client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { startViewerRelay } from "@/components/camera-relay";
 import { viewerShowToken } from "@/lib/live-actions";
 
 export function LiveViewer({
@@ -27,37 +28,56 @@ export function LiveViewer({
     let room: Room | null = null;
     let cancelled = false;
 
+    let stopRelay: (() => void) | null = null;
+
+    const attach = (track: RemoteTrack, source: Track.Source) => {
+      if (track.kind !== Track.Kind.Video) return;
+      const video = source === Track.Source.ScreenShare ? screenRef.current : cameraRef.current;
+      if (!video) return;
+      track.attach(video);
+      void video.play().catch(() => undefined);
+      if (source === Track.Source.ScreenShare) setScreenOn(true);
+      setPhase("playing");
+    };
+
     (async () => {
       setPhase("connecting");
       const session = await viewerShowToken(showId);
       if (cancelled) return;
       if (!session) {
-        setPhase("off");
+        const stop = startViewerRelay(showId, cameraRef, () => {
+          if (!cancelled) setPhase("playing");
+        });
+        if (cancelled) stop();
+        else stopRelay = stop;
         return;
       }
       room = new Room();
-      const attach = (track: RemoteTrack, source: Track.Source) => {
-        if (track.kind !== Track.Kind.Video) return;
-        const video = source === Track.Source.ScreenShare ? screenRef.current : cameraRef.current;
-        if (!video) return;
-        track.attach(video);
-        if (source === Track.Source.ScreenShare) setScreenOn(true);
-        setPhase("playing");
-      };
       room.on(RoomEvent.TrackSubscribed, (track, publication) => attach(track, publication.source));
       room.on(RoomEvent.TrackUnsubscribed, (_track, publication) => {
         if (publication.source === Track.Source.ScreenShare) setScreenOn(false);
       });
       try {
         await room.connect(session.url, session.token);
+        room.remoteParticipants.forEach((participant) => {
+          participant.trackPublications.forEach((publication) => {
+            if (publication.track) attach(publication.track as RemoteTrack, publication.source);
+          });
+        });
       } catch {
-        if (!cancelled) setPhase("off");
+        if (cancelled) return;
+        const stop = startViewerRelay(showId, cameraRef, () => {
+          if (!cancelled) setPhase("playing");
+        });
+        if (cancelled) stop();
+        else stopRelay = stop;
       }
     })();
 
     return () => {
       cancelled = true;
       room?.disconnect();
+      stopRelay?.();
     };
   }, [active, showId]);
 
@@ -65,13 +85,9 @@ export function LiveViewer({
 
   const cameraClass = screenOn
     ? "absolute top-16 right-3 z-10 aspect-video w-[38%] max-w-36 rounded-2xl bg-ink object-cover ring-2 ring-white"
-    : fill
-      ? phase === "playing"
+      : fill
         ? "h-full w-full object-cover"
-        : "h-full w-full object-cover opacity-0"
-      : phase === "playing"
-        ? "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video"
-        : "aspect-[3/4] w-full bg-ink object-cover opacity-0 sm:aspect-video";
+        : "aspect-[3/4] w-full bg-ink object-cover sm:aspect-video";
 
   return (
     <div className={fill ? "absolute inset-0 bg-ink" : "overflow-hidden rounded-2xl bg-ink"}>

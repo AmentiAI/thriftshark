@@ -12,10 +12,11 @@ import {
   livekitConfigured,
   mintShowToken,
   startCameraEgress,
-  stopCameraEgress,
 } from "@/lib/livekit";
 import { currentBuyer } from "@/lib/buyer-account";
+import { finishLiveShow } from "@/lib/live-shows";
 import { storeUpload } from "@/lib/images";
+import { createLiveCardCheckout } from "@/lib/stripe-billing";
 import { isSellerVerified } from "@/lib/seller-plan";
 import { currentSeller, requireSeller } from "@/lib/seller-auth";
 import { sellerIdVerified } from "@/lib/stripe-identity";
@@ -65,12 +66,19 @@ async function beginShow(sellerId: number, shopName: string, title: string, cove
     where seller_id = ${sellerId} and status = 'live'
     limit 1
   `) as { id: number }[];
-  if (existing[0]) return existing[0].id;
+  if (existing[0]) {
+    await sql`
+      update live_shows
+      set host_seen_at = now(), host_gone_at = null
+      where id = ${existing[0].id} and seller_id = ${sellerId}
+    `;
+    return existing[0].id;
+  }
 
   try {
     const rows = (await sql`
-      insert into live_shows (seller_id, title, status, started_at, cover_image_id)
-      values (${sellerId}, ${showTitle(shopName, title)}, 'live', now(), ${coverImageId})
+      insert into live_shows (seller_id, title, status, started_at, cover_image_id, host_seen_at)
+      values (${sellerId}, ${showTitle(shopName, title)}, 'live', now(), ${coverImageId}, now())
       returning id
     `) as { id: number }[];
     return rows[0].id;
@@ -199,7 +207,7 @@ export async function startLiveShow(formData: FormData) {
   try {
     await sql`
       update live_shows
-      set status = 'live', started_at = now()
+      set status = 'live', started_at = now(), host_seen_at = now(), host_gone_at = null
       where id = ${showId} and seller_id = ${seller.id} and status = 'draft'
     `;
   } catch {
@@ -361,31 +369,12 @@ export async function endLiveShow(formData: FormData) {
   const seller = await requireSeller();
   const showId = Number(text(formData.get("show_id")));
   if (!Number.isInteger(showId)) return;
-  const outputs = (await sql`
-    select o.egress_id
-    from live_show_outputs o
-    join live_shows s on s.id = o.show_id
-    where s.id = ${showId} and s.seller_id = ${seller.id} and o.egress_id is not null
-  `) as { egress_id: string }[];
-  for (const output of outputs) {
-    try {
-      if (livekitConfigured()) await stopCameraEgress(output.egress_id);
-    } catch (err) {
-      console.error("stop egress failed", err);
-    }
-  }
-  await sql`
-    update live_show_outputs o
-    set status = 'stopped'
-    from live_shows s
-    where o.show_id = s.id and s.id = ${showId} and s.seller_id = ${seller.id}
-      and o.status in ('starting','live')
-  `;
-  await sql`
-    update live_shows
-    set status = 'ended', ended_at = now()
+  const owned = (await sql`
+    select id from live_shows
     where id = ${showId} and seller_id = ${seller.id} and status = 'live'
-  `;
+  `) as { id: number }[];
+  if (!owned[0]) return;
+  await finishLiveShow(showId);
   revalidatePath("/live");
   revalidatePath(`/live/${showId}`);
   revalidatePath(`/dashboard/shows/${showId}`);
@@ -656,6 +645,92 @@ export async function postShowMessage(_prev: FormState, formData: FormData): Pro
   revalidatePath(`/dashboard/shows/${showId}`);
   revalidatePath("/");
   return { ok: "Posted." };
+}
+
+const viewerKeyPattern = /^[a-zA-Z0-9_-]{6,40}$/;
+const signalKinds = new Set(["join", "offer", "answer", "ice"]);
+
+async function openShow(showId: number) {
+  const rows = (await sql`
+    select id, seller_id from live_shows
+    where id = ${showId} and status = 'live'
+  `) as { id: number; seller_id: number }[];
+  return rows[0] ?? null;
+}
+
+/** Sends the shop to Stripe to save a card, then back to this live. */
+export async function beginLiveCardSetup(formData: FormData) {
+  const showId = Number(text(formData.get("show_id")));
+  const back = Number.isInteger(showId) && showId > 0 ? `/live/${showId}` : "/live";
+  const buyer = await currentBuyer();
+  const seller = buyer ? null : await currentSeller();
+  const result = await createLiveCardCheckout({ showId, buyer, seller });
+  if (!result.ok) redirect(`${back}?card=error`);
+  redirect(result.url);
+}
+
+/** Posts one signaling message. Video never goes through this. */
+export async function pushLiveSignal(
+  showId: number,
+  viewerKey: string,
+  kind: string,
+  fromHost: boolean,
+  payload: string,
+) {
+  if (!Number.isInteger(showId) || !viewerKeyPattern.test(viewerKey)) return;
+  if (!signalKinds.has(kind) || payload.length > 24000) return;
+  const show = await openShow(showId);
+  if (!show) return;
+  const seller = await currentSeller();
+  const host = seller?.id === show.seller_id;
+  if (fromHost) {
+    if (!host || kind === "join" || kind === "answer") return;
+  } else {
+    if (kind === "offer") return;
+    if (!host && !(await viewerIdentity())) return;
+  }
+
+  await sql`
+    insert into live_signals (show_id, viewer_key, kind, from_host, payload)
+    values (${showId}, ${viewerKey}, ${kind}, ${fromHost}, ${payload})
+  `;
+}
+
+/** New signaling rows for this show. The host reads viewers; a viewer reads only their own. */
+export async function pullLiveSignals(showId: number, afterId: number, viewerKey: string) {
+  if (!Number.isInteger(showId) || !Number.isInteger(afterId) || afterId < 0) return [];
+  const show = await openShow(showId);
+  if (!show) return [];
+  const seller = await currentSeller();
+  const host = seller?.id === show.seller_id;
+
+  await sql`
+    delete from live_signals
+    where show_id = ${showId} and created_at < now() - interval '3 minutes'
+  `;
+
+  if (host && viewerKey === "") {
+    return (await sql`
+      select id, viewer_key, kind, payload
+      from live_signals
+      where show_id = ${showId} and id > ${afterId} and from_host = false
+      order by id
+      limit 40
+    `) as { id: number; viewer_key: string; kind: string; payload: string }[];
+  }
+
+  if (!viewerKeyPattern.test(viewerKey)) return [];
+  if (!host && !(await viewerIdentity())) return [];
+  return (await sql`
+    select id, viewer_key, kind, payload
+    from live_signals
+    where show_id = ${showId}
+      and viewer_key = ${viewerKey}
+      and from_host = true
+      and id > ${afterId}
+    order by id
+    limit 40
+  `) as { id: number; viewer_key: string; kind: string; payload: string }[];
 }
 
 export async function hostShowToken(showId: number) {

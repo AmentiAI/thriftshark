@@ -1,6 +1,8 @@
 import "server-only";
 import type Stripe from "stripe";
 import { sql } from "@/lib/db";
+import { currentBuyer } from "@/lib/buyer-account";
+import { currentSeller } from "@/lib/seller-auth";
 import { getStripe, requestOrigin, stripeConfigured } from "@/lib/stripe";
 import {
   SELLER_PLAN_PRICE_USD,
@@ -357,6 +359,105 @@ export async function confirmBuyerVerifiedCheckout(buyer: Buyer, sessionId: stri
   await grantBuyerVerified(buyer.id, session.id);
   const rows = (await sql`select * from buyers where id = ${buyer.id}`) as Buyer[];
   return rows[0] ?? buyer;
+}
+
+/**
+ * Saves a card for live bids. Checkout is in setup mode, so the card is stored
+ * and nothing is charged.
+ */
+export async function createLiveCardCheckout(input: {
+  showId: number;
+  buyer: Buyer | null;
+  seller: Seller | null;
+}): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!stripeConfigured()) {
+    return { ok: false, error: "Stripe is not configured on this server." };
+  }
+  const { buyer, seller, showId } = input;
+  if (!buyer && !seller) return { ok: false, error: "Sign in before adding a card." };
+  if (!Number.isInteger(showId) || showId <= 0) return { ok: false, error: "This live is not open." };
+
+  try {
+    const stripe = getStripe();
+    let customerId = buyer?.stripe_customer_id ?? seller?.stripe_customer_id ?? null;
+    if (!customerId && buyer) {
+      const customer = await stripe.customers.create({
+        email: buyer.email,
+        name: buyer.name,
+        metadata: { buyer_id: String(buyer.id) },
+      });
+      customerId = customer.id;
+      await sql`update buyers set stripe_customer_id = ${customerId}, updated_at = now() where id = ${buyer.id}`;
+    } else if (!customerId && seller) {
+      customerId = await ensureStripeCustomer(seller);
+    }
+    if (!customerId) return { ok: false, error: "Could not start card setup." };
+
+    const origin = await requestOrigin();
+    const session = await stripe.checkout.sessions.create({
+      mode: "setup",
+      customer: customerId,
+      currency: "usd",
+      allowed_payment_method_types: ["card"],
+      success_url: `${origin}/live/${showId}?card={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/live/${showId}`,
+      metadata: {
+        kind: "live_card",
+        buyer_id: buyer ? String(buyer.id) : "",
+        seller_id: seller ? String(seller.id) : "",
+        show_id: String(showId),
+      },
+    });
+
+    if (!session.url) return { ok: false, error: "Stripe did not return a checkout URL." };
+    return { ok: true, url: session.url };
+  } catch (err) {
+    console.error("createLiveCardCheckout", err);
+    const message = err instanceof Error ? err.message : "Could not start card setup.";
+    return { ok: false, error: message };
+  }
+}
+
+/** Stores the card from a completed setup Checkout, only for the signed-in person. */
+export async function saveLiveCard(sessionId: string) {
+  if (!sessionId.startsWith("cs_") || !stripeConfigured()) return;
+  const buyer = await currentBuyer();
+  const seller = buyer ? null : await currentSeller();
+  if (!buyer && !seller) return;
+
+  try {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.mode !== "setup" || session.status !== "complete") return;
+    if (session.metadata?.kind !== "live_card") return;
+    if (buyer && session.metadata.buyer_id !== String(buyer.id)) return;
+    if (seller && session.metadata.seller_id !== String(seller.id)) return;
+
+    const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+    const expected = buyer?.stripe_customer_id ?? seller?.stripe_customer_id;
+    if (!customerId || customerId !== expected) return;
+
+    const setupRef = session.setup_intent;
+    const setupId = typeof setupRef === "string" ? setupRef : setupRef?.id;
+    if (!setupId) return;
+    const setup = await stripe.setupIntents.retrieve(setupId);
+    if (setup.status !== "succeeded") return;
+    const methodRef = setup.payment_method;
+    const methodId = typeof methodRef === "string" ? methodRef : methodRef?.id;
+    if (!methodId || !methodId.startsWith("pm_")) return;
+
+    if (buyer) {
+      await sql`update buyers set payment_method_id = ${methodId}, updated_at = now() where id = ${buyer.id}`;
+    } else if (seller) {
+      await sql`update sellers set payment_method_id = ${methodId}, updated_at = now() where id = ${seller.id}`;
+    }
+
+    await stripe.customers.update(customerId, {
+      invoice_settings: { default_payment_method: methodId },
+    });
+  } catch (err) {
+    console.error("saveLiveCard", err);
+  }
 }
 
 /** Refresh from Stripe when the seller returns from Checkout. */

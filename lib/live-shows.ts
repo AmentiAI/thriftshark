@@ -1,6 +1,7 @@
 import { settleDueAuctions } from "@/lib/auctions";
 import { sql } from "@/lib/db";
 import { money } from "@/lib/format";
+import { livekitConfigured, stopCameraEgress } from "@/lib/livekit";
 
 export type LiveShowStatus = "draft" | "live" | "ended";
 
@@ -102,8 +103,67 @@ const LOT_COLUMNS = `
   o.customer_name as winner_name, o.email as winner_email
 `;
 
+async function stopShowEgress(showId: number) {
+  const outputs = (await sql`
+    select egress_id from live_show_outputs
+    where show_id = ${showId} and egress_id is not null
+  `) as { egress_id: string }[];
+  for (const output of outputs) {
+    try {
+      if (livekitConfigured()) await stopCameraEgress(output.egress_id);
+    } catch (err) {
+      console.error("stop egress failed", err);
+    }
+  }
+  await sql`
+    update live_show_outputs
+    set status = 'stopped'
+    where show_id = ${showId} and status in ('starting', 'live')
+  `;
+}
+
+/** Marks a live show ended and stops any social relay. */
+export async function finishLiveShow(showId: number) {
+  const ended = (await sql`
+    update live_shows
+    set status = 'ended', ended_at = now()
+    where id = ${showId} and status = 'live'
+    returning id
+  `) as { id: number }[];
+  if (!ended[0]) return false;
+  await stopShowEgress(showId);
+  return true;
+}
+
+/**
+ * Ends a show whose host tab is gone. A leave signal waits 12 seconds so a
+ * refresh can cancel it. A tab that vanishes without a signal ends after 45s.
+ */
+export async function releaseAbandonedShows() {
+  const stale = (await sql`
+    update live_shows
+    set status = 'ended', ended_at = now()
+    where status = 'live'
+      and (
+        (
+          host_gone_at is not null
+          and host_gone_at < now() - interval '12 seconds'
+          and (host_seen_at is null or host_gone_at > host_seen_at)
+        )
+        or (
+          host_seen_at is not null
+          and host_seen_at < now() - interval '45 seconds'
+          and (host_gone_at is null or host_seen_at > host_gone_at)
+        )
+      )
+    returning id
+  `) as { id: number }[];
+  for (const show of stale) await stopShowEgress(show.id);
+}
+
 export async function listLiveShows(): Promise<LiveShow[]> {
   await settleDueAuctions();
+  await releaseAbandonedShows();
   const shows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
            s.started_at, s.ended_at, s.created_at, s.cover_image_id,
@@ -119,6 +179,7 @@ export async function listLiveShows(): Promise<LiveShow[]> {
 }
 
 export async function sellerShows(sellerId: number) {
+  await releaseAbandonedShows();
   return (await sql`
     select id, title, status, current_auction_id, started_at, ended_at, created_at
     from live_shows
@@ -138,6 +199,7 @@ export async function sellerShows(sellerId: number) {
 
 export async function getShow(id: number): Promise<LiveShow | null> {
   await settleDueAuctions();
+  await releaseAbandonedShows();
   const rows = (await sql`
     select s.id, s.seller_id, s.title, s.status, s.current_auction_id,
            s.started_at, s.ended_at, s.created_at, s.cover_image_id,

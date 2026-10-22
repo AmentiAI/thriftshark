@@ -36,6 +36,8 @@ export type Seller = {
   stripe_charges_enabled: boolean;
   stripe_payouts_enabled: boolean;
   stripe_customer_id: string | null;
+  /** Card saved for live bids, when this shop is watching someone else. */
+  payment_method_id: string | null;
   stripe_subscription_id: string | null;
   subscription_status: string;
   subscription_current_period_end: string | null;
@@ -102,6 +104,8 @@ export type Buyer = {
   email: string;
   password_hash: string;
   stripe_customer_id: string | null;
+  /** Card saved for live bids. Null until they connect one. */
+  payment_method_id: string | null;
   verified_until: string | null;
   status: "active" | "suspended";
   chest_in: number | string | null;

@@ -4,6 +4,8 @@ import { Room, Track, type LocalTrackPublication } from "livekit-client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { hostShowToken, startLiveShow } from "@/lib/live-actions";
 import type { FormState } from "@/lib/actions";
+import { HostRelay } from "@/components/camera-relay";
+import { HostPresence } from "@/components/host-presence";
 import { SelfCamera } from "@/components/self-camera";
 
 function stopStream(stream: MediaStream | null) {
@@ -30,6 +32,7 @@ export function LiveStudio({
   const audioPub = useRef<LocalTrackPublication | null>(null);
   const [screenOn, setScreenOn] = useState(false);
   const [note, setNote] = useState<FormState>(null);
+  const [camera, setCamera] = useState<MediaStream | null>(null);
 
   useEffect(() => {
     if (screenOn && screenRef.current && screenStream.current) {
@@ -45,6 +48,7 @@ export function LiveStudio({
   }, []);
 
   async function publish(stream: MediaStream) {
+    setCamera(stream);
     if (!live || !videoReady) return;
     try {
       let room = roomRef.current;
@@ -137,9 +141,8 @@ export function LiveStudio({
         </button>
       </div>
 
-      {!videoReady && live && (
-        <p className="text-sm text-ink-soft">Viewers see you once the camera connection is on. You can still run the auction.</p>
-      )}
+      {live && <HostPresence showId={showId} />}
+      <HostRelay showId={showId} stream={camera} enabled={live && !videoReady} />
       {note?.error && <p className="text-sm text-coral">{note.error}</p>}
       {note?.ok && <p className="text-sm font-medium">{note.ok}</p>}
     </div>

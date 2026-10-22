@@ -1707,6 +1707,22 @@ export async function placeBid(_prev: FormState, formData: FormData): Promise<Fo
   const buyer = await currentBuyer();
   const buyerId = buyer && buyer.email.toLowerCase() === d.bidder_email ? buyer.id : null;
 
+  const onLive = (await sql`
+    select s.seller_id
+    from live_show_lots l
+    join live_shows s on s.id = l.show_id and s.status = 'live'
+    where l.auction_id = ${d.auction_id}
+    limit 1
+  `) as { seller_id: number }[];
+  if (onLive[0]) {
+    const seller = buyer ? null : await currentSeller();
+    if (seller && seller.id === onLive[0].seller_id) {
+      return { error: "You can't bid on your own live." };
+    }
+    const card = buyer?.payment_method_id ?? seller?.payment_method_id;
+    if (!card) return { error: "Add a card before you bid." };
+  }
+
   const rows = (await sql.query(
     `with target as (
        select a.id, a.start_cents, a.increment_cents, a.status, a.ends_at,
