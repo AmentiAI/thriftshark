@@ -1,22 +1,36 @@
 import Link from "next/link";
-import { money, shortDate } from "@/lib/format";
+import { money, shortDate, shortWhen } from "@/lib/format";
+import { ACTIVITY_LABELS, adminActivity, adminPulse } from "@/lib/admin-activity";
 import { adminListOrders, adminStats, listAdminThreads } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders, threads] = await Promise.all([
+  const [stats, pulse, activity, orders, threads] = await Promise.all([
     adminStats(),
+    adminPulse(),
+    adminActivity(null, 12),
     adminListOrders(),
     listAdminThreads(),
   ]);
 
   const tiles = [
     ["Shops", String(stats.shops), "/admin/sellers"],
+    ["New shops (7d)", String(pulse.shops_7d), "/admin/activity?type=shop"],
+    ["Shoppers", String(pulse.buyers), "/admin/activity?type=buyer"],
+    ["New shoppers (7d)", String(pulse.buyers_7d), "/admin/activity?type=buyer"],
+    ["Shops not ID-checked", String(pulse.unchecked_shops), "/admin/sellers"],
+    ["Live now", String(pulse.live_now), "/admin/activity?type=live"],
+    ["Open auctions", String(pulse.open_auctions), "/admin/activity?type=auction"],
+    ["Bids (24h)", String(pulse.bids_24h), "/admin/activity?type=bid"],
+    ["Pending offers", String(pulse.pending_offers), "/admin/activity?type=offer"],
+    ["Open hunts", String(pulse.open_hunts), "/admin/activity?type=hunt"],
     ["In stock", String(stats.available), "/admin/items"],
     ["Sold", String(stats.sold), "/admin/items?status=sold"],
     ["Drafts", String(stats.drafts), "/admin/items?status=draft"],
     ["Orders to pack", String(stats.new_orders), "/admin/orders"],
+    ["Unpaid orders", String(pulse.unpaid_orders), "/admin/payments"],
+    ["Paid (7d)", `${pulse.paid_7d} · ${money(pulse.paid_7d_cents)}`, "/admin/activity?type=payment"],
     ["Waiting DMs", String(stats.waiting_dms), "/admin/messages"],
     ["Stock value", money(stats.stock_value_cents), "/admin/items"],
     ["Order revenue", money(stats.revenue_cents), "/admin/orders"],
@@ -36,10 +50,39 @@ export default async function AdminDashboard() {
               className="border border-line bg-paper-dim/40 p-4 transition hover:border-ink"
             >
               <p className="eyebrow text-ink-faint">{label}</p>
-              <p className="mt-2 font-display text-2xl font-bold">{value}</p>
+              <p className="mt-2 font-display text-2xl font-bold break-anywhere">{value}</p>
             </Link>
           ))}
         </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-xl font-bold">Latest activity</h2>
+          <Link href="/admin/activity" className="text-sm underline hover:text-reef-dark">
+            Everything
+          </Link>
+        </div>
+        {activity.length === 0 ? (
+          <p className="mt-4 border border-line bg-paper-dim/40 px-5 py-10 text-center text-sm text-ink-soft">
+            Nothing has happened yet.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line border-y border-line">
+            {activity.map((row, i) => (
+              <li key={`${row.kind}-${row.at}-${i}`} className="flex items-start gap-3 py-3 text-sm">
+                <span className="mt-0.5 w-20 shrink-0 text-[11px] font-bold tracking-wider text-ink-faint uppercase">
+                  {ACTIVITY_LABELS[row.kind]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium break-anywhere">{row.title}</p>
+                  {row.detail && <p className="text-ink-soft break-anywhere">{row.detail}</p>}
+                </div>
+                <span className="shrink-0 text-xs text-ink-faint">{shortWhen(row.at)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section>

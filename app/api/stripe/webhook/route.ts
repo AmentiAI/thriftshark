@@ -90,6 +90,7 @@ export async function POST(request: Request) {
           const paid = (await sql`
             update orders set
               payment_status = 'paid',
+              paid_at = now(),
               stripe_payment_intent_id = coalesce(${paymentIntent}, stripe_payment_intent_id)
             where stripe_checkout_session_id = ${session.id}
               and payment_status = 'pending'

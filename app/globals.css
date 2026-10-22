@@ -4,7 +4,7 @@
   /*
    Light marketplace floor — Grailed/Depop pattern:
    white page, near-black type, clothes supply the colour.
-   Blue accent from the crest; blood only on the thin promo ticker.
+   Blue accent from the crest.
   */
   --color-void: #0a0a0a;
   --color-ink: #111111;
@@ -201,23 +201,6 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-
-@keyframes ticker {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-.ticker-track {
-  display: flex;
-  width: max-content;
-  animation: ticker 36s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ticker-track {
-    animation: none;
-  }
 }
 
 /* Motion — transform/opacity only */

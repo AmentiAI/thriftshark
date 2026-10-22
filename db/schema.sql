@@ -646,3 +646,6 @@ alter table seller_notices add column if not exists href text;
 
 create index if not exists seller_notices_unread_idx
   on seller_notices (seller_id) where read_at is null;
+
+-- When Stripe confirmed payment, for the admin activity feed.
+alter table orders add column if not exists paid_at timestamptz;

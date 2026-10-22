@@ -2,7 +2,7 @@ import { SiteNav } from "@/components/site-nav";
 import { currentBuyer, isBuyerVerified } from "@/lib/buyer-account";
 import { ensureCurrentGiveaway, sellerEnteredGiveaway } from "@/lib/giveaways";
 import { currentSeller } from "@/lib/seller-auth";
-import { getCategories, sellerInboxCount } from "@/lib/queries";
+import { getCategories, sellerBell } from "@/lib/queries";
 import { remindExpiringVerified } from "@/lib/verified-pass";
 
 export async function SiteHeader() {
@@ -16,11 +16,11 @@ export async function SiteHeader() {
     }),
   ]);
 
-  const [alreadyEntered, alerts] = await Promise.all([
+  const [alreadyEntered, bell] = await Promise.all([
     seller
       ? sellerEnteredGiveaway(giveaway.id, seller.id)
       : Promise.resolve(Boolean(buyer && isBuyerVerified(buyer))),
-    seller ? sellerInboxCount(seller.id) : Promise.resolve(0),
+    seller ? sellerBell(seller.id) : Promise.resolve(null),
   ]);
 
   return (
@@ -32,7 +32,10 @@ export async function SiteHeader() {
               shop_name: seller.shop_name,
               handle: seller.handle,
               logo_image_id: seller.logo_image_id,
-              alerts,
+              alerts: (bell?.unread ?? 0) + (bell?.waiting ?? 0),
+              unread: bell?.unread ?? 0,
+              waiting: bell?.waiting ?? 0,
+              notices: bell?.notices ?? [],
             }
           : null
       }

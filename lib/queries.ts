@@ -538,6 +538,47 @@ export async function sellerNotices(sellerId: number) {
   }[];
 }
 
+/** What the header bell shows a shop: latest notices and what is waiting. */
+export async function sellerBell(sellerId: number) {
+  const [noticeRows, countRows] = await Promise.all([
+    sql`
+      select id, kind, body, href, read_at, created_at
+      from seller_notices
+      where seller_id = ${sellerId}
+      order by created_at desc
+      limit 6
+    `,
+    sql`
+      select
+        (select count(*)::int from seller_notices
+          where seller_id = ${sellerId} and read_at is null) as unread,
+        (select count(*)::int from dm_threads t
+          where t.seller_id = ${sellerId}
+            and (select m.sender from dm_messages m
+                 where m.thread_id = t.id order by m.id desc limit 1) = 'buyer') as waiting
+    `,
+  ]);
+  const notices = noticeRows as {
+    id: number;
+    kind: string;
+    body: string;
+    href: string | null;
+    read_at: unknown;
+    created_at: unknown;
+  }[];
+  const counts = countRows as { unread: number; waiting: number }[];
+  const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : String(value));
+  return {
+    notices: notices.map((notice) => ({
+      ...notice,
+      created_at: iso(notice.created_at),
+      read_at: notice.read_at ? iso(notice.read_at) : null,
+    })),
+    unread: counts[0]?.unread ?? 0,
+    waiting: counts[0]?.waiting ?? 0,
+  };
+}
+
 /** Unread notices plus conversations where the buyer spoke last. */
 export async function sellerInboxCount(sellerId: number) {
   const rows = (await sql`

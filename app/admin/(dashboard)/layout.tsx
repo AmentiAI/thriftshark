@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const TABS = [
   ["/admin", "Dashboard"],
+  ["/admin/activity", "Activity"],
   ["/admin/sellers", "Shops"],
   ["/admin/items", "Inventory"],
   ["/admin/orders", "Orders"],
