@@ -46,7 +46,7 @@ export function SiteFooter() {
           <ul className="space-y-2 text-sm text-ink-soft">
             {[
               ["/sell", "How selling works"],
-              ["/signup", "Open a shop"],
+              ["/signup?as=store", "Open a shop"],
               ["/contact", "Contact"],
               ["/terms", "Terms of Service"],
               ["/privacy", "Privacy Policy"],

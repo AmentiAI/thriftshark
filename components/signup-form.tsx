@@ -6,9 +6,15 @@ import { signUp, type FormState } from "@/lib/actions";
 
 const label = "mb-1.5 block text-xs font-bold tracking-[0.12em] text-ink-soft uppercase";
 
-export function SignupForm({ next = "" }: { next?: string }) {
+export function SignupForm({
+  next = "",
+  initialRole = "buyer",
+}: {
+  next?: string;
+  initialRole?: "buyer" | "store";
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(signUp, null);
-  const [role, setRole] = useState<"buyer" | "store">("buyer");
+  const [role, setRole] = useState<"buyer" | "store">(initialRole);
   const [handle, setHandle] = useState("");
 
   const preview = handle.toLowerCase().replace(/[^a-z0-9-]/g, "") || "your-shop";

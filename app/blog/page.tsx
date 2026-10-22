@@ -48,7 +48,7 @@ export default function BlogIndexPage() {
       </ul>
 
       <div className="mt-10 flex flex-wrap gap-3">
-        <Link href="/signup" className="btn btn-ink">
+        <Link href="/signup?as=store" className="btn btn-ink">
           Open a shop
         </Link>
         <Link href="/shop" className="btn btn-ghost">

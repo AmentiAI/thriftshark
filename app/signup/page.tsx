@@ -22,6 +22,8 @@ export default async function SignupPage(props: PageProps<"/signup">) {
   const params = await props.searchParams;
   const next = typeof params.next === "string" ? params.next : "";
   const dest = next.startsWith("/") && !next.startsWith("//") ? next : "";
+  const as = typeof params.as === "string" ? params.as : "";
+  const initialRole = as === "store" || as === "shop" || as === "seller" ? "store" : "buyer";
   if (await currentSeller()) redirect(dest || "/dashboard");
   if (await currentBuyer()) redirect(dest || "/account");
 
@@ -55,7 +57,7 @@ export default async function SignupPage(props: PageProps<"/signup">) {
         <h2 className="font-display text-xl font-bold tracking-tight">Create your account</h2>
         <p className="mt-1 text-sm text-ink-faint">Pick buyer, or open a store.</p>
         <div className="mt-6">
-          <SignupForm next={dest} />
+          <SignupForm next={dest} initialRole={initialRole} />
         </div>
       </div>
     </div>

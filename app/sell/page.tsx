@@ -62,7 +62,7 @@ export default async function SellPage() {
             per order unless their account is Verified.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/signup" className="btn btn-ink">
+            <Link href="/signup?as=store" className="btn btn-ink">
               Open your shop free
             </Link>
             <Link href="/sellers" className="btn btn-ghost">
@@ -108,7 +108,7 @@ export default async function SellPage() {
             <p className="mt-2 text-sm text-ink-soft">
               {stats.shops} shops · {stats.listings} items for sale
             </p>
-            <Link href="/signup" className="btn btn-ink mt-5 w-full">
+            <Link href="/signup?as=store" className="btn btn-ink mt-5 w-full">
               Create your shop
             </Link>
           </aside>

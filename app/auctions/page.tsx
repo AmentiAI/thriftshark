@@ -33,7 +33,7 @@ export default async function AuctionsPage() {
 
   const featured = live[0] ?? null;
   const floor = live.slice(1);
-  const listHref = seller ? "/dashboard/items/new" : "/signup";
+  const listHref = seller ? "/dashboard/items/new" : "/signup?as=store";
 
   return (
     <>

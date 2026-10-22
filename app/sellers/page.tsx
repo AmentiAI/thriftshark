@@ -28,7 +28,7 @@ export default async function SellersPage() {
           Their photos. Their prices. Paid through Stripe.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/signup" className="btn btn-ink">
+          <Link href="/signup?as=store" className="btn btn-ink">
             Open your shop
           </Link>
           <Link href="/shop" className="btn btn-ghost">
@@ -43,7 +43,7 @@ export default async function SellersPage() {
           <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
             Be the first. Opening a shop takes about a minute.
           </p>
-          <Link href="/signup" className="btn btn-ink mt-6">
+          <Link href="/signup?as=store" className="btn btn-ink mt-6">
             Open the first shop
           </Link>
         </div>

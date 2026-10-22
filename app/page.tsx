@@ -77,7 +77,7 @@ export default async function HomePage() {
               <Link href="/shop" className="btn btn-ink !px-4 !py-2 text-sm">
                 Shop now
               </Link>
-              <Link href="/signup" className="btn btn-ghost !px-4 !py-2 text-sm">
+              <Link href="/signup?as=store" className="btn btn-ghost !px-4 !py-2 text-sm">
                 Open a shop
               </Link>
             </div>
@@ -157,7 +157,7 @@ export default async function HomePage() {
             <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
               Be the first to sell something. Listing takes about a minute.
             </p>
-            <Link href="/signup" className="btn btn-ink mt-6">
+            <Link href="/signup?as=store" className="btn btn-ink mt-6">
               Open a shop
             </Link>
           </div>
@@ -274,7 +274,7 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/signup" className="btn btn-ink">
+            <Link href="/signup?as=store" className="btn btn-ink">
               Start your shop
             </Link>
             <Link href="/sell" className="btn btn-ghost">
